@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# InvoiceFlow
 
-## Getting Started
+AI invoice processor. Drop a PDF, get structured data in under 5 seconds, export as CSV or POST to a webhook.
 
-First, run the development server:
+**Stack:** Next.js 16 · React 19 · TypeScript · Tailwind 4 · `@anthropic-ai/sdk` · `pdf-parse` · `zod`
+
+## Run locally
 
 ```bash
+cp .env.example .env.local
+# Edit .env.local and paste your Anthropic API key
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 and drop a PDF.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route | Method | What it does |
+|-------|--------|--------------|
+| `/` | GET | Landing page + upload UI |
+| `/api/extract` | POST (multipart) | `pdf` form field → `ExtractResponse` JSON |
+| `/api/csv` | POST (JSON) | `{invoices, format: "summary"\|"line_items"}` → CSV download |
+| `/api/webhook` | POST (JSON) | `{webhook_url, invoice, verbose?}` → fires webhook |
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── page.tsx              # Upload + results UI
+│   ├── api/
+│   │   ├── extract/route.ts  # PDF → Claude → structured JSON
+│   │   ├── csv/route.ts      # Invoice JSON → CSV (2 formats)
+│   │   └── webhook/route.ts  # Invoice JSON → POST to user URL
+│   └── layout.tsx, globals.css
+└── lib/
+    ├── claude.ts             # System prompt + Zod schema + extractInvoice()
+    ├── pdf.ts                # pdf-parse wrapper with typed errors
+    ├── validate.ts           # Deterministic cross-field flags
+    └── csv.ts                # Summary + line-item CSV formatters
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Key design decisions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Per-field confidence + reasoning.** Every extracted field carries its own `{value, confidence, reasoning}` tuple. Hover the UI to see Claude's reasoning — the single highest-impact credibility signal.
+- **Two-pass validation.** Claude flags cross-field issues in the extraction; a deterministic pass in `lib/validate.ts` runs independently and merges findings. Doubled detection is stronger than either alone.
+- **Universal CSV schema.** Not pinned to QuickBooks. Imports into QBO via SaasAnt, into Xero natively, and opens cleanly in Excel / Google Sheets.
+- **Prompt caching on the system prompt.** Ephemeral cache reduces cost on repeat calls by ~90% on the system-prompt tokens.
+- **Structured output via `messages.parse` + `zodOutputFormat`.** The SDK validates and parses Claude's response against the Zod schema; no manual JSON parsing.
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npx vercel          # preview
+npx vercel --prod   # production
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set `ANTHROPIC_API_KEY` in Vercel → Project → Settings → Environment Variables.
+
+## Planning artifacts
+
+- [`_bmad-output/brainstorming/brainstorming-session-2026-04-18-0755.md`](./_bmad-output/brainstorming/brainstorming-session-2026-04-18-0755.md) — full brainstorm: 35 ideas, Jenna persona filter, ranked top 10
+- [`_bmad-output/implementation-artifacts/invoiceflow-build-checklist.md`](./_bmad-output/implementation-artifacts/invoiceflow-build-checklist.md) — weekend build checklist, time-estimated
+- [`_bmad-output/implementation-artifacts/invoiceflow-technical-reference.md`](./_bmad-output/implementation-artifacts/invoiceflow-technical-reference.md) — prompt + schema + cost model reference
