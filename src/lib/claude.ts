@@ -1,6 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIError } from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import { ExtractionError } from "./errors";
+import { computeCost, exceedsBudget, recordCost } from "./cost";
+import type { Logger } from "./log";
 
 const ConfidenceEnum = z.enum(["high", "medium", "low"]);
 
@@ -74,8 +77,16 @@ CROSS-FIELD VALIDATION (populate the "flags" array when you detect any of these)
 
 Return the JSON object only.`;
 
-export const EXTRACTION_MODEL = "claude-sonnet-4-5-20250929";
+export const DEFAULT_EXTRACTION_MODEL = "claude-sonnet-4-6";
 export const EXTRACTION_MAX_TOKENS = 4096;
+export const EXTRACTION_TIMEOUT_MS = 90_000;
+export const EXTRACTION_MAX_RETRIES = 2;
+
+export function getExtractionModel(): string {
+  const fromEnv = process.env.CLAUDE_MODEL;
+  if (fromEnv && fromEnv.length > 0) return fromEnv;
+  return DEFAULT_EXTRACTION_MODEL;
+}
 
 export interface UsageSummary {
   input_tokens: number;
@@ -88,66 +99,168 @@ export interface ExtractionResult {
   invoice: InvoiceExtraction;
   usage: UsageSummary;
   duration_ms: number;
+  model: string;
+  cost_usd: number | null;
+  retry_count: number;
+}
+
+export interface ExtractInvoiceOptions {
+  apiKey?: string;
+  model?: string;
+  logger?: Logger;
+  signal?: AbortSignal;
+}
+
+function isRetryable(err: unknown): boolean {
+  if (err instanceof APIError) {
+    if (err.status === 429) return true;
+    if (err.status && err.status >= 500 && err.status < 600) return true;
+    return false;
+  }
+  if (err instanceof Error) {
+    if (err.name === "AbortError") return false;
+    return /network|timeout|ECONN|fetch failed/i.test(err.message);
+  }
+  return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Extract structured invoice data from raw PDF text using Claude.
- * Uses prompt caching on the system prompt to reduce cost on repeat calls.
+ * Retries transient API failures up to EXTRACTION_MAX_RETRIES times.
+ * Aborts after EXTRACTION_TIMEOUT_MS. Applies a per-request cost cap.
  */
 export async function extractInvoice(
   rawPdfText: string,
-  options: { apiKey?: string; model?: string } = {},
+  options: ExtractInvoiceOptions = {},
 ): Promise<ExtractionResult> {
   const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    throw new Error(
+    throw new ExtractionError(
+      "model-API-failure",
       "ANTHROPIC_API_KEY is not set. Copy .env.example to .env.local and add your key.",
     );
   }
 
+  const model = options.model ?? getExtractionModel();
+  const logger = options.logger;
   const client = new Anthropic({ apiKey });
+  const timeoutSignal = AbortSignal.timeout(EXTRACTION_TIMEOUT_MS);
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, timeoutSignal])
+    : timeoutSignal;
+
   const start = Date.now();
+  let lastError: unknown = null;
 
-  const response = await client.messages.parse({
-    model: options.model ?? EXTRACTION_MODEL,
-    max_tokens: EXTRACTION_MAX_TOKENS,
-    temperature: 0,
-    system: [
-      {
-        type: "text",
-        text: EXTRACTION_SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [
-      {
-        role: "user",
-        content: `<invoice_text>\n${rawPdfText}\n</invoice_text>\n\nExtract the invoice data per the schema.`,
-      },
-    ],
-    output_config: {
-      format: zodOutputFormat(InvoiceExtractionSchema),
-    },
-  });
+  for (let attempt = 0; attempt <= EXTRACTION_MAX_RETRIES; attempt++) {
+    try {
+      const response = await client.messages.parse(
+        {
+          model,
+          max_tokens: EXTRACTION_MAX_TOKENS,
+          temperature: 0,
+          system: [
+            {
+              type: "text",
+              text: EXTRACTION_SYSTEM_PROMPT,
+              cache_control: { type: "ephemeral" },
+            },
+          ],
+          messages: [
+            {
+              role: "user",
+              content: `<invoice_text>\n${rawPdfText}\n</invoice_text>\n\nExtract the invoice data per the schema.`,
+            },
+          ],
+          output_config: {
+            format: zodOutputFormat(InvoiceExtractionSchema),
+          },
+        },
+        { signal },
+      );
 
-  const duration_ms = Date.now() - start;
+      if (!response.parsed_output) {
+        throw new ExtractionError(
+          "model-API-failure",
+          "Claude returned an unparseable response.",
+        );
+      }
 
-  if (!response.parsed_output) {
-    throw new Error(
-      "Claude returned an unparseable response. Check logs for the raw output.",
-    );
+      const duration_ms = Date.now() - start;
+      const usage: UsageSummary = {
+        input_tokens: response.usage.input_tokens,
+        output_tokens: response.usage.output_tokens,
+        cache_creation_input_tokens:
+          response.usage.cache_creation_input_tokens ?? null,
+        cache_read_input_tokens:
+          response.usage.cache_read_input_tokens ?? null,
+      };
+
+      const cost_usd = computeCost(usage, model);
+      if (cost_usd !== null) {
+        const budget = exceedsBudget(cost_usd);
+        if (budget.exceeded) {
+          logger?.warn({
+            category: "cost-budget-exceeded",
+            cost_usd,
+            budget_cap_usd: budget.cap ?? undefined,
+            retry_count: attempt,
+          });
+          throw new ExtractionError(
+            "cost-budget-exceeded",
+            `Cost ${cost_usd.toFixed(4)} exceeded cap ${budget.cap?.toFixed(4) ?? "unknown"}.`,
+            { observed_usd: cost_usd, cap_usd: budget.cap ?? null },
+          );
+        }
+        recordCost(cost_usd);
+      }
+
+      return {
+        invoice: response.parsed_output,
+        usage,
+        duration_ms,
+        model,
+        cost_usd,
+        retry_count: attempt,
+      };
+    } catch (err) {
+      lastError = err;
+      if (err instanceof ExtractionError) throw err;
+
+      const isAbort =
+        (err instanceof Error && err.name === "AbortError") ||
+        (err instanceof DOMException && err.name === "TimeoutError");
+      if (isAbort) {
+        throw new ExtractionError(
+          "extraction-timeout",
+          `Extraction exceeded ${EXTRACTION_TIMEOUT_MS} ms.`,
+          { duration_ms: Date.now() - start },
+        );
+      }
+
+      if (attempt < EXTRACTION_MAX_RETRIES && isRetryable(err)) {
+        const backoffMs = 400 * Math.pow(2, attempt);
+        logger?.warn({
+          category: "model-API-failure",
+          retry_count: attempt,
+          note: "transient, retrying",
+          duration_ms: Date.now() - start,
+        });
+        await sleep(backoffMs);
+        continue;
+      }
+
+      break;
+    }
   }
 
-  return {
-    invoice: response.parsed_output,
-    usage: {
-      input_tokens: response.usage.input_tokens,
-      output_tokens: response.usage.output_tokens,
-      cache_creation_input_tokens:
-        response.usage.cache_creation_input_tokens ?? null,
-      cache_read_input_tokens:
-        response.usage.cache_read_input_tokens ?? null,
-    },
-    duration_ms,
-  };
+  const message =
+    lastError instanceof Error ? lastError.message : "Unknown extraction failure.";
+  throw new ExtractionError("model-API-failure", message, {
+    duration_ms: Date.now() - start,
+  });
 }

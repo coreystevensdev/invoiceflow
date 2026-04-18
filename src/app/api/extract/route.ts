@@ -4,17 +4,26 @@ import {
   type InvoiceExtraction,
   type UsageSummary,
 } from "@/lib/claude";
-import { parsePdf, PdfParseError } from "@/lib/pdf";
+import { parsePdf, PdfParseError, type PdfParseErrorCode } from "@/lib/pdf";
 import {
   confidenceSummary,
   deterministicFlags,
   mergeFlags,
 } from "@/lib/validate";
+import {
+  ExtractionError,
+  toErrorResponse,
+  type ExtractionErrorCode,
+} from "@/lib/errors";
+import { createLogger } from "@/lib/log";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+const MAX_PDF_BYTES = 25 * 1024 * 1024;
+
 export interface ExtractResponse {
+  correlation_id: string;
   invoice: InvoiceExtraction;
   confidence_summary: ReturnType<typeof confidenceSummary>;
   pdf: {
@@ -27,32 +36,66 @@ export interface ExtractResponse {
     claude: number;
     total: number;
   };
+  model: string;
+  cost_usd: number | null;
+  retry_count: number;
+}
+
+function mapPdfError(code: PdfParseErrorCode): ExtractionErrorCode {
+  switch (code) {
+    case "empty_file":
+      return "corrupt-PDF";
+    case "not_a_pdf":
+      return "non-PDF";
+    case "image_only":
+      return "not-an-invoice";
+    case "parse_failed":
+      return "corrupt-PDF";
+  }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const correlationId = crypto.randomUUID();
+  const logger = createLogger(correlationId);
   const start = Date.now();
+
+  const respond = (
+    code: ExtractionErrorCode,
+    opts: { detected?: Record<string, unknown>; message?: string } = {},
+  ) => {
+    const { body, status, headers } = toErrorResponse({
+      code,
+      correlationId,
+      detected: opts.detected,
+      messageOverride: opts.message,
+    });
+    logger.warn({
+      route: "extract",
+      category: code,
+      http_status: status,
+      duration_ms: Date.now() - start,
+    });
+    return NextResponse.json(body, { status, headers });
+  };
 
   const formData = await request.formData().catch(() => null);
   if (!formData) {
-    return NextResponse.json(
-      { error: "Invalid multipart/form-data body." },
-      { status: 400 },
-    );
+    return respond("non-PDF", {
+      message: "Invalid multipart/form-data body.",
+    });
   }
 
   const file = formData.get("pdf");
   if (!(file instanceof File)) {
-    return NextResponse.json(
-      { error: "Missing 'pdf' file field." },
-      { status: 400 },
-    );
+    return respond("non-PDF", {
+      message: "Missing 'pdf' file field.",
+    });
   }
 
-  if (file.size > 25 * 1024 * 1024) {
-    return NextResponse.json(
-      { error: "PDF is larger than 25 MB. Please upload a smaller file." },
-      { status: 413 },
-    );
+  if (file.size > MAX_PDF_BYTES) {
+    return respond("oversized-PDF", {
+      detected: { size_bytes: file.size, mime: file.type || "unknown" },
+    });
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -63,36 +106,79 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     pdfResult = await parsePdf(bytes);
   } catch (err) {
     if (err instanceof PdfParseError) {
-      return NextResponse.json(
-        {
-          error: err.message,
-          code: err.code,
-          detected: err.detected,
-        },
-        { status: 422 },
-      );
+      return respond(mapPdfError(err.code), {
+        detected: err.detected,
+        message: err.message,
+      });
     }
-    throw err;
+    logger.error({
+      route: "extract",
+      category: "corrupt-PDF",
+      http_status: 500,
+      duration_ms: Date.now() - start,
+      note: "unexpected pdf-parse failure",
+    });
+    return respond("corrupt-PDF");
   }
   const pdfMs = Date.now() - pdfStart;
 
-  const extraction = await extractInvoice(pdfResult.text);
-  const modelFlags = extraction.invoice.flags;
-  const detFlags = deterministicFlags(extraction.invoice);
-  const flags = mergeFlags(modelFlags, detFlags);
-  const invoice: InvoiceExtraction = { ...extraction.invoice, flags };
+  logger.info({
+    route: "extract",
+    category: "pdf-parsed",
+    pdf_size_bytes: bytes.length,
+    pdf_num_pages: pdfResult.num_pages,
+    pdf_mime: file.type || "application/pdf",
+    duration_ms: pdfMs,
+  });
 
-  const response: ExtractResponse = {
-    invoice,
-    confidence_summary: confidenceSummary(invoice),
-    pdf: { num_pages: pdfResult.num_pages, size_bytes: bytes.length },
-    usage: extraction.usage,
-    duration_ms: {
-      pdf_parse: pdfMs,
-      claude: extraction.duration_ms,
-      total: Date.now() - start,
-    },
-  };
+  try {
+    const extraction = await extractInvoice(pdfResult.text, { logger });
+    const modelFlags = extraction.invoice.flags;
+    const detFlags = deterministicFlags(extraction.invoice);
+    const flags = mergeFlags(modelFlags, detFlags);
+    const invoice: InvoiceExtraction = { ...extraction.invoice, flags };
 
-  return NextResponse.json(response);
+    const response: ExtractResponse = {
+      correlation_id: correlationId,
+      invoice,
+      confidence_summary: confidenceSummary(invoice),
+      pdf: { num_pages: pdfResult.num_pages, size_bytes: bytes.length },
+      usage: extraction.usage,
+      duration_ms: {
+        pdf_parse: pdfMs,
+        claude: extraction.duration_ms,
+        total: Date.now() - start,
+      },
+      model: extraction.model,
+      cost_usd: extraction.cost_usd,
+      retry_count: extraction.retry_count,
+    };
+
+    logger.info({
+      route: "extract",
+      category: "ok",
+      http_status: 200,
+      pdf_size_bytes: bytes.length,
+      pdf_num_pages: pdfResult.num_pages,
+      duration_ms: Date.now() - start,
+      cost_usd: extraction.cost_usd ?? undefined,
+      retry_count: extraction.retry_count,
+    });
+
+    return NextResponse.json(response, {
+      headers: { "X-Correlation-Id": correlationId },
+    });
+  } catch (err) {
+    if (err instanceof ExtractionError) {
+      return respond(err.code, { detected: err.detected, message: err.message });
+    }
+    logger.error({
+      route: "extract",
+      category: "model-API-failure",
+      http_status: 502,
+      duration_ms: Date.now() - start,
+      note: "unexpected extraction failure",
+    });
+    return respond("model-API-failure");
+  }
 }

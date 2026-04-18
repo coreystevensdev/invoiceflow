@@ -1,14 +1,37 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import type { ExtractResponse } from "./api/extract/route";
 import type { InvoiceExtraction, ExtractionFlag } from "@/lib/claude";
+import type { ExtractionErrorCode } from "@/lib/errors";
+import { ErrorState } from "@/components/error-state";
 
 type Status =
   | { kind: "idle" }
   | { kind: "loading"; filename: string }
   | { kind: "success"; result: ExtractResponse; filename: string }
-  | { kind: "error"; message: string; code?: string };
+  | {
+      kind: "error";
+      code: ExtractionErrorCode;
+      correlation_id?: string;
+      retry_after_seconds?: number;
+      detected?: Record<string, unknown>;
+    };
+
+interface ErrorBody {
+  error?: string;
+  code?: ExtractionErrorCode;
+  correlation_id?: string;
+  retry_after_seconds?: number;
+  detected?: Record<string, unknown>;
+}
 
 export default function Home() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -16,6 +39,7 @@ export default function Home() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookStatus, setWebhookStatus] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropzoneHintId = useId();
 
   const handleFile = useCallback(async (file: File) => {
     setStatus({ kind: "loading", filename: file.name });
@@ -24,11 +48,13 @@ export default function Home() {
     form.append("pdf", file);
     const res = await fetch("/api/extract", { method: "POST", body: form });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: "Unknown error." }));
+      const body: ErrorBody = await res.json().catch(() => ({}));
       setStatus({
         kind: "error",
-        message: err.error ?? "Extraction failed.",
-        code: err.code,
+        code: body.code ?? "model-API-failure",
+        correlation_id: body.correlation_id,
+        retry_after_seconds: body.retry_after_seconds,
+        detected: body.detected,
       });
       return;
     }
@@ -54,6 +80,16 @@ export default function Home() {
     [handleFile],
   );
 
+  const onDropzoneKey = useCallback(
+    (e: KeyboardEvent<HTMLLabelElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        inputRef.current?.click();
+      }
+    },
+    [],
+  );
+
   const downloadCsv = useCallback(
     async (format: "summary" | "line_items") => {
       if (status.kind !== "success") return;
@@ -76,7 +112,7 @@ export default function Home() {
 
   const fireWebhook = useCallback(async () => {
     if (status.kind !== "success" || !webhookUrl) return;
-    setWebhookStatus("firing…");
+    setWebhookStatus("Firing…");
     const res = await fetch("/api/webhook", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -88,13 +124,16 @@ export default function Home() {
     const data = await res.json();
     setWebhookStatus(
       res.ok
-        ? `✓ ${data.status} (${data.duration_ms}ms)`
-        : `✗ ${data.error ?? "failed"}`,
+        ? `Sent — upstream responded ${data.status} in ${data.duration_ms}ms.`
+        : `Failed — ${data.error ?? "unknown reason"}.`,
     );
   }, [status, webhookUrl]);
 
   return (
-    <main className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+    <main
+      id="main-content"
+      className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
+    >
       <div className="mx-auto max-w-4xl px-6 py-16">
         <header className="mb-10">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
@@ -102,13 +141,23 @@ export default function Home() {
           </h1>
           <p className="mt-3 text-lg text-zinc-600 dark:text-zinc-400">
             Drop a PDF. Get structured data in under 5 seconds.
-            <span className="mx-2 text-zinc-400">·</span>
+            <span
+              aria-hidden="true"
+              className="mx-2 text-zinc-400"
+            >
+              ·
+            </span>
             3 hours manual → 45 seconds with Claude.
           </p>
         </header>
 
         <label
           htmlFor="pdf-input"
+          role="button"
+          tabIndex={0}
+          aria-label="Upload a PDF invoice. Press Enter or Space to open the file picker, or drop a file onto this area."
+          aria-describedby={dropzoneHintId}
+          onKeyDown={onDropzoneKey}
           onDragEnter={(e) => {
             e.preventDefault();
             setIsDragging(true);
@@ -119,7 +168,7 @@ export default function Home() {
           }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={onDrop}
-          className={`block cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition ${
+          className={`block cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950 ${
             isDragging
               ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
               : "border-zinc-300 bg-white hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500"
@@ -132,27 +181,28 @@ export default function Home() {
             accept="application/pdf,.pdf"
             onChange={onChange}
             className="sr-only"
+            aria-describedby={dropzoneHintId}
           />
-          <p className="text-lg font-medium">
+          <p className="text-lg font-medium" aria-live="polite">
             {status.kind === "loading"
               ? `Extracting ${status.filename}…`
               : "Drop a PDF invoice here, or click to upload"}
           </p>
-          <p className="mt-2 text-sm text-zinc-500">
+          <p
+            id={dropzoneHintId}
+            className="mt-2 text-sm text-zinc-500"
+          >
             Max 25 MB. Typed or scanned-with-OCR PDFs.
           </p>
         </label>
 
         {status.kind === "error" && (
-          <div className="mt-6 rounded-lg border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-            <p className="font-medium">We couldn&apos;t process that file.</p>
-            <p className="mt-1 text-sm">{status.message}</p>
-            {status.code && (
-              <p className="mt-1 text-xs text-red-700 dark:text-red-300">
-                code: {status.code}
-              </p>
-            )}
-          </div>
+          <ErrorState
+            code={status.code}
+            correlationId={status.correlation_id}
+            retryAfterSeconds={status.retry_after_seconds}
+            detected={status.detected}
+          />
         )}
 
         {status.kind === "success" && (
@@ -168,27 +218,19 @@ export default function Home() {
         )}
       </div>
 
-      <footer className="border-t border-zinc-200 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 px-6">
+      <footer className="mt-auto border-t border-zinc-200 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-4 px-6">
           <span>
             Powered by{" "}
             <a
-              className="underline"
+              className="underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded"
               href="https://www.anthropic.com/claude"
               target="_blank"
               rel="noreferrer"
             >
               Claude
             </a>
-          </span>
-          <span>
-            Need one for your business?{" "}
-            <a
-              className="font-medium text-indigo-600 underline dark:text-indigo-400"
-              href="#"
-            >
-              Hire me on Upwork →
-            </a>
+            .
           </span>
         </div>
       </footer>
@@ -241,17 +283,23 @@ function ResultsView({
   );
 
   return (
-    <section className="mt-8 space-y-6">
+    <section className="mt-8 space-y-6" aria-label="Extraction results">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-500">
         <span>
           <span className="font-medium text-zinc-700 dark:text-zinc-300">
             {filename}
           </span>
-          <span className="mx-2">·</span>
+          <span aria-hidden="true" className="mx-2">
+            ·
+          </span>
           {result.pdf.num_pages} page{result.pdf.num_pages === 1 ? "" : "s"}
-          <span className="mx-2">·</span>
+          <span aria-hidden="true" className="mx-2">
+            ·
+          </span>
           {(result.duration_ms.total / 1000).toFixed(1)}s total
-          <span className="mx-2">·</span>
+          <span aria-hidden="true" className="mx-2">
+            ·
+          </span>
           {result.usage.input_tokens + result.usage.output_tokens} tokens
         </span>
         <span>
@@ -259,18 +307,22 @@ function ResultsView({
           <b className="text-green-700 dark:text-green-400">
             {summary.high} high
           </b>
-          <span className="mx-2">·</span>
+          <span aria-hidden="true" className="mx-2">
+            ·
+          </span>
           <b className="text-amber-700 dark:text-amber-400">
             {summary.medium} medium
           </b>
-          <span className="mx-2">·</span>
+          <span aria-hidden="true" className="mx-2">
+            ·
+          </span>
           <b className="text-red-700 dark:text-red-400">{summary.low} low</b>
         </span>
       </div>
 
       {inv.flags.length > 0 && <FlagsList flags={inv.flags} />}
 
-      <div className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
+      <dl className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
         {fields.map((f) => (
           <FieldRow
             key={f.label}
@@ -279,45 +331,56 @@ function ResultsView({
             money={f.money}
           />
         ))}
-      </div>
+      </dl>
 
       {inv.line_items.length > 0 && <LineItemsTable items={inv.line_items} />}
 
       <div className="flex flex-wrap gap-3">
         <button
+          type="button"
           onClick={() => downloadCsv("summary")}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           Download summary CSV
         </button>
         <button
+          type="button"
           onClick={() => downloadCsv("line_items")}
-          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
         >
           Download line-items CSV
         </button>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-        <h3 className="text-sm font-medium">Fire webhook</h3>
+        <h2 className="text-sm font-medium">Fire webhook</h2>
         <div className="mt-2 flex flex-wrap gap-2">
+          <label htmlFor="webhook-url" className="sr-only">
+            Webhook URL
+          </label>
           <input
+            id="webhook-url"
             type="url"
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
             placeholder="https://your-webhook-url"
-            className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-950"
           />
           <button
+            type="button"
             onClick={fireWebhook}
             disabled={!webhookUrl}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
             Fire
           </button>
         </div>
         {webhookStatus && (
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <p
+            className="mt-2 text-sm text-zinc-600 dark:text-zinc-400"
+            role="status"
+            aria-live="polite"
+          >
             {webhookStatus}
           </p>
         )}
@@ -341,6 +404,7 @@ function FieldRow({
   field: FieldLike;
   money?: boolean;
 }) {
+  const reasoningId = useId();
   const value =
     field.value === null || field.value === undefined
       ? "—"
@@ -353,18 +417,41 @@ function FieldRow({
       : field.confidence === "medium"
         ? "bg-amber-500"
         : "bg-red-500";
+  const confidenceGlyph =
+    field.confidence === "high"
+      ? "●"
+      : field.confidence === "medium"
+        ? "◐"
+        : "○";
+  const confidenceWord =
+    field.confidence === "high"
+      ? "High"
+      : field.confidence === "medium"
+        ? "Medium"
+        : "Low";
+
   return (
     <div className="group relative">
       <dt className="text-xs uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd className="mt-1 flex items-center gap-2 text-lg font-medium">
+      <dd
+        className="mt-1 flex items-center gap-2 text-lg font-medium"
+        aria-describedby={field.reasoning ? reasoningId : undefined}
+      >
         <span>{value}</span>
         <span
-          aria-label={`${field.confidence} confidence`}
-          className={`h-2 w-2 rounded-full ${dotColor}`}
-        />
+          aria-hidden="true"
+          className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] leading-none text-white ${dotColor}`}
+        >
+          {confidenceGlyph}
+        </span>
+        <span className="sr-only">{confidenceWord} confidence.</span>
       </dd>
       {field.reasoning && (
-        <div className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-80 rounded-lg bg-zinc-900 p-3 text-xs text-white shadow-lg group-hover:block dark:bg-zinc-100 dark:text-zinc-900">
+        <div
+          id={reasoningId}
+          role="tooltip"
+          className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-80 rounded-lg bg-zinc-900 p-3 text-xs text-white shadow-lg group-hover:block group-focus-within:block dark:bg-zinc-100 dark:text-zinc-900"
+        >
           {field.reasoning}
         </div>
       )}
@@ -380,17 +467,33 @@ function FlagsList({ flags }: { flags: ExtractionFlag[] }) {
     error:
       "border-red-300 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200",
   };
+  const icons: Record<ExtractionFlag["severity"], string> = {
+    info: "ℹ",
+    warning: "⚠",
+    error: "✕",
+  };
+  const labels: Record<ExtractionFlag["severity"], string> = {
+    info: "Info",
+    warning: "Warning",
+    error: "Error",
+  };
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-2" aria-label="Validation flags">
       {flags.map((flag, i) => (
         <li
           key={i}
-          className={`rounded-lg border px-3 py-2 text-sm ${colors[flag.severity]}`}
+          className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm ${colors[flag.severity]}`}
         >
-          <span className="mr-2 text-xs font-semibold uppercase">
-            {flag.severity}
+          <span aria-hidden="true" className="text-base leading-none">
+            {icons[flag.severity]}
           </span>
-          {flag.message}
+          <span>
+            <span className="mr-2 text-xs font-semibold uppercase">
+              {labels[flag.severity]}
+            </span>
+            <span className="sr-only">severity:</span>
+            {flag.message}
+          </span>
         </li>
       ))}
     </ul>
@@ -405,12 +508,21 @@ function LineItemsTable({
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
       <table className="w-full text-sm">
+        <caption className="sr-only">Extracted line items</caption>
         <thead className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
           <tr>
-            <th className="px-4 py-3">Description</th>
-            <th className="px-4 py-3 text-right">Qty</th>
-            <th className="px-4 py-3 text-right">Unit price</th>
-            <th className="px-4 py-3 text-right">Amount</th>
+            <th scope="col" className="px-4 py-3">
+              Description
+            </th>
+            <th scope="col" className="px-4 py-3 text-right">
+              Qty
+            </th>
+            <th scope="col" className="px-4 py-3 text-right">
+              Unit price
+            </th>
+            <th scope="col" className="px-4 py-3 text-right">
+              Amount
+            </th>
           </tr>
         </thead>
         <tbody>
