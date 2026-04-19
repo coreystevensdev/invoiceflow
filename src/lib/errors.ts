@@ -74,7 +74,7 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
     "extraction-timeout": {
       title: "The extraction took too long",
       message:
-        "The model didn't respond within 90 seconds. Very long invoices or complex layouts can trip this.",
+        "The model didn't respond in time. Very long invoices or complex layouts can trip this.",
       nextStep:
         "If the PDF has many pages, try splitting it. Otherwise retry once — the timeout is often transient.",
     },

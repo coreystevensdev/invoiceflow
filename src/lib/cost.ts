@@ -31,6 +31,15 @@
 export const CAP_MULTIPLIER = 3;
 const HISTORY_CAP = 50;
 
+/**
+ * Hard per-request ceiling, regardless of history. Prevents a first
+ * request (no median yet) from slipping past and racking up an
+ * unbounded bill. Tuned for a typical invoice extraction: even a long
+ * multi-page statement on Opus should not exceed this in normal use.
+ * Requests above this ceiling are aborted as `cost-budget-exceeded`.
+ */
+export const ABSOLUTE_CEILING_USD = 1.0;
+
 interface ModelPricing {
   inputPerMillion: number;
   outputPerMillion: number;
@@ -82,6 +91,14 @@ export interface BudgetCheck {
 
 export function exceedsBudget(current: number): BudgetCheck {
   const median = medianCost();
+  if (current > ABSOLUTE_CEILING_USD) {
+    return {
+      exceeded: true,
+      observed: current,
+      cap: ABSOLUTE_CEILING_USD,
+      median,
+    };
+  }
   if (median === null || median === 0) {
     return { exceeded: false, observed: current, cap: null, median };
   }

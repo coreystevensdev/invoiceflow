@@ -16,6 +16,7 @@ import {
   type ExtractionErrorCode,
 } from "@/lib/errors";
 import { createLogger } from "@/lib/log";
+import { clientIpFrom, extractLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -61,13 +62,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const respond = (
     code: ExtractionErrorCode,
-    opts: { detected?: Record<string, unknown>; message?: string } = {},
+    opts: {
+      detected?: Record<string, unknown>;
+      message?: string;
+      retryAfterSeconds?: number;
+    } = {},
   ) => {
     const { body, status, headers } = toErrorResponse({
       code,
       correlationId,
       detected: opts.detected,
       messageOverride: opts.message,
+      retryAfterSeconds: opts.retryAfterSeconds,
     });
     logger.warn({
       route: "extract",
@@ -77,6 +83,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
     return NextResponse.json(body, { status, headers });
   };
+
+  const ip = clientIpFrom(request.headers);
+  const limit = extractLimit(ip);
+  if (!limit.ok) {
+    return respond("rate-limited", {
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+  }
 
   const formData = await request.formData().catch(() => null);
   if (!formData) {

@@ -8,9 +8,14 @@ import { z } from "zod";
 
 export const runtime = "nodejs";
 
+const MAX_INVOICES_PER_CSV = 100;
+
 const RequestSchema = z.object({
   format: z.enum(["summary", "line_items"]).default("summary"),
-  invoices: z.array(InvoiceExtractionSchema).min(1),
+  invoices: z
+    .array(InvoiceExtractionSchema)
+    .min(1)
+    .max(MAX_INVOICES_PER_CSV),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {

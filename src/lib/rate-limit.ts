@@ -10,6 +10,13 @@
  * Extraction of client IP: prefer `x-forwarded-for` first hop, then
  * `x-real-ip`, then the connection address. Edge platforms set at least
  * one of these.
+ *
+ * Memory safety: stale buckets (all timestamps older than the widest
+ * window) are pruned opportunistically on every `check()` call — bounded
+ * to a small sample so one call can't stall. Under a DDoS with many
+ * unique IPs, the Map still grows during an active window, but empties
+ * automatically when traffic subsides. Fluid Compute instances recycle
+ * often enough that hard bounds are unnecessary for this scope.
  */
 
 export interface RateLimitOptions {
@@ -25,9 +32,23 @@ export interface RateLimitResult {
 }
 
 const buckets = new Map<string, number[]>();
+const MAX_WINDOW_MS = 24 * 60 * 60 * 1000;
+const EVICTION_SAMPLE = 32;
+
+function evictStale(now: number): void {
+  let inspected = 0;
+  const cutoff = now - MAX_WINDOW_MS;
+  for (const [key, history] of buckets) {
+    if (inspected >= EVICTION_SAMPLE) break;
+    inspected++;
+    const lastSeen = history[history.length - 1] ?? 0;
+    if (lastSeen < cutoff) buckets.delete(key);
+  }
+}
 
 export function check(key: string, opts: RateLimitOptions): RateLimitResult {
   const now = Date.now();
+  evictStale(now);
   const windowStart = now - opts.windowMs;
   const history = buckets.get(key) ?? [];
   const recent = history.filter((t) => t > windowStart);
@@ -96,8 +117,17 @@ export const INQUIRY_LIMIT: RateLimitOptions = {
   windowMs: 60 * 60 * 1000,
 };
 
+export const EXTRACT_LIMIT: RateLimitOptions = {
+  limit: 20,
+  windowMs: 60 * 60 * 1000,
+};
+
 export function inquiryLimit(ip: string): RateLimitResult {
   return check(`inquiry:${ip}`, INQUIRY_LIMIT);
+}
+
+export function extractLimit(ip: string): RateLimitResult {
+  return check(`extract:${ip}`, EXTRACT_LIMIT);
 }
 
 export function resetForTests(): void {

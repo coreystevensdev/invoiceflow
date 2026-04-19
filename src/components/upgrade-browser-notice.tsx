@@ -16,7 +16,7 @@ const MIN_MAJORS: Record<string, number> = {
 };
 
 function assessSupport(ua: string, browser: string | undefined, major: string | undefined): SupportAssessment {
-  if (/MSIE |Trident\//.test(ua)) {
+  if (/\bMSIE\s|\bTrident\//.test(ua)) {
     return {
       supported: false,
       reason: "Internet Explorer is not supported. It stopped receiving security updates in 2022.",
