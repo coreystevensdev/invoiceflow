@@ -405,6 +405,7 @@ function FieldRow({
   money?: boolean;
 }) {
   const reasoningId = useId();
+  const [escapeDismissed, setEscapeDismissed] = useState(false);
   const value =
     field.value === null || field.value === undefined
       ? "—"
@@ -430,8 +431,29 @@ function FieldRow({
         ? "Medium"
         : "Low";
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape" && field.reasoning && !escapeDismissed) {
+      event.stopPropagation();
+      setEscapeDismissed(true);
+    }
+  };
+
+  const resetDismissal = () => {
+    if (escapeDismissed) setEscapeDismissed(false);
+  };
+
+  const tooltipVisibility = escapeDismissed
+    ? "hidden"
+    : "hidden group-hover:block group-focus-within:block";
+
   return (
-    <div className="group relative">
+    <div
+      className="group relative"
+      tabIndex={field.reasoning ? 0 : undefined}
+      onKeyDown={handleKeyDown}
+      onFocus={resetDismissal}
+      onMouseEnter={resetDismissal}
+    >
       <dt className="text-xs uppercase tracking-wide text-zinc-500">{label}</dt>
       <dd
         className="mt-1 flex items-center gap-2 text-lg font-medium"
@@ -450,7 +472,7 @@ function FieldRow({
         <div
           id={reasoningId}
           role="tooltip"
-          className="pointer-events-none absolute left-0 top-full z-10 mt-1 hidden w-80 rounded-lg bg-zinc-900 p-3 text-xs text-white shadow-lg group-hover:block group-focus-within:block dark:bg-zinc-100 dark:text-zinc-900"
+          className={`pointer-events-none absolute left-0 top-full z-10 mt-1 w-80 rounded-lg bg-zinc-900 p-3 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900 ${tooltipVisibility}`}
         >
           {field.reasoning}
         </div>
