@@ -167,3 +167,7 @@ Documented using the [BMad Method](https://docs.bmad-method.org/) for traceable 
 - [`brainstorming-session-2026-04-18-0755.md`](./_bmad-output/brainstorming/brainstorming-session-2026-04-18-0755.md) — Idea generation + persona-driven filtering
 - [`invoiceflow-technical-reference.md`](./_bmad-output/implementation-artifacts/invoiceflow-technical-reference.md) — Prompt + schema + cost model reference
 - [`spec-sunday-quality-bar-polish.md`](./_bmad-output/implementation-artifacts/spec-sunday-quality-bar-polish.md) — Post-MVP polish spec (a11y, CSP, SEO, typed errors, cost caps)
+
+## Sister project
+
+**[TellSight](https://github.com/CoreyStevensDev/saas-analytics-dashboard)** — AI-powered analytics dashboard for SMBs. Same Claude + privacy-first thesis (stats-only to the LLM, never raw rows) applied to *interpreting* business data rather than *extracting* it. The two are designed to compose: InvoiceFlow turns PDF invoices into CSVs, TellSight reads CSVs and explains what's in them.
