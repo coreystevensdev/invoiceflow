@@ -12,6 +12,8 @@ import type { ExtractResponse } from "./api/extract/route";
 import type { InvoiceExtraction, ExtractionFlag } from "@/lib/claude";
 import type { ExtractionErrorCode } from "@/lib/errors";
 import { ErrorState } from "@/components/error-state";
+import { PrivacySection } from "@/components/privacy-section";
+import { TrustStrip } from "@/components/trust-strip";
 
 type Status =
   | { kind: "idle" }
@@ -216,6 +218,9 @@ export default function Home() {
             webhookStatus={webhookStatus}
           />
         )}
+
+        <TrustStrip />
+        <PrivacySection />
       </div>
 
       <footer className="mt-auto border-t border-zinc-200 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
