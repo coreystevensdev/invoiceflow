@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# gauntlet PDFs and other extraction fixtures (may contain real invoice content;
+# zero-retention posture forbids committing PDF bytes or extracted invoice data)
+/_fixtures/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
