@@ -19,7 +19,8 @@ export type ExtractionErrorCode =
   | "model-API-failure"
   | "rate-limited"
   | "extraction-timeout"
-  | "cost-budget-exceeded";
+  | "cost-budget-exceeded"
+  | "monthly-budget-exhausted";
 
 export interface ErrorDescription {
   title: string;
@@ -85,6 +86,13 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
       nextStep:
         "Check whether the PDF is unusually large or complex. If it's legitimate, contact the operator to raise the cap.",
     },
+    "monthly-budget-exhausted": {
+      title: "Free tier exhausted for the month",
+      message:
+        "InvoiceFlow's free tier is funded by a fixed monthly compute budget. The current month's budget is gone — it resets on the 1st.",
+      nextStep:
+        "Want unlimited extraction with no monthly ceiling? TellSight reads spreadsheets the same way and runs on metered billing. Same Claude, same privacy posture.",
+    },
   };
 
 export const STATUS_BY_CODE: Record<ExtractionErrorCode, number> = {
@@ -96,6 +104,7 @@ export const STATUS_BY_CODE: Record<ExtractionErrorCode, number> = {
   "rate-limited": 429,
   "extraction-timeout": 504,
   "cost-budget-exceeded": 429,
+  "monthly-budget-exhausted": 429,
 };
 
 export function describeError(code: ExtractionErrorCode): ErrorDescription {

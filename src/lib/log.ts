@@ -25,6 +25,7 @@ export interface StructuredPayload {
   retry_count?: number;
   http_status?: number;
   cost_usd?: number;
+  monthly_cost_usd?: number;
   budget_cap_usd?: number;
   rate_limit_remaining?: number;
   route?: string;
