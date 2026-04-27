@@ -2,7 +2,12 @@ import Anthropic, { APIError } from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { ExtractionError } from "./errors";
-import { computeCost, exceedsBudget, recordCost } from "./cost";
+import {
+  computeCost,
+  exceedsBudget,
+  recordCost,
+  recordMonthlyCost,
+} from "./cost";
 import type { Logger } from "./log";
 
 const ConfidenceEnum = z.enum(["high", "medium", "low"]);
@@ -217,6 +222,7 @@ export async function extractInvoice(
           );
         }
         recordCost(cost_usd);
+        recordMonthlyCost(cost_usd);
       }
 
       return {

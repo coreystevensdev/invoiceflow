@@ -21,6 +21,14 @@ export function getSiteUrl(): string {
   return "http://localhost:3000";
 }
 
+// TODO: Update once TellSight no-account demo deploys (target 2026-05-04).
+// Reused by Story 2.2 (CSV success CTA) and Story 2.0 (`monthly-budget-exhausted` error CTA).
+export const TELLSIGHT_DEMO_URL = "https://tellsight.example.com/demo";
+
+export function isTellSightDemoUrlConfigured(): boolean {
+  return !TELLSIGHT_DEMO_URL.includes("example.com");
+}
+
 export interface SoftwareApplicationSchema {
   "@context": "https://schema.org";
   "@type": "SoftwareApplication";

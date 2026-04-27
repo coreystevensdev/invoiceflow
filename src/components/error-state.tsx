@@ -1,4 +1,5 @@
 import { describeError, type ExtractionErrorCode } from "@/lib/errors";
+import { TELLSIGHT_DEMO_URL, isTellSightDemoUrlConfigured } from "@/lib/site";
 
 interface ErrorStateProps {
   code: ExtractionErrorCode;
@@ -16,6 +17,7 @@ const ICON_BY_CODE: Record<ExtractionErrorCode, string> = {
   "rate-limited": "⏱",
   "extraction-timeout": "⏱",
   "cost-budget-exceeded": "⚠",
+  "monthly-budget-exhausted": "⚠",
 };
 
 export function ErrorState({
@@ -26,6 +28,8 @@ export function ErrorState({
 }: ErrorStateProps) {
   const description = describeError(code);
   const icon = ICON_BY_CODE[code];
+  const showTellSightCta =
+    code === "monthly-budget-exhausted" && isTellSightDemoUrlConfigured();
   return (
     <div
       role="alert"
@@ -40,7 +44,23 @@ export function ErrorState({
       </p>
       <p className="mt-2 text-sm">{description.message}</p>
       <p className="mt-2 text-sm font-medium">
-        What to try: <span className="font-normal">{description.nextStep}</span>
+        What to try:{" "}
+        <span className="font-normal">
+          {description.nextStep}
+          {showTellSightCta && (
+            <>
+              {" "}
+              <a
+                href={TELLSIGHT_DEMO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Try TellSight →
+              </a>
+            </>
+          )}
+        </span>
       </p>
       {typeof retryAfterSeconds === "number" && retryAfterSeconds > 0 && (
         <p className="mt-2 text-xs">

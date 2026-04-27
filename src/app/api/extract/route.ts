@@ -15,8 +15,9 @@ import {
   toErrorResponse,
   type ExtractionErrorCode,
 } from "@/lib/errors";
-import { createLogger } from "@/lib/log";
+import { createLogger, type StructuredPayload } from "@/lib/log";
 import { clientIpFrom, extractLimit } from "@/lib/rate-limit";
+import { exceedsMonthlyBudget, getMonthlyCumulativeUsd } from "@/lib/cost";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -75,12 +76,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       messageOverride: opts.message,
       retryAfterSeconds: opts.retryAfterSeconds,
     });
-    logger.warn({
+    const warnPayload: StructuredPayload = {
       route: "extract",
       category: code,
       http_status: status,
       duration_ms: Date.now() - start,
-    });
+    };
+    if (code === "monthly-budget-exhausted") {
+      warnPayload.monthly_cost_usd = getMonthlyCumulativeUsd();
+    }
+    logger.warn(warnPayload);
     return NextResponse.json(body, { status, headers });
   };
 
@@ -90,6 +95,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return respond("rate-limited", {
       retryAfterSeconds: limit.retryAfterSeconds,
     });
+  }
+
+  if (exceedsMonthlyBudget()) {
+    return respond("monthly-budget-exhausted");
   }
 
   const formData = await request.formData().catch(() => null);
