@@ -25,8 +25,25 @@ export function getSiteUrl(): string {
 // Reused by Story 2.2 (CSV success CTA) and Story 2.0 (`monthly-budget-exhausted` error CTA).
 export const TELLSIGHT_DEMO_URL = "https://tellsight.example.com/demo";
 
+const TELLSIGHT_DEMO_URL_PLACEHOLDER = "https://tellsight.example.com/demo";
+
+/**
+ * True only when `TELLSIGHT_DEMO_URL` has been overridden away from the
+ * literal placeholder *and* parses as an HTTPS URL. Any other shape —
+ * placeholder substring match, `javascript:` scheme, malformed URL —
+ * reports false so the UI suppresses the link rather than rendering an
+ * unsafe or broken anchor target. The HTTPS check matters because the
+ * strict CSP does **not** block `javascript:` href on a user-clicked
+ * anchor; the guard is a defense-in-depth.
+ */
 export function isTellSightDemoUrlConfigured(): boolean {
-  return !TELLSIGHT_DEMO_URL.includes("example.com");
+  if (TELLSIGHT_DEMO_URL === TELLSIGHT_DEMO_URL_PLACEHOLDER) return false;
+  try {
+    const url = new URL(TELLSIGHT_DEMO_URL);
+    return url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export interface SoftwareApplicationSchema {
