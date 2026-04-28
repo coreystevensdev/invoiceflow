@@ -17,7 +17,11 @@ import {
 } from "@/lib/errors";
 import { createLogger, type StructuredPayload } from "@/lib/log";
 import { clientIpFrom, extractLimit } from "@/lib/rate-limit";
-import { exceedsMonthlyBudget, getMonthlyCumulativeUsd } from "@/lib/cost";
+import {
+  consumeMonthlyBudgetMisconfig,
+  exceedsMonthlyBudget,
+  getMonthlyCumulativeUsd,
+} from "@/lib/cost";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -81,10 +85,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       category: code,
       http_status: status,
       duration_ms: Date.now() - start,
+      ...(code === "monthly-budget-exhausted"
+        ? { monthly_cost_usd: getMonthlyCumulativeUsd() }
+        : {}),
     };
-    if (code === "monthly-budget-exhausted") {
-      warnPayload.monthly_cost_usd = getMonthlyCumulativeUsd();
-    }
     logger.warn(warnPayload);
     return NextResponse.json(body, { status, headers });
   };
@@ -97,7 +101,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   }
 
-  if (exceedsMonthlyBudget()) {
+  const isMonthlyExhausted = exceedsMonthlyBudget();
+  const misconfig = consumeMonthlyBudgetMisconfig();
+  if (misconfig) {
+    logger.warn({
+      route: "extract",
+      category: "monthly-budget-misconfig",
+      note: `MONTHLY_BUDGET_USD=${JSON.stringify(misconfig.raw)} (${misconfig.reason}); falling back to default`,
+    });
+  }
+  if (isMonthlyExhausted) {
     return respond("monthly-budget-exhausted");
   }
 

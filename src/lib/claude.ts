@@ -207,6 +207,11 @@ export async function extractInvoice(
 
       const cost_usd = computeCost(usage, model);
       if (cost_usd !== null) {
+        // Anthropic bills tokens regardless of which path we throw on,
+        // so the monthly aggregate must include over-cap requests too.
+        // Otherwise an attacker spamming just-over-cap requests burns
+        // the budget invisibly to the monthly tracker.
+        recordMonthlyCost(cost_usd);
         const budget = exceedsBudget(cost_usd);
         if (budget.exceeded) {
           logger?.warn({
@@ -222,7 +227,6 @@ export async function extractInvoice(
           );
         }
         recordCost(cost_usd);
-        recordMonthlyCost(cost_usd);
       }
 
       return {

@@ -20,6 +20,9 @@ const ICON_BY_CODE: Record<ExtractionErrorCode, string> = {
   "monthly-budget-exhausted": "⚠",
 };
 
+const MONTHLY_BUDGET_NEXT_STEP_NO_LINK =
+  "The free tier resets on the 1st of next month. If you need extraction sooner, contact the operator to raise the cap.";
+
 export function ErrorState({
   code,
   correlationId,
@@ -30,6 +33,10 @@ export function ErrorState({
   const icon = ICON_BY_CODE[code];
   const showTellSightCta =
     code === "monthly-budget-exhausted" && isTellSightDemoUrlConfigured();
+  const nextStepText =
+    code === "monthly-budget-exhausted" && !showTellSightCta
+      ? MONTHLY_BUDGET_NEXT_STEP_NO_LINK
+      : description.nextStep;
   return (
     <div
       role="alert"
@@ -46,7 +53,7 @@ export function ErrorState({
       <p className="mt-2 text-sm font-medium">
         What to try:{" "}
         <span className="font-normal">
-          {description.nextStep}
+          {nextStepText}
           {showTellSightCta && (
             <>
               {" "}
@@ -54,9 +61,11 @@ export function ErrorState({
                 href={TELLSIGHT_DEMO_URL}
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Try TellSight (opens in a new tab)"
                 className="underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2"
               >
-                Try TellSight →
+                Try TellSight{" "}
+                <span aria-hidden="true">→</span>
               </a>
             </>
           )}

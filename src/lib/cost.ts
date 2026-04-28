@@ -25,16 +25,37 @@
  *     month in UTC (`YYYY-MM`). `resolveCurrentMonth()` is the single
  *     rollover point — every public monthly function calls it first so
  *     observability getters never return stale cumulative data after a
- *     month boundary. The same per-instance scaling caveat applies:
- *     under horizontal scale the effective ceiling is roughly
- *     `instance_count × MONTHLY_BUDGET_USD`. Documented trade-off
- *     matching the per-instance rate limiter; do not introduce
- *     Redis/Upstash/Vercel KV without an explicit growth-tier decision
- *     (see project-context.md).
+ *     month boundary.
+ *   - The "$MONTHLY_BUDGET_USD" ceiling is *soft* by design. Three
+ *     sources of overshoot, all documented and accepted:
+ *       (1) Horizontal scale: per-instance accounting. Under N warm
+ *           Fluid Compute instances, effective ceiling is
+ *           `N × MONTHLY_BUDGET_USD`. Matches the per-instance rate
+ *           limiter trade-off (see rate-limit.ts).
+ *       (2) Intra-instance concurrency: `exceedsMonthlyBudget()` checks
+ *           prior cumulative; up to K concurrent in-flight requests can
+ *           each pass the gate before the first one calls
+ *           `recordMonthlyCost()`. Effective overshoot per instance is
+ *           bounded by `K × max_single_cost` where K is the concurrent
+ *           request count and `max_single_cost ≤ ABSOLUTE_CEILING_USD`.
+ *       (3) Crossing-request boundary: the gate compares prior
+ *           cumulative to the budget. The request that crosses the
+ *           budget always completes (and records the cost that produced
+ *           the crossing). The *next* request is the one that gets
+ *           rejected. So actual spend can land at
+ *           `MONTHLY_BUDGET_USD + max_single_cost` even with no
+ *           concurrency.
+ *     For a portfolio-tier tool this softness is acceptable; do not
+ *     introduce Redis/Upstash/Vercel KV without an explicit growth-tier
+ *     decision (see project-context.md).
  *   - `getMonthlyBudgetUsd()` parses `MONTHLY_BUDGET_USD` defensively:
- *     missing, empty, NaN, or ≤ 0 inputs all fall back to
+ *     missing, empty, non-numeric, NaN, or ≤ 0 inputs all fall back to
  *     `MONTHLY_BUDGET_USD_DEFAULT`. A malformed env var must not
- *     produce a zero-budget DoS-of-self.
+ *     produce a zero-budget DoS-of-self. Misconfiguration is recorded
+ *     in a one-shot diagnostic that the route handler consumes and
+ *     emits as a structured warn line (see
+ *     `consumeMonthlyBudgetMisconfig()`); silent fallback would mask
+ *     "why did my $50 budget reset to $25?" support tickets.
  *   - The monthly check is evaluated **pre-call** in the route handler
  *     (cumulative state is already known); the per-request rolling
  *     median + absolute ceiling are evaluated **post-call**. A single
@@ -140,22 +161,57 @@ export function resetHistoryForTests(): void {
   history.length = 0;
 }
 
+export type MonthlyBudgetMisconfigReason =
+  | "non-numeric"
+  | "non-positive";
+
+interface MonthlyBudgetMisconfig {
+  raw: string;
+  reason: MonthlyBudgetMisconfigReason;
+}
+
+let pendingMisconfig: MonthlyBudgetMisconfig | null = null;
+
 /**
- * Reads `MONTHLY_BUDGET_USD`, parses as float, falls back to
- * `MONTHLY_BUDGET_USD_DEFAULT` on missing/invalid/non-positive input.
- * Fail-safe: a malformed env var must not produce a zero-budget
+ * Reads `MONTHLY_BUDGET_USD`, parses as a strict numeric literal, falls
+ * back to `MONTHLY_BUDGET_USD_DEFAULT` on missing/invalid/non-positive
+ * input. Fail-safe: a malformed env var must not produce a zero-budget
  * DoS-of-self. To "disable" the ceiling, set a deliberately large value.
+ *
+ * Strict parse rejects values `parseFloat` would silently accept (e.g.
+ * `"50 USD"` → 50). Operator typos that mask intent must surface.
+ *
+ * On fallback, records a one-shot diagnostic for the route handler to
+ * emit. Trailing/leading whitespace is tolerated to match shell quoting
+ * conventions but anything else (units, garbage) trips the strict regex.
  */
 export function getMonthlyBudgetUsd(): number {
   const raw = process.env.MONTHLY_BUDGET_USD;
   if (typeof raw !== "string" || raw.length === 0) {
     return MONTHLY_BUDGET_USD_DEFAULT;
   }
-  const parsed = Number.parseFloat(raw);
+  const trimmed = raw.trim();
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) {
+    pendingMisconfig ??= { raw, reason: "non-numeric" };
+    return MONTHLY_BUDGET_USD_DEFAULT;
+  }
+  const parsed = Number.parseFloat(trimmed);
   if (!Number.isFinite(parsed) || parsed <= 0) {
+    pendingMisconfig ??= { raw, reason: "non-positive" };
     return MONTHLY_BUDGET_USD_DEFAULT;
   }
   return parsed;
+}
+
+/**
+ * Returns the pending misconfiguration diagnostic (if any) and clears
+ * it. Route handler emits a one-time structured warn line so silent
+ * env-var fallback doesn't mask operator typos.
+ */
+export function consumeMonthlyBudgetMisconfig(): MonthlyBudgetMisconfig | null {
+  const diagnostic = pendingMisconfig;
+  pendingMisconfig = null;
+  return diagnostic;
 }
 
 interface MonthlyState {
@@ -211,4 +267,5 @@ export function getMonthlyCumulativeUsd(): number {
 export function resetMonthlyStateForTests(): void {
   monthlyState.monthKey = currentMonthKey();
   monthlyState.cumulativeUsd = 0;
+  pendingMisconfig = null;
 }
