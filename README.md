@@ -1,8 +1,17 @@
 # InvoiceFlow
 
-Extract structured data from PDF invoices with Claude. Drop a PDF, see vendor, line items, tax, total, and due date with per-field reasoning in under five seconds. Export QuickBooks-ready or Xero-ready CSV, or POST the payload to a webhook.
+[![Live demo](https://img.shields.io/badge/demo-invoiceflow.vercel.app-2563eb?style=flat)](https://invoiceflow.vercel.app)
+[![Build](https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg)](https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-No account. No database. No platform.
+Drop a PDF invoice and get vendor, line items, tax, total, and due date back as structured JSON in about five seconds. Each field includes the source text Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL.
+
+There's no login or database. PDFs process in memory inside a single Vercel Function and disappear when the request ends.
+
+> **Live demo:** https://invoiceflow.vercel.app
+> **60-second walkthrough:** [Loom](https://www.loom.com/share/REPLACE-WITH-LOOM-ID)
+
+![Extraction UI showing per-field reasoning tooltip](.github/assets/extraction-screenshot.png)
 
 **Stack:** Next.js 16 · React 19 · TypeScript · Tailwind 4 · `@anthropic-ai/sdk` · `pdf-parse` · `zod`
 
@@ -10,7 +19,8 @@ No account. No database. No platform.
 
 ```bash
 cp .env.example .env.local
-# Edit .env.local and paste your Anthropic API key
+# paste your Anthropic API key into .env.local
+npm install
 npm run dev
 ```
 
@@ -19,133 +29,142 @@ Open http://localhost:3000 and drop a PDF.
 ## Routes
 
 | Route | Method | What it does |
-|-------|--------|--------------|
+|---|---|---|
 | `/` | GET | Landing + extraction UI |
-| `/api/extract` | POST (multipart) | `pdf` form field → `ExtractResponse` JSON |
-| `/api/csv` | POST (JSON) | `{invoices, format: "summary" \| "line_items"}` → CSV download |
-| `/api/webhook` | POST (JSON) | `{webhook_url, invoice, verbose?}` → fires webhook |
+| `/api/extract` | POST (multipart) | `pdf` form field returns an `ExtractResponse` JSON |
+| `/api/csv` | POST (JSON) | `{invoices, format: "summary" \| "line_items"}` returns a CSV download |
+| `/api/webhook` | POST (JSON) | `{webhook_url, invoice, verbose?}` POSTs to your URL |
 | `/robots.txt`, `/sitemap.xml`, `/schema.jsonld` | GET | SEO surfaces |
 
-Every API response carries a `correlation_id` (UUID v4) for observability and support follow-up. Errors are typed — see `src/lib/errors.ts`.
+Every API response carries a `correlation_id` (UUID v4) for log lookups. Errors are typed; the discriminated union lives in `src/lib/errors.ts`.
 
-## Architecture
-
-```
-src/
-├── app/
-│   ├── page.tsx                # Upload + reasoning-tooltip results UI
-│   ├── layout.tsx              # Metadata, OG, Twitter, canonical, JSON-LD link
-│   ├── globals.css             # :focus-visible ring + prefers-reduced-motion guard
-│   ├── api/
-│   │   ├── extract/route.ts    # PDF → Claude → structured JSON
-│   │   ├── csv/route.ts        # Invoice JSON → CSV (QBO or Xero schema)
-│   │   └── webhook/route.ts    # Invoice JSON → POST to user URL (rate-limited)
-│   ├── robots.ts, sitemap.ts
-│   └── schema.jsonld/route.ts  # SoftwareApplication structured data
-├── components/
-│   ├── error-state.tsx         # Typed ErrorState (all 8 categories)
-│   └── upgrade-browser-notice.tsx
-├── lib/
-│   ├── claude.ts               # System prompt + Zod schema + extractInvoice()
-│   ├── pdf.ts                  # pdf-parse wrapper with typed errors
-│   ├── validate.ts             # Deterministic cross-field flags
-│   ├── csv.ts                  # Summary + line-item CSV formatters
-│   ├── errors.ts               # ExtractionErrorCode union + toErrorResponse
-│   ├── log.ts                  # Structured correlation-ID logger
-│   ├── cost.ts                 # Rolling-median cost ceiling
-│   ├── rate-limit.ts           # Sliding-window in-memory limiter
-│   └── site.ts                 # Canonical URL + metadata helpers
-└── proxy.ts                    # Next.js 16 middleware: CSP nonce, HSTS, headers
-```
-
-### Key design decisions
-
-- **Per-field confidence + reasoning.** Every extracted field carries its own `{value, confidence, reasoning}` tuple. Hover or focus a field to see Claude's source-cited reasoning. The reasoning tooltip is keyboard-accessible (Tab to reveal, Escape to dismiss) and screen-reader-wired via `aria-describedby`.
-- **Two-pass validation.** Claude flags cross-field issues in the extraction; a deterministic pass in `lib/validate.ts` runs independently and merges findings. Doubled detection is stronger than either alone.
-- **Zero-retention architecture.** No database, no auth, no content logging. Uploaded PDFs process in-memory within a single Vercel Function execution; only metadata (size, page count, correlation ID, error category) reaches the logs.
-- **Typed error taxonomy.** Eight categorized error codes (`corrupt-PDF`, `oversized-PDF`, `non-PDF`, `not-an-invoice`, `model-API-failure`, `rate-limited`, `extraction-timeout`, `cost-budget-exceeded`) each render a user-readable title + cause + next step via the shared `ErrorState` component. No raw 5xx surfaced.
-- **Strict nonce-based CSP** via `src/proxy.ts`. No `'unsafe-inline'`; per-request nonce; HSTS, Referrer-Policy, X-Content-Type-Options, Permissions-Policy.
-- **WCAG 2.1 AA baseline.** Keyboard-operable, `aria-live` status announcements, icon+text state communication (never color-only), `prefers-reduced-motion` honored globally, visible focus rings on every interactive element.
-- **Universal CSV schema.** Imports into any current QBO CSV importer, into Xero natively, and opens cleanly in Excel / Google Sheets. ISO-8601 dates, numeric money, UTF-8 with BOM.
-- **Prompt caching on the system prompt.** Ephemeral cache reduces cost on repeat calls by ~90% on the system-prompt tokens.
-- **Structured output via `messages.parse` + `zodOutputFormat`.** The SDK validates and parses Claude's response against the Zod schema; no manual JSON parsing.
-- **Cost + retry safety.** 90-second Claude timeout, max 2 retries with exponential backoff, 3× rolling-median cost ceiling with an absolute first-request guard. Runaway extractions surface as `cost-budget-exceeded`.
-
-### Request flow
+## How it works
 
 ```
 Browser              Vercel Function                       Anthropic API
   │                         │                                    │
   │ ── POST PDF ─────────>  │                                    │
-  │                         │  extractLimit(ip)                  │
-  │                         │  pdf-parse → text, num_pages       │
+  │                         │  rate-limit by IP                  │
+  │                         │  pdf-parse → text + page count     │
   │                         │                                    │
   │                         │ ── messages.parse(sys+user) ────>  │
   │                         │   system prompt cached             │
-  │                         │   Zod schema = typed output        │
+  │                         │   Zod schema enforces output       │
   │                         │ <── parsed_output, usage ────────  │
   │                         │                                    │
-  │                         │  deterministicFlags + mergeFlags   │
-  │                         │  computeCost → exceedsBudget?      │
-  │                         │  recordCost, logger.info(...)      │
+  │                         │  deterministic flags + merge       │
+  │                         │  cost guard: 3× rolling median?    │
+  │                         │  log usage by correlation id       │
   │ <── JSON + corr. id ──  │                                    │
 ```
 
-Everything inside the Vercel Function is a single Node.js process — no queue, no worker, no database. Fluid Compute reuses the instance across concurrent requests, so the in-memory cost history and rate-limit buckets persist across warm invocations.
+Everything inside the function is one Node.js process. No queue, no worker, no background job. Vercel's Fluid Compute reuses the instance across concurrent requests, so the in-memory cost history and rate-limit buckets persist across warm invocations (per-instance, not globally — see "Known limitations").
+
+## File layout
+
+```
+src/
+├── app/
+│   ├── page.tsx                  Upload UI + reasoning tooltips
+│   ├── layout.tsx                Metadata, OG, Twitter, JSON-LD link
+│   ├── globals.css               :focus-visible ring + reduced-motion guard
+│   ├── api/extract/route.ts      PDF → Claude → structured JSON
+│   ├── api/csv/route.ts          Invoice JSON → CSV (QBO or Xero)
+│   ├── api/webhook/route.ts      Invoice JSON → POST to user URL
+│   └── schema.jsonld/route.ts    SoftwareApplication structured data
+├── components/
+│   ├── error-state.tsx           ErrorState for all 8 error categories
+│   └── upgrade-browser-notice.tsx
+├── lib/
+│   ├── claude.ts                 System prompt + Zod schema + extractInvoice()
+│   ├── pdf.ts                    pdf-parse wrapper with typed errors
+│   ├── validate.ts               Cross-field validation
+│   ├── csv.ts                    Summary + line-item CSV formatters
+│   ├── errors.ts                 ExtractionErrorCode union + toErrorResponse
+│   ├── log.ts                    Structured correlation-ID logger (allowlist)
+│   ├── cost.ts                   Rolling-median cost ceiling
+│   ├── rate-limit.ts             Sliding-window limiter
+│   └── site.ts                   Canonical URL helper
+└── proxy.ts                      Next.js 16 middleware: nonce CSP, HSTS
+```
+
+## Design decisions worth calling out
+
+**Per-field confidence and reasoning.** Every extracted field is a `{value, confidence, reasoning}` tuple. Hover or focus a field to see the source-cited reasoning. The tooltip is keyboard-accessible (Tab to reveal, Escape to dismiss) and wired to the field via `aria-describedby`.
+
+**Two-pass validation.** Claude flags cross-field issues during extraction. A deterministic pass in `lib/validate.ts` runs independently and merges its findings. Either alone misses things the other catches.
+
+**Zero retention.** No database, no auth, no content logging. Uploaded PDFs process in memory within a single Vercel Function execution. The structured logger in `src/lib/log.ts` only emits an allowlisted set of metadata keys: `pdf_size_bytes`, `pdf_num_pages`, `correlation_id`, `error_code`, `cost_usd`, `retry_count`. Field values and PDF bytes never reach the log stream.
+
+**Typed error taxonomy.** Eight error codes (`corrupt-PDF`, `oversized-PDF`, `non-PDF`, `not-an-invoice`, `model-API-failure`, `rate-limited`, `extraction-timeout`, `cost-budget-exceeded`) each map to a user-readable title, cause, and next-step copy via the shared `ErrorState` component. Raw 5xx responses never reach the client. Adding a new error path is a `Record<...>`-typed change that won't compile if you forget any of the three places it has to be wired.
+
+**Strict nonce-based CSP.** `src/proxy.ts` generates a per-request nonce, sets the CSP header, and ships HSTS, Referrer-Policy, X-Content-Type-Options, and Permissions-Policy alongside it. No `'unsafe-inline'`. JSON-LD structured data is served at a dedicated `/schema.jsonld` route rather than as an inline `<script>`, because the strict CSP would block it.
+
+**WCAG 2.1 AA baseline.** Keyboard-operable everywhere, `aria-live` status updates during extraction, icon and text status indicators (color is never the only signal), `prefers-reduced-motion` honored globally, focus rings visible on every interactive element.
+
+**Universal CSV schema.** Imports cleanly into QuickBooks Online's CSV importer, into Xero, and opens in Excel and Google Sheets. ISO-8601 dates, numeric money, UTF-8 with BOM.
+
+**Prompt caching.** The ~500-token system prompt uses `cache_control: { type: "ephemeral" }`. After the first call in a cache window, the system-prompt fraction of cost drops by roughly 90%.
+
+**Structured output.** `messages.parse()` plus `zodOutputFormat(InvoiceExtractionSchema)` validates Claude's response against the Zod schema inside the SDK. No hand-rolled JSON parsing or defensive type guards scattered through the codebase.
+
+**Cost and retry safety.** 90-second Claude timeout, max 2 retries with exponential backoff, 3× rolling-median cost ceiling, and an absolute first-request guard. Constants and roles in the table below.
 
 ## Why Claude
 
-Claude was the direct choice for five reasons, rank-ordered:
+I picked Claude as the reader rather than building OCR plus rules because:
 
-1. **Structure, not just characters.** OCR alone returns strings; distinguishing vendor name from line-item description from grand total requires a reader who understands what an invoice *is*. A frontier LLM is that reader out of the box — no training data, no rule set, no fine-tuning.
-2. **Structured output with type safety.** `messages.parse(...)` + `zodOutputFormat(InvoiceExtractionSchema)` validates Claude's response against the Zod schema inside the SDK. No manual JSON parsing, no defensive type guards scattered through the codebase. Malformed output throws at the SDK boundary.
-3. **Reasoning is native, not bolted on.** Every field carries a `reasoning` string citing the source text. The per-field tooltip UI is thin glass; the credibility lives in the model's self-report.
-4. **Prompt caching is first-class.** The ~500-token system prompt is cached via `cache_control: { type: "ephemeral" }`. Steady-state cost drops roughly by the system-prompt fraction after the first call in a cache window.
-5. **Confidence + cross-field flags come from the same call.** One extraction returns value, confidence, reasoning, AND validation flags. No second model, no ensembling.
+1. An invoice's structure (vendor name vs line item vs grand total) requires understanding what an invoice *is*, not just transcribing characters. Frontier LLMs do this without training data or per-layout rules.
+2. `messages.parse(...)` with `zodOutputFormat(InvoiceExtractionSchema)` validates the response against a Zod schema inside the SDK. Malformed output throws at the SDK boundary, so the rest of the codebase can trust the shape.
+3. Each field comes back with its own reasoning string citing the source text. The tooltip UI is a thin renderer; the credibility comes from the model.
+4. Prompt caching is supported via `cache_control`. The system prompt is identical on every request, so cached tokens dominate after the first call.
+5. Confidence and cross-field flags come from the same call. No second model, no ensembling.
 
-**Alternatives considered and rejected:**
+Alternatives considered:
 
 | Option | Why not |
 |---|---|
-| OCR only (Tesseract, AWS Textract) | Returns characters; structure inference still needed. Would require a second model or per-layout rules. |
-| Rule-based PDF parsing (regex on extracted text) | Breaks on every new invoice layout. Maintenance cost is unbounded. |
-| Fine-tuned extraction model | Needs labeled data, retraining discipline, ML ops overhead. Wrong size for this scope. |
-| Other frontier LLMs (GPT-4 class, Gemini) | Comparable extraction quality. Anthropic's typed-Zod output helper + ephemeral caching tipped this direction. Model is env-swappable via `CLAUDE_MODEL` — the rest of the pipeline is vendor-neutral at the JSON-schema seam. |
+| OCR only (Tesseract, AWS Textract) | Returns characters. Structure inference still requires a second model or hand-written rules. |
+| Regex over extracted text | Breaks on every new invoice layout. Maintenance grows without bound. |
+| Fine-tuned extraction model | Needs labeled data and an ML ops loop. Out of scope for this scale. |
+| Other frontier LLMs (GPT-4 class, Gemini) | Quality is comparable. Anthropic's Zod output helper and ephemeral caching tipped the call. The model is env-swappable via `CLAUDE_MODEL`; the rest of the pipeline is vendor-neutral at the JSON-schema seam. |
 
 ## Cost model
 
-Per-extraction cost for a typical single-page PDF invoice (~1,500 input tokens, ~800 output tokens):
+Per-extraction cost for a typical single-page invoice (~1,500 input tokens, ~800 output tokens):
 
-| Model | Input $/MTok | Output $/MTok | Per-extraction | Steady state with prompt caching |
+| Model | Input $/MTok | Output $/MTok | Per extraction | Steady state with caching |
 |---|---|---|---|---|
-| `claude-haiku-4-5` | $1 | $5 | ≈ $0.006 | ≈ $0.005 |
-| `claude-sonnet-4-6` (default) | $3 | $15 | ≈ $0.017 | ≈ $0.014 |
-| `claude-opus-4-7` | $15 | $75 | ≈ $0.083 | ≈ $0.070 |
+| `claude-haiku-4-5` | $1 | $5 | ~ $0.006 | ~ $0.005 |
+| `claude-sonnet-4-6` (default) | $3 | $15 | ~ $0.017 | ~ $0.014 |
+| `claude-opus-4-7` | $15 | $75 | ~ $0.083 | ~ $0.070 |
 
-Sonnet 4.6 is the default because it clears the long tail — handwritten receipts, multi-page statements, non-English invoices — where Haiku tends to flag low-confidence. Opus is available via `CLAUDE_MODEL` when the extra accuracy is worth ~5× the spend.
+Sonnet 4.6 is the default because it handles the long tail (handwritten receipts, multi-page statements, non-English invoices) where Haiku tends to flag low confidence. Opus is available via `CLAUDE_MODEL` when the extra accuracy is worth roughly 5× the spend.
 
-**Defense in depth (`src/lib/claude.ts`, `src/lib/cost.ts`):**
+### Defense in depth
+
+Defined in `src/lib/claude.ts` and `src/lib/cost.ts`:
 
 | Guard | Value | Role |
 |---|---|---|
-| `EXTRACTION_MAX_TOKENS` | 4096 | Hard cap on output tokens per request. |
-| `EXTRACTION_MAX_RETRIES` | 2 | Transient failures retry twice with exponential backoff, then surface `model-API-failure`. |
-| `EXTRACTION_TIMEOUT_MS` | 90,000 | `AbortSignal.timeout`; slow calls fail as `extraction-timeout`. |
-| `ABSOLUTE_CEILING_USD` | $1.00 | Any single extraction above this aborts as `cost-budget-exceeded`. Catches the first request before any history exists. |
-| `CAP_MULTIPLIER × rolling median` | 3× | After a handful of extractions, requests costing >3× the observed median abort. Detects layout explosions, prompt-injection attempts that balloon output, or misconfigured prompts. |
+| `EXTRACTION_MAX_TOKENS` | 4096 | Hard cap on output tokens per request |
+| `EXTRACTION_MAX_RETRIES` | 2 | Transient failures retry twice with exponential backoff, then surface `model-API-failure` |
+| `EXTRACTION_TIMEOUT_MS` | 90,000 | `AbortSignal.timeout`; slow calls fail as `extraction-timeout` |
+| `ABSOLUTE_CEILING_USD` | $1.00 | Single extractions above this abort as `cost-budget-exceeded`. Catches the very first request before any history exists. |
+| `CAP_MULTIPLIER × rolling median` | 3× | After a few extractions, requests above 3× the median abort. Catches layout explosions, prompt-injection that balloons output, or misconfigured prompts. |
 
-Every request emits one structured JSON log line including `cost_usd`, `retry_count`, `pdf_size_bytes`, and `pdf_num_pages`. Operators can eyeball the distribution in Vercel logs without wiring a dashboard.
+Every request emits one structured JSON log line including `cost_usd`, `retry_count`, `pdf_size_bytes`, and `pdf_num_pages`. Operators can eyeball the distribution in Vercel logs without standing up a dashboard.
 
 ## Known limitations
 
-Honest gaps a reviewer should know about:
+A few honest gaps:
 
-- **No persistence.** Zero-retention is a feature, not a bug — no PDF content, no extracted fields, nothing touches disk. Any workflow needing history or resumability rebuilds on top.
-- **In-memory rate limiter + cost history.** Per Fluid Compute instance. The 20/hr extract cap is effectively 20/hr × instance count under horizontal scale. Upgrade path is Redis / Vercel KV.
-- **`pdf-parse` is text-only.** Image-only PDFs (scanned receipts without OCR) return `not-an-invoice`. Handwritten receipts need an OCR pre-pass — out of scope for this iteration.
-- **Model pricing is hard-coded in `src/lib/cost.ts`.** Add a pricing row when adopting a new model or the anomaly cap silently fails open (documented in the file header).
+- **No persistence.** Zero retention is a feature, but any workflow needing history or resume-on-failure has to be rebuilt on top.
+- **In-memory rate limiter and cost history.** Per Fluid Compute instance, not globally shared. The 20/hr extract cap is effectively 20/hr × instance count under horizontal scale. Migration target is Redis or Vercel KV.
+- **`pdf-parse` is text-only.** Image-only PDFs (scanned receipts without OCR) come back as `not-an-invoice`. Handwritten receipts need an OCR pre-pass that doesn't exist here yet.
+- **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
-- **No test suite yet.** The pure-logic files (`validate.ts`, `cost.ts`, `errors.ts`, `rate-limit.ts`) are structured for easy unit testing — next obvious addition.
+- **No automated test suite yet.** The pure-logic files (`validate.ts`, `cost.ts`, `errors.ts`, `rate-limit.ts`) are structured for unit testing. That's the next obvious addition; tracking it on the roadmap rather than committing skeleton tests that don't run.
 
 ## Deploy
 
@@ -154,20 +173,28 @@ npx vercel          # preview
 npx vercel --prod   # production
 ```
 
-Set `ANTHROPIC_API_KEY` in Vercel → Project → Settings → Environment Variables. Optional: `CLAUDE_MODEL` (default `claude-sonnet-4-6`), `SITE_URL`, `MAX_PDF_SIZE_MB`.
+Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-sonnet-4-6`), `SITE_URL`, `MAX_PDF_SIZE_MB`. See `.env.example`.
 
 ## Planning artifacts
 
-Documented using the [BMad Method](https://docs.bmad-method.org/) for traceable decision-making from concept to architecture.
+Documented using the [BMad Method](https://docs.bmad-method.org/) for traceable decision-making from product concept through architecture.
 
-- [`prd.md`](./_bmad-output/planning-artifacts/prd.md) — Product requirements: 48 FRs, 38 NFRs, 4 user journeys, domain scope boundaries
-- [`ux-design-specification.md`](./_bmad-output/planning-artifacts/ux-design-specification.md) — UX spec: personas, core experience, emotional register, pattern analysis, design system rationale, 4 journey flows (Mermaid), WCAG 2.1 AA strategy
-- [`architecture.md`](./_bmad-output/planning-artifacts/architecture.md) — Architecture decisions: FR/NFR coverage, technology stack rationale, implementation patterns with reference call sites, complete project tree, validation with honest gap analysis
+- [`prd.md`](./_bmad-output/planning-artifacts/prd.md) — 48 functional requirements, 38 non-functional, 4 user journeys, scope boundaries
+- [`ux-design-specification.md`](./_bmad-output/planning-artifacts/ux-design-specification.md) — personas, emotional register, design system rationale, journey flows, WCAG 2.1 AA strategy
+- [`architecture.md`](./_bmad-output/planning-artifacts/architecture.md) — FR/NFR coverage, stack rationale, implementation patterns with reference call sites, validation with gap analysis
 - [`research/domain-ap-automation-research-2026-04-18.md`](./_bmad-output/planning-artifacts/research/domain-ap-automation-research-2026-04-18.md) — AP automation domain research
-- [`brainstorming-session-2026-04-18-0755.md`](./_bmad-output/brainstorming/brainstorming-session-2026-04-18-0755.md) — Idea generation + persona-driven filtering
-- [`invoiceflow-technical-reference.md`](./_bmad-output/implementation-artifacts/invoiceflow-technical-reference.md) — Prompt + schema + cost model reference
-- [`spec-sunday-quality-bar-polish.md`](./_bmad-output/implementation-artifacts/spec-sunday-quality-bar-polish.md) — Post-MVP polish spec (a11y, CSP, SEO, typed errors, cost caps)
+- [`brainstorming-session-2026-04-18-0755.md`](./_bmad-output/brainstorming/brainstorming-session-2026-04-18-0755.md) — idea generation with persona-driven filtering
+- [`invoiceflow-technical-reference.md`](./_bmad-output/implementation-artifacts/invoiceflow-technical-reference.md) — prompt + schema + cost reference
+- [`spec-sunday-quality-bar-polish.md`](./_bmad-output/implementation-artifacts/spec-sunday-quality-bar-polish.md) — post-MVP polish spec
 
 ## Sister project
 
-**[TellSight](https://github.com/CoreyStevensDev/saas-analytics-dashboard)** — AI-powered analytics dashboard for SMBs. Same Claude + privacy-first thesis (stats-only to the LLM, never raw rows) applied to *interpreting* business data rather than *extracting* it. The two are designed to compose: InvoiceFlow turns PDF invoices into CSVs, TellSight reads CSVs and explains what's in them.
+[**TellSight**](https://github.com/CoreyStevensDev/saas-analytics-dashboard) applies the same Claude + privacy-first approach to interpreting business data rather than extracting it. The two compose: InvoiceFlow turns PDF invoices into CSVs; TellSight reads CSVs and explains what's in them.
+
+## License
+
+[MIT](LICENSE)
+
+---
+
+Built solo. Questions about the design choices welcome — open an issue or reach out via the contact info on my [GitHub profile](https://github.com/coreystevensdev).
