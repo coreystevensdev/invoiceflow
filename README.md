@@ -187,7 +187,7 @@ Documented using the [BMad Method](https://docs.bmad-method.org/) for traceable 
 
 ## Sister project
 
-[**TellSight**](https://github.com/CoreyStevensDev/saas-analytics-dashboard) applies the same Claude + privacy-first approach to interpreting business data rather than extracting it. The two compose: InvoiceFlow turns PDF invoices into CSVs; TellSight reads CSVs and explains what's in them.
+[**TellSight**](https://github.com/coreystevensdev/saas-analytics-dashboard) applies the same Claude + privacy-first approach to interpreting business data rather than extracting it. The two compose: InvoiceFlow turns PDF invoices into CSVs; TellSight reads CSVs and explains what's in them.
 
 ## License
 
