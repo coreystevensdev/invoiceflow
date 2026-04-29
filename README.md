@@ -11,8 +11,6 @@ There's no login or database. PDFs process in memory inside a single Vercel Func
 > **Live demo:** https://invoiceflow.vercel.app
 > **60-second walkthrough:** [Loom](https://www.loom.com/share/REPLACE-WITH-LOOM-ID)
 
-![Extraction UI showing per-field reasoning tooltip](.github/assets/extraction-screenshot.png)
-
 **Stack:** Next.js 16 · React 19 · TypeScript · Tailwind 4 · `@anthropic-ai/sdk` · `pdf-parse` · `zod`
 
 ## Run locally
