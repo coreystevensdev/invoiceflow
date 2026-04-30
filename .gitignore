@@ -55,3 +55,7 @@ _bmad-output/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI-development scaffolding (local only)
+CLAUDE.md
+AGENTS.md
