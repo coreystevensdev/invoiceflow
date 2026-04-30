@@ -18,6 +18,6 @@ This project tracks `main` only. There are no maintained release branches at thi
 
 ## Threat model context
 
-InvoiceFlow is a stateless service: PDFs and extracted fields process in memory inside a single Vercel Function and are never persisted. The structured logger in `src/lib/log.ts` deliberately enumerates allowed metadata keys to prevent content leakage. Reports about the privacy posture are especially welcome — for example, a code path that could exfiltrate PDF bytes or extracted field values to logs, third-party services, or the response of an unrelated request.
+InvoiceFlow is a stateless service: PDFs and extracted fields process in memory inside a single Vercel Function and are never persisted. The structured logger in `src/lib/log.ts` deliberately enumerates allowed metadata keys to prevent content leakage. Reports about the privacy posture are especially welcome, for example, a code path that could exfiltrate PDF bytes or extracted field values to logs, third-party services, or the response of an unrelated request.
 
 The strict nonce-based CSP in `src/proxy.ts` is also load-bearing. Any path that requires `'unsafe-inline'` or introduces a new third-party script domain should be flagged rather than worked around.

@@ -77,7 +77,7 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
       message:
         "The model didn't respond in time. Very long invoices or complex layouts can trip this.",
       nextStep:
-        "If the PDF has many pages, try splitting it. Otherwise retry once — the timeout is often transient.",
+        "If the PDF has many pages, try splitting it. Otherwise retry once, the timeout is often transient.",
     },
     "cost-budget-exceeded": {
       title: "Extraction aborted to protect your budget",
@@ -89,7 +89,7 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
     "monthly-budget-exhausted": {
       title: "Free tier exhausted for the month",
       message:
-        "InvoiceFlow's free tier is funded by a fixed monthly compute budget. The current month's budget is gone — it resets on the 1st.",
+        "InvoiceFlow's free tier is funded by a fixed monthly compute budget. The current month's budget is gone, it resets on the 1st.",
       nextStep:
         "Want unlimited extraction with no monthly ceiling? TellSight reads spreadsheets the same way and runs on metered billing. Same Claude, same privacy posture.",
     },

@@ -8,7 +8,7 @@ export interface PdfTextResult {
 /**
  * Parse raw PDF bytes into text. Surfaces a specific error shape so the route
  * handler can return a clean "this isn't a parseable PDF" response to the UI
- * (brainstorm idea #9 — graceful corrupt-PDF handling).
+ * (brainstorm idea #9, graceful corrupt-PDF handling).
  */
 export async function parsePdf(bytes: Buffer): Promise<PdfTextResult> {
   if (bytes.length === 0) {
@@ -36,7 +36,7 @@ export async function parsePdf(bytes: Buffer): Promise<PdfTextResult> {
     const text = result.text;
     if (!text || text.trim().length === 0) {
       throw new PdfParseError(
-        "This PDF contains no extractable text. It may be an image-only scan — try OCR first, or use a PDF with selectable text.",
+        "This PDF contains no extractable text. It may be an image-only scan, try OCR first, or use a PDF with selectable text.",
         "image_only",
         { size: bytes.length, num_pages: result.total },
       );

@@ -2,7 +2,7 @@
  * In-memory sliding-window rate limiter.
  *
  * Scope: per Fluid Compute instance. Under horizontal scale each instance
- * limits independently — a 10/hr cap becomes effectively 10/hr × instance
+ * limits independently, a 10/hr cap becomes effectively 10/hr × instance
  * count. Acceptable for abuse prevention on a demo tool; not acceptable
  * for a production billing quota. Upgrade to a shared store (Redis / KV)
  * when traffic grows.
@@ -12,7 +12,7 @@
  * one of these.
  *
  * Memory safety: stale buckets (all timestamps older than the widest
- * window) are pruned opportunistically on every `check()` call — bounded
+ * window) are pruned opportunistically on every `check()` call, bounded
  * to a small sample so one call can't stall. Under a DDoS with many
  * unique IPs, the Map still grows during an active window, but empties
  * automatically when traffic subsides. Fluid Compute instances recycle
@@ -96,7 +96,7 @@ function validIp(candidate: string | undefined): string | null {
  * the candidate is a well-formed IPv4/IPv6 address before using it as a
  * rate-limit key; otherwise rate limits could be bypassed by varying the
  * header value per request. Falls back to `x-real-ip` (typically
- * platform-set and not client-writable) and finally "unknown" — which
+ * platform-set and not client-writable) and finally "unknown", which
  * buckets all unclassified requests under one shared quota.
  */
 export function clientIpFrom(headers: Headers): string {

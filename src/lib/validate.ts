@@ -47,7 +47,7 @@ export function deterministicFlags(invoice: InvoiceExtraction): ExtractionFlag[]
   if (total !== null && total <= 0) {
     flags.push({
       severity: "warning",
-      message: `Total is $${total.toFixed(2)} — expected a positive value.`,
+      message: `Total is $${total.toFixed(2)}, expected a positive value.`,
     });
   }
 

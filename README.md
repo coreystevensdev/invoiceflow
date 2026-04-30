@@ -56,7 +56,7 @@ Browser              Vercel Function                       Anthropic API
   │ <── JSON + corr. id ──  │                                    │
 ```
 
-Everything inside the function is one Node.js process. No queue, no worker, no background job. Vercel's Fluid Compute reuses the instance across concurrent requests, so the in-memory cost history and rate-limit buckets persist across warm invocations (per-instance, not globally — see "Known limitations").
+Everything inside the function is one Node.js process. No queue, no worker, no background job. Vercel's Fluid Compute reuses the instance across concurrent requests, so the in-memory cost history and rate-limit buckets persist across warm invocations (per-instance, not globally, see "Known limitations").
 
 ## File layout
 
@@ -183,4 +183,4 @@ Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-son
 
 ---
 
-Built solo. Questions about the design choices welcome — open an issue or reach out via the contact info on my [GitHub profile](https://github.com/coreystevensdev).
+Built solo. Questions about the design choices welcome, open an issue or reach out via the contact info on my [GitHub profile](https://github.com/coreystevensdev).
