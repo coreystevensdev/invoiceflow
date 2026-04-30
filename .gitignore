@@ -44,9 +44,13 @@ yarn-error.log*
 # claude code skills (tool-generated, regenerable)
 .claude/
 
-# bmad-document-project regen undo buffer (local-only; old scans are recoverable
-# via git history since /docs is committed)
-/docs/.archive/
+# BMad framework, planning artifacts, and codebase scans (local-only)
+_bmad/
+_bmad-output/
+/docs/
+
+# Per-file engineering-notes companions (local-only)
+*_explained.md
 
 # typescript
 *.tsbuildinfo
