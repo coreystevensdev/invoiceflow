@@ -2,7 +2,7 @@
  * Rolling-median cost tracker + anomaly cap, plus calendar-month aggregate ceiling.
  *
  * Purpose: surface requests that cost dramatically more than the usual
- * extraction — a runaway prompt, a multi-page statement, or a pricing
+ * extraction, a runaway prompt, a multi-page statement, or a pricing
  * misconfiguration. See PRD NFR-R4. Also enforces an aggregate monthly
  * ceiling (Story 2.0) so a viral spike or rotating-IP abuse cannot burn
  * through more than `MONTHLY_BUDGET_USD` in a calendar month.
@@ -23,7 +23,7 @@
  *   - The monthly tracker (`exceedsMonthlyBudget`, `recordMonthlyCost`,
  *     `getMonthlyCumulativeUsd`) buckets cumulative cost by calendar
  *     month in UTC (`YYYY-MM`). `resolveCurrentMonth()` is the single
- *     rollover point — every public monthly function calls it first so
+ *     rollover point, every public monthly function calls it first so
  *     observability getters never return stale cumulative data after a
  *     month boundary.
  *   - The "$MONTHLY_BUDGET_USD" ceiling is *soft* by design. Three
@@ -68,7 +68,7 @@
  *   claude-haiku-4-5:  input $1, output $5
  *
  * If an unknown model is used, `computeCost` returns null and
- * `exceedsBudget` fails open — a demo-safe default. The monthly tracker
+ * `exceedsBudget` fails open, a demo-safe default. The monthly tracker
  * only ever sees finite, non-negative costs (guarded by the same
  * `if (cost_usd !== null)` check at the call site).
  */
@@ -233,7 +233,7 @@ function currentMonthKey(): string {
  * so observability getters never return stale cumulative data after a
  * month boundary. Without this, `getMonthlyCumulativeUsd()` invoked
  * after rollover but before the next record/exceeds call would emit a
- * stale figure on the rejection log line — a real failure mode.
+ * stale figure on the rejection log line, a real failure mode.
  */
 function resolveCurrentMonth(): void {
   const now = currentMonthKey();
@@ -255,7 +255,7 @@ export function exceedsMonthlyBudget(): boolean {
 }
 
 /**
- * Server-side observability only — never surface in user-facing
+ * Server-side observability only, never surface in user-facing
  * responses (NFR-S2 / FR41). Used by the route handler's structured log
  * line on a `monthly-budget-exhausted` rejection.
  */

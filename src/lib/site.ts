@@ -29,8 +29,8 @@ const TELLSIGHT_DEMO_URL_PLACEHOLDER = "https://tellsight.example.com/demo";
 
 /**
  * True only when `TELLSIGHT_DEMO_URL` has been overridden away from the
- * literal placeholder *and* parses as an HTTPS URL. Any other shape —
- * placeholder substring match, `javascript:` scheme, malformed URL —
+ * literal placeholder *and* parses as an HTTPS URL. Any other shape
+ * placeholder substring match, `javascript:` scheme, malformed URL
  * reports false so the UI suppresses the link rather than rendering an
  * unsafe or broken anchor target. The HTTPS check matters because the
  * strict CSP does **not** block `javascript:` href on a user-clicked

@@ -126,8 +126,8 @@ export default function Home() {
     const data = await res.json();
     setWebhookStatus(
       res.ok
-        ? `Sent — upstream responded ${data.status} in ${data.duration_ms}ms.`
-        : `Failed — ${data.error ?? "unknown reason"}.`,
+        ? `Sent, upstream responded ${data.status} in ${data.duration_ms}ms.`
+        : `Failed, ${data.error ?? "unknown reason"}.`,
     );
   }, [status, webhookUrl]);
 
@@ -413,7 +413,7 @@ function FieldRow({
   const [escapeDismissed, setEscapeDismissed] = useState(false);
   const value =
     field.value === null || field.value === undefined
-      ? "—"
+      ? "-"
       : money && typeof field.value === "number"
         ? field.value.toFixed(2)
         : String(field.value);
@@ -558,15 +558,15 @@ function LineItemsTable({
               key={i}
               className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
             >
-              <td className="px-4 py-3">{li.description ?? "—"}</td>
+              <td className="px-4 py-3">{li.description ?? "-"}</td>
               <td className="px-4 py-3 text-right tabular-nums">
-                {li.quantity ?? "—"}
+                {li.quantity ?? "-"}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">
-                {li.unit_price?.toFixed(2) ?? "—"}
+                {li.unit_price?.toFixed(2) ?? "-"}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">
-                {li.amount?.toFixed(2) ?? "—"}
+                {li.amount?.toFixed(2) ?? "-"}
               </td>
             </tr>
           ))}

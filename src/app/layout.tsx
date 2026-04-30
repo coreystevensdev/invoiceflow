@@ -24,8 +24,8 @@ const siteUrl = getSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
-    template: `%s — ${SITE_NAME}`,
+    default: `${SITE_NAME}, ${SITE_TAGLINE}`,
+    template: `%s, ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     type: "website",
     url: siteUrl,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    title: `${SITE_NAME}, ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
     locale: "en_US",
     images: [
@@ -59,13 +59,13 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME} — extract invoice data as CSV in seconds`,
+        alt: `${SITE_NAME}, extract invoice data as CSV in seconds`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    title: `${SITE_NAME}, ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
     images: ["/opengraph-image"],
   },

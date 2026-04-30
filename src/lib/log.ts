@@ -5,7 +5,7 @@
  * Invariant: loggers never accept free-form strings for payloads. Callers
  * pass a shape via `StructuredPayload`; if the shape contains anything
  * resembling extracted content (invoice fields, PDF text, webhook body),
- * the type system should stop them — the allowed keys are enumerated.
+ * the type system should stop them, the allowed keys are enumerated.
  *
  * Logs go to `console.*`. In Vercel Fluid Compute they are picked up by
  * the log drain; in local dev they render to the terminal. No external
