@@ -1,94 +1,30 @@
 /**
- * Rolling-median cost tracker + anomaly cap, plus calendar-month aggregate ceiling.
+ * Per-request rolling-median cost cap and a calendar-month aggregate
+ * spend ceiling for Anthropic API usage.
  *
- * Purpose: surface requests that cost dramatically more than the usual
- * extraction, a runaway prompt, a multi-page statement, or a pricing
- * misconfiguration. See PRD NFR-R4. Also enforces an aggregate monthly
- * ceiling (Story 2.0) so a viral spike or rotating-IP abuse cannot burn
- * through more than `MONTHLY_BUDGET_USD` in a calendar month.
+ * Both checks are in-memory per Fluid Compute instance, not globally
+ * shared. Acceptable for an anomaly detector and a soft monthly cap;
+ * not appropriate as a hard global quota. Move to Redis if that changes.
  *
- * Scope notes:
- *   - In-memory, per Fluid Compute instance. Each instance tracks
- *     independently; acceptable for a ceiling-not-quota semantic.
- *   - The per-request cap is checked **after** the Claude call completes,
- *     not before. By the time we know the cost, the tokens are spent. The
- *     real runaway guard is EXTRACTION_MAX_RETRIES (bounded at 2) and
- *     EXTRACTION_MAX_TOKENS (4096) in claude.ts. This tracker detects
- *     and reports anomalies; it does not prevent the first expensive
- *     response from being generated.
- *   - Between reading the median and appending the new cost, two
- *     concurrent requests may both pass the check. Acceptable because
- *     (a) retries are bounded, (b) the cap triggers an alert log line,
- *     and (c) adding a lock would not reduce spend already incurred.
- *   - The monthly tracker (`exceedsMonthlyBudget`, `recordMonthlyCost`,
- *     `getMonthlyCumulativeUsd`) buckets cumulative cost by calendar
- *     month in UTC (`YYYY-MM`). `resolveCurrentMonth()` is the single
- *     rollover point, every public monthly function calls it first so
- *     observability getters never return stale cumulative data after a
- *     month boundary.
- *   - The "$MONTHLY_BUDGET_USD" ceiling is *soft* by design. Three
- *     sources of overshoot, all documented and accepted:
- *       (1) Horizontal scale: per-instance accounting. Under N warm
- *           Fluid Compute instances, effective ceiling is
- *           `N × MONTHLY_BUDGET_USD`. Matches the per-instance rate
- *           limiter trade-off (see rate-limit.ts).
- *       (2) Intra-instance concurrency: `exceedsMonthlyBudget()` checks
- *           prior cumulative; up to K concurrent in-flight requests can
- *           each pass the gate before the first one calls
- *           `recordMonthlyCost()`. Effective overshoot per instance is
- *           bounded by `K × max_single_cost` where K is the concurrent
- *           request count and `max_single_cost ≤ ABSOLUTE_CEILING_USD`.
- *       (3) Crossing-request boundary: the gate compares prior
- *           cumulative to the budget. The request that crosses the
- *           budget always completes (and records the cost that produced
- *           the crossing). The *next* request is the one that gets
- *           rejected. So actual spend can land at
- *           `MONTHLY_BUDGET_USD + max_single_cost` even with no
- *           concurrency.
- *     For a portfolio-tier tool this softness is acceptable; do not
- *     introduce Redis/Upstash/Vercel KV without an explicit growth-tier
- *     decision (see project-context.md).
- *   - `getMonthlyBudgetUsd()` parses `MONTHLY_BUDGET_USD` defensively:
- *     missing, empty, non-numeric, NaN, or ≤ 0 inputs all fall back to
- *     `MONTHLY_BUDGET_USD_DEFAULT`. A malformed env var must not
- *     produce a zero-budget DoS-of-self. Misconfiguration is recorded
- *     in a one-shot diagnostic that the route handler consumes and
- *     emits as a structured warn line (see
- *     `consumeMonthlyBudgetMisconfig()`); silent fallback would mask
- *     "why did my $50 budget reset to $25?" support tickets.
- *   - The monthly check is evaluated **pre-call** in the route handler
- *     (cumulative state is already known); the per-request rolling
- *     median + absolute ceiling are evaluated **post-call**. A single
- *     high-cost request can still complete and only be detected after
- *     the fact; a budget-exhausted state rejects the *next* request.
+ * The per-request cap runs after the Claude call (cost is only known
+ * once usage comes back). Real prevention is upstream: bounded retries
+ * and EXTRACTION_MAX_TOKENS in claude.ts.
  *
  * Pricing (per 1M tokens, as of 2026-04):
- *   claude-sonnet-4-6: input $3, output $15
- *   claude-opus-4-7:   input $15, output $75
- *   claude-haiku-4-5:  input $1, output $5
+ *   claude-sonnet-4-6: $3 in / $15 out
+ *   claude-opus-4-7:   $15 in / $75 out
+ *   claude-haiku-4-5:  $1 in / $5 out
  *
- * If an unknown model is used, `computeCost` returns null and
- * `exceedsBudget` fails open, a demo-safe default. The monthly tracker
- * only ever sees finite, non-negative costs (guarded by the same
- * `if (cost_usd !== null)` check at the call site).
+ * Unknown models return null cost and the budget check fails open.
  */
 
 export const CAP_MULTIPLIER = 3;
 const HISTORY_CAP = 50;
 
-/**
- * Hard per-request ceiling, regardless of history. Prevents a first
- * request (no median yet) from slipping past and racking up an
- * unbounded bill. Tuned for a typical invoice extraction: even a long
- * multi-page statement on Opus should not exceed this in normal use.
- * Requests above this ceiling are aborted as `cost-budget-exceeded`.
- */
+/** Hard per-request ceiling. Catches runaways before the rolling median seeds. */
 export const ABSOLUTE_CEILING_USD = 1.0;
 
-/**
- * Default aggregate monthly Anthropic-spend ceiling in USD. Overridable
- * via the `MONTHLY_BUDGET_USD` env var. See `getMonthlyBudgetUsd`.
- */
+/** Default monthly Anthropic-spend ceiling (USD). Override via MONTHLY_BUDGET_USD. */
 export const MONTHLY_BUDGET_USD_DEFAULT = 25;
 
 interface ModelPricing {
@@ -173,17 +109,10 @@ interface MonthlyBudgetMisconfig {
 let pendingMisconfig: MonthlyBudgetMisconfig | null = null;
 
 /**
- * Reads `MONTHLY_BUDGET_USD`, parses as a strict numeric literal, falls
- * back to `MONTHLY_BUDGET_USD_DEFAULT` on missing/invalid/non-positive
- * input. Fail-safe: a malformed env var must not produce a zero-budget
- * DoS-of-self. To "disable" the ceiling, set a deliberately large value.
- *
- * Strict parse rejects values `parseFloat` would silently accept (e.g.
- * `"50 USD"` → 50). Operator typos that mask intent must surface.
- *
- * On fallback, records a one-shot diagnostic for the route handler to
- * emit. Trailing/leading whitespace is tolerated to match shell quoting
- * conventions but anything else (units, garbage) trips the strict regex.
+ * Reads MONTHLY_BUDGET_USD; falls back to the default on missing or
+ * malformed input. Strict regex parse rejects "50 USD"-style values that
+ * parseFloat would silently accept. Records a one-shot diagnostic on
+ * fallback so operator typos surface in logs.
  */
 export function getMonthlyBudgetUsd(): number {
   const raw = process.env.MONTHLY_BUDGET_USD;
@@ -203,11 +132,7 @@ export function getMonthlyBudgetUsd(): number {
   return parsed;
 }
 
-/**
- * Returns the pending misconfiguration diagnostic (if any) and clears
- * it. Route handler emits a one-time structured warn line so silent
- * env-var fallback doesn't mask operator typos.
- */
+/** Returns the pending misconfig diagnostic (if any) and clears it. */
 export function consumeMonthlyBudgetMisconfig(): MonthlyBudgetMisconfig | null {
   const diagnostic = pendingMisconfig;
   pendingMisconfig = null;
@@ -228,13 +153,7 @@ function currentMonthKey(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
-/**
- * Single rollover point. Every public monthly function calls this first
- * so observability getters never return stale cumulative data after a
- * month boundary. Without this, `getMonthlyCumulativeUsd()` invoked
- * after rollover but before the next record/exceeds call would emit a
- * stale figure on the rejection log line, a real failure mode.
- */
+// Reset cumulative state on month rollover.
 function resolveCurrentMonth(): void {
   const now = currentMonthKey();
   if (now !== monthlyState.monthKey) {
@@ -254,11 +173,7 @@ export function exceedsMonthlyBudget(): boolean {
   return monthlyState.cumulativeUsd >= getMonthlyBudgetUsd();
 }
 
-/**
- * Server-side observability only, never surface in user-facing
- * responses (NFR-S2 / FR41). Used by the route handler's structured log
- * line on a `monthly-budget-exhausted` rejection.
- */
+/** Server-side observability only. Used by route logging. */
 export function getMonthlyCumulativeUsd(): number {
   resolveCurrentMonth();
   return monthlyState.cumulativeUsd;
