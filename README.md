@@ -9,7 +9,6 @@ Drop a PDF invoice and get vendor, line items, tax, total, and due date back as 
 There's no login or database. PDFs process in memory inside a single Vercel Function and disappear when the request ends.
 
 > **Live demo:** https://invoiceflow.vercel.app
-> **60-second walkthrough:** [Loom](https://www.loom.com/share/REPLACE-WITH-LOOM-ID)
 
 **Stack:** Next.js 16 · React 19 · TypeScript · Tailwind 4 · `@anthropic-ai/sdk` · `pdf-parse` · `zod`
 
