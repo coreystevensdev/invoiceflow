@@ -180,7 +180,3 @@ Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-son
 ## License
 
 [MIT](LICENSE)
-
----
-
-Built solo. Questions about the design choices welcome, open an issue or reach out via the contact info on my [GitHub profile](https://github.com/coreystevensdev).
