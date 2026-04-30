@@ -173,18 +173,6 @@ npx vercel --prod   # production
 
 Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-sonnet-4-6`), `SITE_URL`, `MAX_PDF_SIZE_MB`. See `.env.example`.
 
-## Planning artifacts
-
-Documented using the [BMad Method](https://docs.bmad-method.org/) for traceable decision-making from product concept through architecture.
-
-- [`prd.md`](./_bmad-output/planning-artifacts/prd.md) — 48 functional requirements, 38 non-functional, 4 user journeys, scope boundaries
-- [`ux-design-specification.md`](./_bmad-output/planning-artifacts/ux-design-specification.md) — personas, emotional register, design system rationale, journey flows, WCAG 2.1 AA strategy
-- [`architecture.md`](./_bmad-output/planning-artifacts/architecture.md) — FR/NFR coverage, stack rationale, implementation patterns with reference call sites, validation with gap analysis
-- [`research/domain-ap-automation-research-2026-04-18.md`](./_bmad-output/planning-artifacts/research/domain-ap-automation-research-2026-04-18.md) — AP automation domain research
-- [`brainstorming-session-2026-04-18-0755.md`](./_bmad-output/brainstorming/brainstorming-session-2026-04-18-0755.md) — idea generation with persona-driven filtering
-- [`invoiceflow-technical-reference.md`](./_bmad-output/implementation-artifacts/invoiceflow-technical-reference.md) — prompt + schema + cost reference
-- [`spec-sunday-quality-bar-polish.md`](./_bmad-output/implementation-artifacts/spec-sunday-quality-bar-polish.md) — post-MVP polish spec
-
 ## Sister project
 
 [**TellSight**](https://github.com/coreystevensdev/saas-analytics-dashboard) applies the same Claude + privacy-first approach to interpreting business data rather than extracting it. The two compose: InvoiceFlow turns PDF invoices into CSVs; TellSight reads CSVs and explains what's in them.
