@@ -162,7 +162,7 @@ A few honest gaps:
 - **`pdf-parse` is text-only.** Image-only PDFs (scanned receipts without OCR) come back as `not-an-invoice`. Handwritten receipts need an OCR pre-pass that doesn't exist here yet.
 - **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
-- **No automated test suite yet.** The pure-logic files (`validate.ts`, `cost.ts`, `errors.ts`, `rate-limit.ts`) are structured for unit testing. That's the next obvious addition; tracking it on the roadmap rather than committing skeleton tests that don't run.
+- **Unit tests cover the pure-logic library only.** Vitest covers `cost.ts`, `errors.ts`, `validate.ts`, `rate-limit.ts`, and `csv.ts`. No integration tests against the route handlers, no end-to-end coverage of the upload flow.
 
 ## Deploy
 
