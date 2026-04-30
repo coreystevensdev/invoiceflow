@@ -1,5 +1,5 @@
 const REPO_BASE = "https://github.com/coreystevensdev/invoiceflow/blob/main";
-const TELLSIGHT_URL = "https://github.com/coreystevensdev/saas-analytics-dashboard";
+const TELLSIGHT_URL = "https://github.com/coreystevensdev/tellsight";
 
 export function PrivacySection() {
   return (
