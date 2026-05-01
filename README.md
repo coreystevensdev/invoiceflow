@@ -14,8 +14,6 @@ Drop a PDF invoice and get vendor, line items, tax, total, and due date back as 
 
 There's no login or database. PDFs process in memory inside a single Vercel Function and disappear when the request ends.
 
-> **Live demo:** https://invoiceflow-cs.vercel.app
-
 <p align="center">
   <img src="public/screenshots/landing.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
 </p>
