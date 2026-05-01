@@ -34,7 +34,7 @@ export function PrivacySection() {
           rel="noreferrer"
           className="font-medium text-zinc-900 underline underline-offset-2 transition-colors hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:text-zinc-100 dark:hover:text-indigo-400"
         >
-          TellSight
+          Tellsight
         </a>
         , the analytics tool I made for the same audience: the privacy promise
         lives in the code, not in a policy.

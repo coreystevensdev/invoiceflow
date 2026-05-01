@@ -1,5 +1,5 @@
 import { describeError, type ExtractionErrorCode } from "@/lib/errors";
-import { TELLSIGHT_DEMO_URL, isTellSightDemoUrlConfigured } from "@/lib/site";
+import { TELLSIGHT_DEMO_URL, isTellsightDemoUrlConfigured } from "@/lib/site";
 
 interface ErrorStateProps {
   code: ExtractionErrorCode;
@@ -31,10 +31,10 @@ export function ErrorState({
 }: ErrorStateProps) {
   const description = describeError(code);
   const icon = ICON_BY_CODE[code];
-  const showTellSightCta =
-    code === "monthly-budget-exhausted" && isTellSightDemoUrlConfigured();
+  const showTellsightCta =
+    code === "monthly-budget-exhausted" && isTellsightDemoUrlConfigured();
   const nextStepText =
-    code === "monthly-budget-exhausted" && !showTellSightCta
+    code === "monthly-budget-exhausted" && !showTellsightCta
       ? MONTHLY_BUDGET_NEXT_STEP_NO_LINK
       : description.nextStep;
   return (
@@ -54,17 +54,17 @@ export function ErrorState({
         What to try:{" "}
         <span className="font-normal">
           {nextStepText}
-          {showTellSightCta && (
+          {showTellsightCta && (
             <>
               {" "}
               <a
                 href={TELLSIGHT_DEMO_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Try TellSight (opens in a new tab)"
+                aria-label="Try Tellsight (opens in a new tab)"
                 className="underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2"
               >
-                Try TellSight{" "}
+                Try Tellsight{" "}
                 <span aria-hidden="true">→</span>
               </a>
             </>
