@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useId,
   useMemo,
   useRef,
@@ -17,7 +18,12 @@ import { PrivacySection } from "@/components/privacy-section";
 type Status =
   | { kind: "idle" }
   | { kind: "loading"; filename: string }
-  | { kind: "success"; result: ExtractResponse; filename: string }
+  | {
+      kind: "success";
+      result: ExtractResponse;
+      filename: string;
+      pdfUrl: string;
+    }
   | {
       kind: "error";
       code: ExtractionErrorCode;
@@ -43,7 +49,10 @@ export default function Home() {
   const dropzoneHintId = useId();
 
   const handleFile = useCallback(async (file: File) => {
-    setStatus({ kind: "loading", filename: file.name });
+    setStatus((prev) => {
+      if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
+      return { kind: "loading", filename: file.name };
+    });
     setWebhookStatus(null);
     const form = new FormData();
     form.append("pdf", file);
@@ -60,8 +69,15 @@ export default function Home() {
       return;
     }
     const data = (await res.json()) as ExtractResponse;
-    setStatus({ kind: "success", result: data, filename: file.name });
+    const pdfUrl = URL.createObjectURL(file);
+    setStatus({ kind: "success", result: data, filename: file.name, pdfUrl });
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (status.kind === "success") URL.revokeObjectURL(status.pdfUrl);
+    };
+  }, [status]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLLabelElement>) => {
@@ -231,6 +247,7 @@ export default function Home() {
           <ResultsView
             result={status.result}
             filename={status.filename}
+            pdfUrl={status.pdfUrl}
             downloadCsv={downloadCsv}
             webhookUrl={webhookUrl}
             setWebhookUrl={setWebhookUrl}
@@ -273,6 +290,7 @@ export default function Home() {
 interface ResultsViewProps {
   result: ExtractResponse;
   filename: string;
+  pdfUrl: string;
   downloadCsv: (format: "summary" | "line_items") => void;
   webhookUrl: string;
   setWebhookUrl: (v: string) => void;
@@ -280,17 +298,25 @@ interface ResultsViewProps {
   webhookStatus: string | null;
 }
 
+type ResultView = "fields" | "json";
+
 function ResultsView({
   result,
   filename,
+  pdfUrl,
   downloadCsv,
   webhookUrl,
   setWebhookUrl,
   fireWebhook,
   webhookStatus,
 }: ResultsViewProps) {
+  const [view, setView] = useState<ResultView>("fields");
   const inv = result.invoice;
   const summary = result.confidence_summary;
+  const fieldsTabId = useId();
+  const jsonTabId = useId();
+  const fieldsPanelId = useId();
+  const jsonPanelId = useId();
 
   const fields = useMemo(
     () => [
@@ -342,18 +368,83 @@ function ResultsView({
 
       {inv.flags.length > 0 && <FlagsList flags={inv.flags} />}
 
-      <dl className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
-        {fields.map((f) => (
-          <FieldRow
-            key={f.label}
-            label={f.label}
-            field={f.field}
-            money={f.money}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="lg:sticky lg:top-4 lg:self-start">
+          <iframe
+            src={pdfUrl}
+            title={`Original PDF: ${filename}`}
+            className="h-[600px] w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 lg:h-[820px]"
           />
-        ))}
-      </dl>
+        </div>
 
-      {inv.line_items.length > 0 && <LineItemsTable items={inv.line_items} />}
+        <div className="space-y-6">
+          <div
+            role="tablist"
+            aria-label="Extraction view"
+            className="inline-flex rounded-lg border border-zinc-200 bg-white p-1 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            <button
+              type="button"
+              role="tab"
+              id={fieldsTabId}
+              aria-selected={view === "fields"}
+              aria-controls={fieldsPanelId}
+              onClick={() => setView("fields")}
+              className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                view === "fields"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              }`}
+            >
+              Fields
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id={jsonTabId}
+              aria-selected={view === "json"}
+              aria-controls={jsonPanelId}
+              onClick={() => setView("json")}
+              className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                view === "json"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              }`}
+            >
+              JSON
+            </button>
+          </div>
+
+          {view === "fields" ? (
+            <div
+              role="tabpanel"
+              id={fieldsPanelId}
+              aria-labelledby={fieldsTabId}
+              className="space-y-6"
+            >
+              <dl className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
+                {fields.map((f) => (
+                  <FieldRow
+                    key={f.label}
+                    label={f.label}
+                    field={f.field}
+                    money={f.money}
+                  />
+                ))}
+              </dl>
+              {inv.line_items.length > 0 && (
+                <LineItemsTable items={inv.line_items} />
+              )}
+            </div>
+          ) : (
+            <JsonPanel
+              panelId={jsonPanelId}
+              tabId={jsonTabId}
+              result={result}
+            />
+          )}
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-3">
         <button
@@ -587,6 +678,53 @@ function LineItemsTable({
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function JsonPanel({
+  panelId,
+  tabId,
+  result,
+}: {
+  panelId: string;
+  tabId: string;
+  result: ExtractResponse;
+}) {
+  const [copied, setCopied] = useState(false);
+  const json = useMemo(() => JSON.stringify(result, null, 2), [result]);
+
+  const onCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(json);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  }, [json]);
+
+  return (
+    <div
+      role="tabpanel"
+      id={panelId}
+      aria-labelledby={tabId}
+      className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-950 dark:border-zinc-800"
+    >
+      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2 text-xs">
+        <span className="font-mono text-zinc-400">api/extract response</span>
+        <button
+          type="button"
+          onClick={onCopy}
+          className="rounded-md border border-zinc-700 px-2 py-1 font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          aria-live="polite"
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="max-h-[820px] overflow-auto p-4 text-xs leading-relaxed text-zinc-100">
+        <code>{json}</code>
+      </pre>
     </div>
   );
 }
