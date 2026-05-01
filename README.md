@@ -1,8 +1,14 @@
-# InvoiceFlow
+<p align="center">
+  <img src="public/screenshots/banner.png" alt="InvoiceFlow" width="100%">
+</p>
 
-[![Live demo](https://img.shields.io/badge/demo-invoiceflow-cs.vercel.app-2563eb?style=flat)](https://invoiceflow-cs.vercel.app)
-[![Build](https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg)](https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+<p align="center">
+  <a href="https://invoiceflow-cs.vercel.app"><img src="https://img.shields.io/badge/live--demo-invoiceflow--cs.vercel.app-2563eb?style=flat" alt="Live demo"></a>
+  <a href="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml"><img src="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="MIT License">
+</p>
+
+# InvoiceFlow
 
 Drop a PDF invoice and get vendor, line items, tax, total, and due date back as structured JSON in about five seconds. Each field includes the source text Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL.
 
