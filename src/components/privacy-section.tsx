@@ -34,7 +34,7 @@ export function PrivacySection() {
           rel="noreferrer"
           className="font-medium text-zinc-900 underline underline-offset-2 transition-colors hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:text-zinc-100 dark:hover:text-indigo-400"
         >
-          Tellsight
+          TellSight
         </a>
         , the analytics tool I made for the same audience: the privacy promise
         lives in the code, not in a policy.
@@ -42,7 +42,7 @@ export function PrivacySection() {
 
       <details className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-950">
         <summary className="cursor-pointer select-none font-medium text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:text-zinc-200">
-          For engineers &mdash; how it&apos;s enforced
+          For engineers: how it&apos;s enforced
         </summary>
         <div className="mt-3 space-y-2 text-zinc-700 dark:text-zinc-400">
           <p>
