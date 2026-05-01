@@ -205,16 +205,43 @@ export default function Home() {
             className="sr-only"
             aria-describedby={dropzoneHintId}
           />
-          <p className="text-lg font-medium" aria-live="polite">
+          {status.kind === "loading" ? (
+            <div
+              className="flex items-center justify-center gap-3 text-lg font-medium"
+              aria-live="polite"
+            >
+              <svg
+                className="h-5 w-5 animate-spin text-indigo-600 motion-reduce:animate-none dark:text-indigo-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeOpacity="0.25"
+                  strokeWidth="3"
+                />
+                <path
+                  d="M22 12a10 10 0 0 1-10 10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span>Extracting {status.filename}</span>
+            </div>
+          ) : (
+            <p className="text-lg font-medium" aria-live="polite">
+              Drop a PDF invoice here, or click to upload
+            </p>
+          )}
+          <p id={dropzoneHintId} className="mt-2 text-sm text-zinc-500">
             {status.kind === "loading"
-              ? `Extracting ${status.filename}…`
-              : "Drop a PDF invoice here, or click to upload"}
-          </p>
-          <p
-            id={dropzoneHintId}
-            className="mt-2 text-sm text-zinc-500"
-          >
-            Max 25 MB. Typed or scanned-with-OCR PDFs.
+              ? "Typically 4-8 seconds. Reading the PDF, sending to Claude, validating fields."
+              : "Max 25 MB. Typed or scanned-with-OCR PDFs."}
           </p>
         </label>
 
