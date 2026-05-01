@@ -18,9 +18,13 @@ There's no login or database. PDFs process in memory inside a single Vercel Func
   <img src="public/screenshots/landing.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
 </p>
 
+<p align="center">
+  <img src="public/screenshots/extract-success.png" alt="Side-by-side PDF preview and extracted fields with confidence dots" width="100%">
+</p>
+
 <table>
 <tr>
-<td width="50%"><img src="public/screenshots/extract-success.png" alt="Successful invoice extraction with confidence dots and reasoning"></td>
+<td width="50%"><img src="public/screenshots/extract-json.png" alt="JSON view tab showing the api/extract response shape"></td>
 <td width="50%"><img src="public/screenshots/csv-export.png" alt="CSV export buttons for QuickBooks and Xero schemas"></td>
 </tr>
 <tr>
