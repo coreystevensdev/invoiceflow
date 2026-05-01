@@ -10,6 +10,17 @@ There's no login or database. PDFs process in memory inside a single Vercel Func
 
 > **Live demo:** https://invoiceflow-blush.vercel.app
 
+<p align="center">
+  <img src="public/screenshots/landing.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
+</p>
+
+<table>
+<tr>
+<td width="50%"><img src="public/screenshots/extract-success.png" alt="Successful invoice extraction with confidence dots and reasoning"></td>
+<td width="50%"><img src="public/screenshots/csv-export.png" alt="CSV export buttons for QuickBooks and Xero schemas"></td>
+</tr>
+</table>
+
 **Stack:** Next.js 16 · React 19 · TypeScript · Tailwind 4 · `@anthropic-ai/sdk` · `pdf-parse` · `zod`
 
 ## Run locally
