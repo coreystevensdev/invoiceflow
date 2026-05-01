@@ -1,33 +1,30 @@
-interface TrustTile {
+interface TrustFact {
   label: string;
   value: string;
 }
 
-const TILES: readonly TrustTile[] = [
-  { label: "Setup", value: "No signup needed" },
-  { label: "Pricing", value: "Free, always" },
-  { label: "Privacy", value: "Zero-retention by design" },
-  { label: "Powered by", value: "Claude Sonnet 4.6" },
+const FACTS: readonly TrustFact[] = [
+  { label: "Setup", value: "No signup" },
+  { label: "Pricing", value: "Free" },
+  { label: "Privacy", value: "Zero retention" },
+  { label: "Model", value: "Claude Sonnet 4.6" },
 ];
 
 export function TrustStrip() {
   return (
     <section
       aria-label="At a glance"
-      className="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-200 bg-zinc-200 dark:border-zinc-800 dark:bg-zinc-800 sm:grid-cols-4"
+      className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-600 dark:text-zinc-400"
     >
-      {TILES.map((tile) => (
-        <div
-          key={tile.label}
-          className="bg-zinc-50 px-4 py-5 text-center dark:bg-zinc-950"
-        >
-          <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {tile.value}
-          </div>
-          <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
-            {tile.label}
-          </div>
-        </div>
+      {FACTS.map((fact) => (
+        <span key={fact.label} className="inline-flex items-baseline gap-1.5">
+          <span className="text-xs uppercase tracking-wide text-zinc-500">
+            {fact.label}
+          </span>
+          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+            {fact.value}
+          </span>
+        </span>
       ))}
     </section>
   );

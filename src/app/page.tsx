@@ -137,19 +137,14 @@ export default function Home() {
       className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
     >
       <div className="mx-auto max-w-4xl px-6 py-16">
-        <header className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Stop typing invoices into QuickBooks.
           </h1>
-          <p className="mt-3 text-lg text-zinc-600 dark:text-zinc-400">
-            Drop a PDF. Get structured data in under 5 seconds.
-            <span
-              aria-hidden="true"
-              className="mx-2 text-zinc-400"
-            >
-              ·
-            </span>
-            3 hours manual → 45 seconds with Claude.
+          <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
+            Drop a PDF, get vendor, line items, tax, total, and due date back as
+            structured data. Typically under 5 seconds. No login, no database,
+            no logging of invoice content.
           </p>
         </header>
 
@@ -289,39 +284,27 @@ function ResultsView({
 
   return (
     <section className="mt-8 space-y-6" aria-label="Extraction results">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-500">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-zinc-500">
         <span>
           <span className="font-medium text-zinc-700 dark:text-zinc-300">
             {filename}
           </span>
-          <span aria-hidden="true" className="mx-2">
-            ·
-          </span>
-          {result.pdf.num_pages} page{result.pdf.num_pages === 1 ? "" : "s"}
-          <span aria-hidden="true" className="mx-2">
-            ·
-          </span>
-          {(result.duration_ms.total / 1000).toFixed(1)}s total
-          <span aria-hidden="true" className="mx-2">
-            ·
-          </span>
+          {", "}
+          {result.pdf.num_pages} page{result.pdf.num_pages === 1 ? "" : "s"},{" "}
+          {(result.duration_ms.total / 1000).toFixed(1)}s,{" "}
           {result.usage.input_tokens + result.usage.output_tokens} tokens
         </span>
         <span>
-          Confidence:{" "}
           <b className="text-green-700 dark:text-green-400">
             {summary.high} high
           </b>
-          <span aria-hidden="true" className="mx-2">
-            ·
-          </span>
+          {", "}
           <b className="text-amber-700 dark:text-amber-400">
-            {summary.medium} medium
+            {summary.medium} med
           </b>
-          <span aria-hidden="true" className="mx-2">
-            ·
-          </span>
+          {", "}
           <b className="text-red-700 dark:text-red-400">{summary.low} low</b>
+          <span className="ml-1">confidence</span>
         </span>
       </div>
 
