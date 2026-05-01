@@ -13,7 +13,6 @@ import type { InvoiceExtraction, ExtractionFlag } from "@/lib/claude";
 import type { ExtractionErrorCode } from "@/lib/errors";
 import { ErrorState } from "@/components/error-state";
 import { PrivacySection } from "@/components/privacy-section";
-import { TrustStrip } from "@/components/trust-strip";
 
 type Status =
   | { kind: "idle" }
@@ -81,6 +80,16 @@ export default function Home() {
     },
     [handleFile],
   );
+
+  const onSampleClick = useCallback(async () => {
+    const res = await fetch("/sample-invoice.pdf");
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const file = new File([blob], "sample-invoice.pdf", {
+      type: "application/pdf",
+    });
+    await handleFile(file);
+  }, [handleFile]);
 
   const onDropzoneKey = useCallback(
     (e: KeyboardEvent<HTMLLabelElement>) => {
@@ -193,6 +202,22 @@ export default function Home() {
           </p>
         </label>
 
+        {status.kind === "idle" && (
+          <p className="mt-3 text-center text-sm text-zinc-500">
+            Don&apos;t have a PDF handy?{" "}
+            <button
+              type="button"
+              onClick={onSampleClick}
+              className="font-medium text-indigo-700 underline underline-offset-2 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:text-indigo-400 dark:hover:text-indigo-300"
+            >
+              Try with a sample invoice
+            </button>
+            .
+          </p>
+        )}
+
+        {status.kind === "idle" && <PreviewCard />}
+
         {status.kind === "error" && (
           <ErrorState
             code={status.code}
@@ -214,7 +239,6 @@ export default function Home() {
           />
         )}
 
-        <TrustStrip />
         <PrivacySection />
       </div>
 
@@ -556,5 +580,43 @@ function LineItemsTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+const PREVIEW_FIELDS: ReadonlyArray<{ label: string; value: string }> = [
+  { label: "Invoice #", value: "INV-2026-0042" },
+  { label: "Vendor", value: "Acme Office Supplies, LLC" },
+  { label: "Bill date", value: "2026-04-15" },
+  { label: "Due date", value: "2026-05-15" },
+  { label: "Subtotal", value: "2007.00" },
+  { label: "Total", value: "2167.56" },
+];
+
+function PreviewCard() {
+  return (
+    <section
+      aria-label="Example extraction output"
+      className="mt-8 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+    >
+      <p className="text-xs uppercase tracking-wide text-zinc-500">
+        What comes back
+      </p>
+      <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+        {PREVIEW_FIELDS.map((f) => (
+          <div key={f.label}>
+            <dt className="text-xs uppercase tracking-wide text-zinc-500">
+              {f.label}
+            </dt>
+            <dd className="mt-1 text-lg font-medium text-zinc-900 dark:text-zinc-100">
+              {f.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-5 text-xs text-zinc-500">
+        Plus line items, currency, per-field confidence flags, and source-cited
+        reasoning for every value.
+      </p>
+    </section>
   );
 }
