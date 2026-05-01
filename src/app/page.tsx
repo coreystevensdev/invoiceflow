@@ -637,7 +637,7 @@ function FieldRow({
         <div
           id={reasoningId}
           role="tooltip"
-          className={`pointer-events-none absolute left-0 top-full z-10 mt-1 w-80 rounded-lg bg-zinc-900 p-3 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900 ${tooltipVisibility}`}
+          className={`pointer-events-none absolute inset-x-0 top-full z-10 mt-1 rounded-lg bg-zinc-900 p-3 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900 ${tooltipVisibility}`}
         >
           {field.reasoning}
         </div>
