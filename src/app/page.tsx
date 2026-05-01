@@ -613,11 +613,16 @@ function FieldRow({
 
   return (
     <div
-      className="group relative"
+      className={`group relative ${field.reasoning ? "cursor-pointer" : ""}`}
       tabIndex={field.reasoning ? 0 : undefined}
       onKeyDown={handleKeyDown}
       onFocus={resetDismissal}
       onMouseEnter={resetDismissal}
+      onClick={(e) => {
+        if (field.reasoning) {
+          (e.currentTarget as HTMLDivElement).focus();
+        }
+      }}
     >
       <dt className="text-xs uppercase tracking-wide text-zinc-500">{label}</dt>
       <dd
