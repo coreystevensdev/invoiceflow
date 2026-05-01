@@ -1,4 +1,4 @@
-import { PDFParse } from "pdf-parse";
+import pdfParse from "pdf-parse";
 
 export interface PdfTextResult {
   text: string;
@@ -29,19 +29,17 @@ export async function parsePdf(bytes: Buffer): Promise<PdfTextResult> {
     );
   }
 
-  const data = new Uint8Array(bytes);
-  const parser = new PDFParse({ data });
   try {
-    const result = await parser.getText();
+    const result = await pdfParse(bytes);
     const text = result.text;
     if (!text || text.trim().length === 0) {
       throw new PdfParseError(
         "This PDF contains no extractable text. It may be an image-only scan, try OCR first, or use a PDF with selectable text.",
         "image_only",
-        { size: bytes.length, num_pages: result.total },
+        { size: bytes.length, num_pages: result.numpages },
       );
     }
-    return { text, num_pages: result.total };
+    return { text, num_pages: result.numpages };
   } catch (err) {
     if (err instanceof PdfParseError) throw err;
     const message = err instanceof Error ? err.message : String(err);
@@ -50,8 +48,6 @@ export async function parsePdf(bytes: Buffer): Promise<PdfTextResult> {
       "parse_failed",
       { size: bytes.length, underlying: message },
     );
-  } finally {
-    await parser.destroy().catch(() => {});
   }
 }
 
