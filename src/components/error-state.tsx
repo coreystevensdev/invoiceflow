@@ -90,10 +90,8 @@ export function ErrorState({
         code: <code className="font-mono">{code}</code>
         {correlationId && (
           <>
-            <span className="mx-2" aria-hidden="true">
-              ·
-            </span>
-            request: <code className="font-mono">{correlationId}</code>
+            {", "}request:{" "}
+            <code className="font-mono">{correlationId}</code>
           </>
         )}
       </p>
