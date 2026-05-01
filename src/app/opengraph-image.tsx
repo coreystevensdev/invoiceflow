@@ -48,8 +48,8 @@ export default async function Image() {
               flexDirection: "column",
             }}
           >
-            <span>Drop a PDF. Get vendor, line items, tax, total.</span>
-            <span>About five seconds. No login. No database.</span>
+            <span>Drop a PDF. Get vendor, line items, tax, total, due date.</span>
+            <span>Under 5 seconds. No login. No database. No content logged.</span>
           </div>
         </div>
         <div
