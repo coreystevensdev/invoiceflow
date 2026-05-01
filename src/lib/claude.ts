@@ -70,11 +70,12 @@ CRITICAL RULES:
 5. All dates must be ISO 8601 (YYYY-MM-DD). Convert from any source format.
 6. All monetary values must be numeric (no currency symbols). Use the "currency" field to specify ISO 4217 (USD, EUR, JPY, etc.).
 7. Never guess. Null with reasoning beats a hallucinated value.
+8. The user message includes a <today> tag with today's date in ISO format (YYYY-MM-DD). Use that as the reference for any "past" or "future" date reasoning. Do not rely on training-time knowledge of the current date.
 
 CROSS-FIELD VALIDATION (populate the "flags" array when you detect any of these):
 - "subtotal + tax ≠ total" (within $0.02 tolerance) → severity: error
 - Line items sum does not match subtotal → severity: warning
-- Bill date is in the future → severity: warning
+- Bill date is after the <today> date → severity: warning
 - Due date is before bill date → severity: error
 - Total is 0 or negative → severity: warning
 - Vendor name missing → severity: warning
@@ -178,7 +179,7 @@ export async function extractInvoice(
           messages: [
             {
               role: "user",
-              content: `<invoice_text>\n${rawPdfText}\n</invoice_text>\n\nExtract the invoice data per the schema.`,
+              content: `<today>${new Date().toISOString().slice(0, 10)}</today>\n<invoice_text>\n${rawPdfText}\n</invoice_text>\n\nExtract the invoice data per the schema.`,
             },
           ],
           output_config: {
