@@ -1,6 +1,6 @@
 # InvoiceFlow
 
-[![Live demo](https://img.shields.io/badge/demo-invoiceflow-blush.vercel.app-2563eb?style=flat)](https://invoiceflow-blush.vercel.app)
+[![Live demo](https://img.shields.io/badge/demo-invoiceflow-cs.vercel.app-2563eb?style=flat)](https://invoiceflow-cs.vercel.app)
 [![Build](https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg)](https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
@@ -8,7 +8,7 @@ Drop a PDF invoice and get vendor, line items, tax, total, and due date back as 
 
 There's no login or database. PDFs process in memory inside a single Vercel Function and disappear when the request ends.
 
-> **Live demo:** https://invoiceflow-blush.vercel.app
+> **Live demo:** https://invoiceflow-cs.vercel.app
 
 <p align="center">
   <img src="public/screenshots/landing.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">

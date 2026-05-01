@@ -13,7 +13,7 @@ import { chromium } from "playwright";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
-const BASE = process.env.SCREENSHOT_URL ?? "https://invoiceflow-blush.vercel.app";
+const BASE = process.env.SCREENSHOT_URL ?? "https://invoiceflow-cs.vercel.app";
 const OUT = join(process.cwd(), "public", "screenshots");
 const VIEWPORT = { width: 1440, height: 900 };
 
