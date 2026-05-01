@@ -188,7 +188,7 @@ Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-son
 
 ## Sister project
 
-[**TellSight**](https://github.com/coreystevensdev/tellsight) applies the same Claude + privacy-first approach to interpreting business data rather than extracting it. The two compose: InvoiceFlow turns PDF invoices into CSVs; TellSight reads CSVs and explains what's in them.
+[**Tellsight**](https://github.com/coreystevensdev/tellsight) applies the same Claude + privacy-first approach to interpreting business data rather than extracting it. The two compose: InvoiceFlow turns PDF invoices into CSVs; Tellsight reads CSVs and explains what's in them.
 
 ## License
 

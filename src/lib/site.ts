@@ -21,7 +21,7 @@ export function getSiteUrl(): string {
   return "http://localhost:3000";
 }
 
-// TODO: Update once TellSight no-account demo deploys (target 2026-05-04).
+// TODO: Update once Tellsight no-account demo deploys (target 2026-05-04).
 // Reused by Story 2.2 (CSV success CTA) and Story 2.0 (`monthly-budget-exhausted` error CTA).
 export const TELLSIGHT_DEMO_URL = "https://tellsight.example.com/demo";
 
@@ -36,7 +36,7 @@ const TELLSIGHT_DEMO_URL_PLACEHOLDER = "https://tellsight.example.com/demo";
  * strict CSP does **not** block `javascript:` href on a user-clicked
  * anchor; the guard is a defense-in-depth.
  */
-export function isTellSightDemoUrlConfigured(): boolean {
+export function isTellsightDemoUrlConfigured(): boolean {
   if (TELLSIGHT_DEMO_URL === TELLSIGHT_DEMO_URL_PLACEHOLDER) return false;
   try {
     const url = new URL(TELLSIGHT_DEMO_URL);

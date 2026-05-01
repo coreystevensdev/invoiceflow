@@ -91,7 +91,7 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
       message:
         "InvoiceFlow's free tier is funded by a fixed monthly compute budget. The current month's budget is gone, it resets on the 1st.",
       nextStep:
-        "Want unlimited extraction with no monthly ceiling? TellSight reads spreadsheets the same way and runs on metered billing. Same Claude, same privacy posture.",
+        "Want unlimited extraction with no monthly ceiling? Tellsight reads spreadsheets the same way and runs on metered billing. Same Claude, same privacy posture.",
     },
   };
 
