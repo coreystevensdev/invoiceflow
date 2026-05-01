@@ -21,7 +21,7 @@ export function PrivacySection() {
       </p>
 
       <p className="mt-3 text-zinc-700 dark:text-zinc-300">
-        The structured logger doesn&apos;t promise not to leak &mdash; it
+        The structured logger doesn&apos;t promise not to leak. It
         can&apos;t. The allowed log keys are enumerated in TypeScript, so trying
         to log invoice content is a compile error, not a code-review catch.
       </p>
