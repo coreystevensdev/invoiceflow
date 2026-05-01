@@ -18,6 +18,10 @@ import { NextRequest, NextResponse } from "next/server";
  *
  * Loom is whitelisted in frame-src / img-src / media-src to support the
  * Sunday hero video. Drop those entries if Loom is ever removed.
+ *
+ * `blob:` is whitelisted in frame-src so the results view can render the
+ * uploaded PDF in an iframe via URL.createObjectURL. The blob URL is
+ * same-origin and the lifecycle is controlled in src/app/page.tsx.
  */
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
@@ -31,7 +35,7 @@ export function proxy(request: NextRequest) {
     `font-src 'self' data:`,
     `connect-src 'self'${isDev ? " ws: http://localhost:*" : ""}`,
     `media-src 'self' https://cdn.loom.com https://www.loom.com`,
-    `frame-src 'self' https://www.loom.com`,
+    `frame-src 'self' blob: https://www.loom.com`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
