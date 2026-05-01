@@ -112,12 +112,22 @@ async function captureExtraction(page, pdfBuffer) {
     buffer: pdfBuffer,
   });
   await page.waitForSelector('section[aria-label="Extraction results"]', { timeout: 90_000 });
-  // Focus the first describable field so a reasoning tooltip shows in frame.
-  const field = page.locator("[aria-describedby]").first();
-  await field.focus();
-  await page.waitForTimeout(600);
+  // Allow the PDF iframe to settle before screenshotting.
+  await page.waitForTimeout(1500);
   await page.screenshot({ path: join(OUT, "extract-success.png") });
   console.log("[screenshot] extract-success.png");
+}
+
+async function captureJsonView(page) {
+  // Same page, click the JSON tab and capture the response panel.
+  const jsonTab = page.getByRole("tab", { name: "JSON" });
+  await jsonTab.click();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(OUT, "extract-json.png") });
+  console.log("[screenshot] extract-json.png");
+  // Reset to Fields tab so subsequent CSV shot keeps the standard view.
+  await page.getByRole("tab", { name: "Fields" }).click();
+  await page.waitForTimeout(200);
 }
 
 async function captureCsvExport(page) {
@@ -147,7 +157,10 @@ async function main() {
   await mkdir(OUT, { recursive: true });
   console.log(`[screenshot] target: ${BASE}`);
   console.log(`[screenshot] output: ${OUT}`);
-  const browser = await chromium.launch({ headless: true });
+  // Use the system Chrome channel so the iframe-rendered PDF appears in
+  // captures. Headless Chromium ships without the PDF viewer and renders
+  // the iframe blank; real Chrome has it.
+  const browser = await chromium.launch({ headless: true, channel: "chrome" });
   try {
     const pdfBuffer = await generateInvoicePdf(browser);
     console.log(`[screenshot] synthetic invoice PDF: ${pdfBuffer.byteLength} bytes`);
@@ -155,6 +168,7 @@ async function main() {
     const page = await ctx.newPage();
     await captureLanding(page);
     await captureExtraction(page, pdfBuffer);
+    await captureJsonView(page);
     await captureCsvExport(page);
     await captureError(page);
     await ctx.close();
