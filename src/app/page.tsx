@@ -345,6 +345,29 @@ function ResultsView({
   const fieldsPanelId = useId();
   const jsonPanelId = useId();
 
+  const onTabKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>) => {
+      const order: ResultView[] = ["fields", "json"];
+      const idIndex: Record<ResultView, string> = {
+        fields: fieldsTabId,
+        json: jsonTabId,
+      };
+      const current = order.indexOf(view);
+      let next: ResultView | null = null;
+      if (e.key === "ArrowRight") next = order[(current + 1) % order.length];
+      else if (e.key === "ArrowLeft")
+        next = order[(current - 1 + order.length) % order.length];
+      else if (e.key === "Home") next = order[0];
+      else if (e.key === "End") next = order[order.length - 1];
+      if (next) {
+        e.preventDefault();
+        setView(next);
+        document.getElementById(idIndex[next])?.focus();
+      }
+    },
+    [view, fieldsTabId, jsonTabId],
+  );
+
   const fields = useMemo(
     () => [
       { label: "Invoice #", field: inv.invoice_number },
@@ -416,7 +439,9 @@ function ResultsView({
               id={fieldsTabId}
               aria-selected={view === "fields"}
               aria-controls={fieldsPanelId}
+              tabIndex={view === "fields" ? 0 : -1}
               onClick={() => setView("fields")}
+              onKeyDown={onTabKeyDown}
               className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                 view === "fields"
                   ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
@@ -431,7 +456,9 @@ function ResultsView({
               id={jsonTabId}
               aria-selected={view === "json"}
               aria-controls={jsonPanelId}
+              tabIndex={view === "json" ? 0 : -1}
               onClick={() => setView("json")}
+              onKeyDown={onTabKeyDown}
               className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                 view === "json"
                   ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
