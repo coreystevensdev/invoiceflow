@@ -151,7 +151,7 @@ export default function Home() {
             Stop typing invoices into QuickBooks.
           </h1>
           <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
-            Drop a PDF, get vendor, line items, tax, total, and due date back as
+            Drop a PDF, get vendor, line items, tax, total, and due date as
             structured data. Typically under 5 seconds. No login, no database,
             no logging of invoice content.
           </p>
@@ -243,19 +243,27 @@ export default function Home() {
       </div>
 
       <footer className="mt-auto border-t border-zinc-200 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-4 px-6">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-6">
           <span>
             Powered by{" "}
             <a
-              className="underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded"
+              className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
               href="https://www.anthropic.com/claude"
               target="_blank"
               rel="noreferrer"
             >
-              Claude
+              Claude Sonnet 4.6
             </a>
-            .
           </span>
+          <span aria-hidden="true">·</span>
+          <a
+            className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+            href="https://github.com/coreystevensdev/invoiceflow"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Source on GitHub
+          </a>
         </div>
       </footer>
     </main>
@@ -614,8 +622,7 @@ function PreviewCard() {
         ))}
       </dl>
       <p className="mt-5 text-xs text-zinc-500">
-        Plus line items, currency, per-field confidence flags, and source-cited
-        reasoning for every value.
+        Plus line items, currency, confidence flags, and reasoning per field.
       </p>
     </section>
   );
