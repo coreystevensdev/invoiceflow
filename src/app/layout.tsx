@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import {
@@ -34,8 +34,10 @@ export const metadata: Metadata = {
     "invoice extraction",
     "pdf to csv",
     "accounts payable",
-    "quickbooks import",
-    "claude",
+    "claude api",
+    "structured output",
+    "anthropic",
+    "zero retention",
     "ocr alternative",
   ],
   authors: [{ name: SITE_NAME }],
@@ -85,6 +87,16 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafaf9" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
 };
 
 export default function RootLayout({
