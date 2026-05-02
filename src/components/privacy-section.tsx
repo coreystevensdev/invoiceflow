@@ -55,9 +55,31 @@ export function PrivacySection() {
             >
               src/lib/log.ts
             </a>{" "}
-            enumerates every legal log field (page count, byte size, error code;
-            never content). Trying to log invoice content is a TypeScript
-            compile error, not a code-review catch.
+            allows only this set of fields:{" "}
+            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+              correlation_id
+            </code>
+            ,{" "}
+            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+              pdf_size_bytes
+            </code>
+            ,{" "}
+            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+              pdf_num_pages
+            </code>
+            ,{" "}
+            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+              error_code
+            </code>
+            ,{" "}
+            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+              cost_usd
+            </code>
+            ,{" "}
+            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+              retry_count
+            </code>
+            . Anything else is a compile-time type error.
           </p>
           <p>
             The webhook endpoint in{" "}
