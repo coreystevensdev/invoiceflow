@@ -116,6 +116,28 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
+        <noscript>
+          <div className="border-b border-amber-300 bg-amber-50 px-6 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-2">
+              <span aria-hidden="true" className="font-semibold">
+                ⚠
+              </span>
+              <span>
+                <strong>InvoiceFlow needs JavaScript to run.</strong>{" "}
+                Drag-and-drop, the sample invoice button, and extraction
+                results all require client-side scripts. Enable JavaScript or
+                read the source at{" "}
+                <a
+                  className="underline"
+                  href="https://github.com/coreystevensdev/invoiceflow"
+                >
+                  github.com/coreystevensdev/invoiceflow
+                </a>
+                .
+              </span>
+            </div>
+          </div>
+        </noscript>
         <UpgradeBrowserNotice />
         {children}
       </body>
