@@ -866,11 +866,15 @@ type FieldDef = {
 };
 
 const BBOX_PATTERN = /^\[bbox:\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\]\s*/;
+const BBOX_NONE_PATTERN = /^\[bbox:\s*none\s*\]\s*/i;
 
 function parseBboxFromReasoning(reasoning: string): {
   bbox: Bbox | null;
   text: string;
 } {
+  if (BBOX_NONE_PATTERN.test(reasoning)) {
+    return { bbox: null, text: reasoning.replace(BBOX_NONE_PATTERN, "") };
+  }
   const m = reasoning.match(BBOX_PATTERN);
   if (!m) return { bbox: null, text: reasoning };
   const bbox = [
