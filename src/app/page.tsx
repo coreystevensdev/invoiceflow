@@ -419,7 +419,7 @@ function ResultsView({
       {inv.flags.length > 0 && <FlagsList flags={inv.flags} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="lg:sticky lg:top-4 lg:self-start">
+        <div className="min-w-0 lg:sticky lg:top-4 lg:self-start">
           <iframe
             src={pdfUrl}
             title={`Original PDF: ${filename}`}
@@ -427,7 +427,7 @@ function ResultsView({
           />
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <div
             role="tablist"
             aria-label="Extraction view"
