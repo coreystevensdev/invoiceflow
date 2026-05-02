@@ -33,7 +33,7 @@ export function proxy(request: NextRequest) {
     `style-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-inline'" : ""}`,
     `img-src 'self' blob: data: https://cdn.loom.com https://www.loom.com`,
     `font-src 'self' data:`,
-    `connect-src 'self'${isDev ? " ws: http://localhost:*" : ""}`,
+    `connect-src 'self' blob:${isDev ? " ws: http://localhost:*" : ""}`,
     `media-src 'self' https://cdn.loom.com https://www.loom.com`,
     `frame-src 'self' blob: https://www.loom.com`,
     `object-src 'none'`,
