@@ -10,7 +10,7 @@
 
 # InvoiceFlow
 
-Drop a PDF or image of an invoice and get vendor, line items, tax, total, and due date back as structured JSON in about five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL.
+Drop a PDF or image of an invoice and get the vendor, line items, tax, total, and due date back as structured JSON. Typically under five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL.
 
 PDFs run through `pdf-parse` first and Claude reads the extracted text. Images go directly to Claude vision (image content blocks). Same Zod schema, same response shape, same zero-retention posture either way.
 
@@ -38,7 +38,7 @@ There's no login or database. Files process in memory inside a single Vercel Fun
 </tr>
 </table>
 
-**Stack:** Next.js 16 · React 19 · TypeScript · Tailwind 4 · `@anthropic-ai/sdk` · `pdf-parse` · `zod`
+**Stack:** Next.js 16, React 19, TypeScript, Tailwind 4, `@anthropic-ai/sdk`, `pdf-parse`, `pdfjs-dist`, `zod`.
 
 ## Run locally
 
@@ -103,6 +103,8 @@ src/
 │   └── schema.jsonld/route.ts    SoftwareApplication structured data
 ├── components/
 │   ├── error-state.tsx           ErrorState for all 8 error categories
+│   ├── pdf-preview.tsx           Canvas-rendered PDF + bbox highlight overlay
+│   ├── privacy-section.tsx       Zero-retention copy block (landing + results)
 │   └── upgrade-browser-notice.tsx
 ├── lib/
 │   ├── claude.ts                 System prompt + Zod schema + extractInvoice()
@@ -121,9 +123,7 @@ src/
 
 **Per-field confidence and reasoning.** Every extracted field is a `{value, confidence, reasoning}` tuple. Hover or focus a field to see the source-cited reasoning. The tooltip is keyboard-accessible (Tab to reveal, Escape to dismiss) and wired to the field via `aria-describedby`.
 
-**Click-to-highlight (image inputs).** When the input is an image, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag using normalized 0..1 coordinates. The client parses the prefix off, strips it from the displayed reasoning, and uses the coordinates to overlay an indigo highlight on the source region whenever the field is hovered or focused. PDFs use the existing iframe preview (cross-origin sandboxing prevents overlays on browser-rendered PDFs); the bbox is image-only.
-
-PDF inputs deliberately don't get the visual highlight. The honest reason: the cheapest path (PDF.js client-side rendering + canvas overlay) adds ~600KB to the bundle, and the most accurate path (rasterize the PDF and send to Claude vision) inflates per-extraction cost ~3x and slows extraction. The current asymmetry — images get spatial highlight, PDFs get rich source-cited reasoning text — keeps the text path fast while still giving PDF users a clear answer to "where did this come from."
+**Click-to-highlight.** Hover or focus any extracted field and the source region in the original document is highlighted. Image inputs and PDF inputs both work, by different paths. For images, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag in normalized 0..1 coordinates; the client parses the prefix off and overlays an indigo box on the source region. For PDFs, the file renders to a `<canvas>` via PDF.js, `getTextContent()` provides per-text-item positions, and the client substring-matches each extracted field's value against those positions to derive the same overlay coordinates. PDF.js is lazy-loaded only after a successful extraction (~600KB chunk; absent on the landing-page bundle). On older iOS Safari versions where pdfjs-dist v5's iterator-helper polyfills don't reach, the component degrades gracefully: the source PDF stays visible via the browser's native PDF viewer, the highlight overlay is silently disabled.
 
 **Inline editing.** Click any field value in the results panel to swap the display for an input. Money fields parse to numbers via `parseFloat`, dates and strings save as-is, Enter or blur commits, Escape cancels. CSV export and webhook fire use the edited values, not the original extraction. State resets when a new file is uploaded.
 
