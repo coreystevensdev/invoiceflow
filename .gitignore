@@ -59,3 +59,6 @@ next-env.d.ts
 # AI-development scaffolding (local only)
 CLAUDE.md
 AGENTS.md
+
+# Build artifact copied from node_modules by postinstall
+public/pdf.worker.min.mjs
