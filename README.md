@@ -123,6 +123,8 @@ src/
 
 **Click-to-highlight (image inputs).** When the input is an image, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag using normalized 0..1 coordinates. The client parses the prefix off, strips it from the displayed reasoning, and uses the coordinates to overlay an indigo highlight on the source region whenever the field is hovered or focused. PDFs use the existing iframe preview (cross-origin sandboxing prevents overlays on browser-rendered PDFs); the bbox is image-only.
 
+PDF inputs deliberately don't get the visual highlight. The honest reason: the cheapest path (PDF.js client-side rendering + canvas overlay) adds ~600KB to the bundle, and the most accurate path (rasterize the PDF and send to Claude vision) inflates per-extraction cost ~3x and slows extraction. The current asymmetry — images get spatial highlight, PDFs get rich source-cited reasoning text — keeps the text path fast while still giving PDF users a clear answer to "where did this come from."
+
 **Inline editing.** Click any field value in the results panel to swap the display for an input. Money fields parse to numbers via `parseFloat`, dates and strings save as-is, Enter or blur commits, Escape cancels. CSV export and webhook fire use the edited values, not the original extraction. State resets when a new file is uploaded.
 
 **Two-pass validation.** Claude flags cross-field issues during extraction. A deterministic pass in `lib/validate.ts` runs independently and merges its findings. Either alone misses things the other catches.
