@@ -12,6 +12,7 @@ import {
 import type { ExtractResponse } from "./api/extract/route";
 import type { InvoiceExtraction, ExtractionFlag } from "@/lib/claude";
 import type { ExtractionErrorCode } from "@/lib/errors";
+import { deterministicFlags, mergeFlags } from "@/lib/validate";
 import { ErrorState } from "@/components/error-state";
 import { PdfPreview } from "@/components/pdf-preview";
 import { PrivacySection } from "@/components/privacy-section";
@@ -64,21 +65,31 @@ export default function Home() {
     setWebhookStatus(null);
     const form = new FormData();
     form.append("pdf", file);
-    const res = await fetch("/api/extract", { method: "POST", body: form });
-    if (!res.ok) {
-      const body: ErrorBody = await res.json().catch(() => ({}));
-      setStatus({
-        kind: "error",
-        code: body.code ?? "model-API-failure",
-        correlation_id: body.correlation_id,
-        retry_after_seconds: body.retry_after_seconds,
-        detected: body.detected,
-      });
-      return;
+    try {
+      const res = await fetch("/api/extract", { method: "POST", body: form });
+      if (!res.ok) {
+        const body: ErrorBody = await res.json().catch(() => ({}));
+        setStatus({
+          kind: "error",
+          code: body.code ?? "model-API-failure",
+          correlation_id: body.correlation_id,
+          retry_after_seconds: body.retry_after_seconds,
+          detected: body.detected,
+        });
+        return;
+      }
+      const data = (await res.json()) as ExtractResponse;
+      const pdfUrl = URL.createObjectURL(file);
+      setStatus({ kind: "success", result: data, filename: file.name, pdfUrl });
+    } catch (err) {
+      // Network failure (offline, DNS, CORS, function cold-start timeout) or
+      // response-body parse failure. Without this catch, the promise rejects
+      // unhandled and status stays in "loading" indefinitely. Map all such
+      // failures to model-API-failure so the same ErrorState handles them
+      // and the user gets a retry path instead of a frozen spinner.
+      console.error("[handleFile] extraction request failed:", err);
+      setStatus({ kind: "error", code: "model-API-failure" });
     }
-    const data = (await res.json()) as ExtractResponse;
-    const pdfUrl = URL.createObjectURL(file);
-    setStatus({ kind: "success", result: data, filename: file.name, pdfUrl });
   }, []);
 
   useEffect(() => {
@@ -200,6 +211,12 @@ export default function Home() {
             message: `Failed, ${data.error ?? "unknown reason"}.`,
           });
         }
+      } catch (err) {
+        console.error("[fireWebhook] request failed:", err);
+        setWebhookStatus({
+          kind: "api-error",
+          message: "Network error: could not reach the server.",
+        });
       } finally {
         setWebhookFiring(false);
       }
@@ -355,7 +372,11 @@ export default function Home() {
           )}
           <p id={dropzoneHintId} className="mt-2 text-sm text-zinc-500">
             {status.kind === "loading"
-              ? "Typically 4-8 seconds. Reading the PDF, sending to Claude, validating fields."
+              ? `Typically 4-8 seconds. Reading the ${
+                  /\.(jpe?g|png|gif|webp)$/i.test(status.filename)
+                    ? "image"
+                    : "PDF"
+                }, sending to Claude, validating fields.`
               : "PDF (up to 25 MB) or image (JPG, PNG, GIF, WebP, up to 3.5 MB)."}
           </p>
         </label>
@@ -524,6 +545,31 @@ function ResultsView({
   const webhookHelpId = useId();
   const webhookUrlError = webhookUrl !== "" && !webhookUrlValid;
 
+  // Flags are merged server-side from the model's flags + a deterministic pass
+  // (math, dates, vendor presence). Inline edits change those fundamentals, so
+  // re-run the deterministic pass on the edited invoice and merge with the
+  // model-only subset of the original flag list. Without this, fixing a bad
+  // amount in the line items leaves a stale "line items don't match subtotal"
+  // warning until the next upload.
+  const displayFlags = useMemo(() => {
+    const originalDet = deterministicFlags(result.invoice);
+    const detKeys = new Set(
+      originalDet.map((f) => `${f.severity}:${f.message}`),
+    );
+    const modelOnly = result.invoice.flags.filter(
+      (f) => !detKeys.has(`${f.severity}:${f.message}`),
+    );
+    return mergeFlags(modelOnly, deterministicFlags(edited));
+  }, [result.invoice, edited]);
+
+  // Single source of truth for downstream consumers (JSON panel, CSV export,
+  // webhook payload): edited values plus live-recomputed flags. Keep `edited`
+  // separate so the "edited" sentinel and field rendering stay ref-stable.
+  const displayInvoice = useMemo<InvoiceExtraction>(
+    () => ({ ...edited, flags: displayFlags }),
+    [edited, displayFlags],
+  );
+
   const onTabKeyDown = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>) => {
       const order: ResultView[] = ["fields", "json"];
@@ -678,8 +724,13 @@ function ResultsView({
           </span>
           {", "}
           {result.pdf.num_pages} page{result.pdf.num_pages === 1 ? "" : "s"},{" "}
-          {(result.duration_ms.total / 1000).toFixed(1)}s,{" "}
-          {result.usage.input_tokens + result.usage.output_tokens} tokens
+          {(result.duration_ms.total / 1000).toFixed(1)}s
+          {result.cost_usd != null && (
+            <>
+              {", "}
+              {`$${result.cost_usd.toFixed(3)}`}
+            </>
+          )}
           {edited !== result.invoice && (
             <>
               {" · "}
@@ -712,7 +763,7 @@ function ResultsView({
         </span>
       </div>
 
-      {inv.flags.length > 0 && <FlagsList flags={inv.flags} />}
+      {displayFlags.length > 0 && <FlagsList flags={displayFlags} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="min-w-0 lg:sticky lg:top-4 lg:self-start">
@@ -827,7 +878,7 @@ function ResultsView({
             <JsonPanel
               panelId={jsonPanelId}
               tabId={jsonTabId}
-              result={{ ...result, invoice: edited }}
+              result={{ ...result, invoice: displayInvoice }}
             />
           )}
         </div>
@@ -858,14 +909,14 @@ function ResultsView({
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => downloadCsv("summary", edited)}
+            onClick={() => downloadCsv("summary", displayInvoice)}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             Download summary CSV
           </button>
           <button
             type="button"
-            onClick={() => downloadCsv("line_items", edited)}
+            onClick={() => downloadCsv("line_items", displayInvoice)}
             className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
             Download line-items CSV
@@ -902,7 +953,7 @@ function ResultsView({
           />
           <button
             type="button"
-            onClick={() => fireWebhook(edited)}
+            onClick={() => fireWebhook(displayInvoice)}
             disabled={!webhookUrlValid || webhookFiring}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
@@ -1440,14 +1491,23 @@ function JsonPanel({
     >
       <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2 text-xs">
         <span className="font-mono text-zinc-400">api/extract response</span>
-        <button
-          type="button"
-          onClick={onCopy}
-          className="rounded-md border border-zinc-700 px-2 py-1 font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          aria-live="polite"
-        >
-          {copied ? "Copied" : "Copy"}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Visually-hidden live region announces success without changing
+              the button's accessible name (which stays stable as "Copy JSON
+              to clipboard"). aria-live on the button itself would re-announce
+              the new label every state flip, which is jarring mid-click. */}
+          <span role="status" className="sr-only">
+            {copied ? "JSON copied to clipboard" : ""}
+          </span>
+          <button
+            type="button"
+            onClick={onCopy}
+            aria-label="Copy JSON to clipboard"
+            className="rounded-md border border-zinc-700 px-2 py-1 font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
       </div>
       <pre className="max-h-[820px] overflow-auto p-4 text-xs leading-relaxed text-zinc-100">
         <code>{json}</code>
