@@ -247,7 +247,7 @@ export default function Home() {
           htmlFor="pdf-input"
           role="button"
           tabIndex={status.kind === "loading" ? -1 : 0}
-          aria-label="Upload a PDF invoice. Press Enter or Space to open the file picker, or drop a file onto this area."
+          aria-label="Upload a PDF or image of an invoice. Press Enter or Space to open the file picker, or drop a file onto this area."
           aria-describedby={dropzoneHintId}
           aria-disabled={status.kind === "loading"}
           onKeyDown={(e) => {
@@ -287,7 +287,7 @@ export default function Home() {
             id="pdf-input"
             ref={inputRef}
             type="file"
-            accept="application/pdf,.pdf"
+            accept="application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
             onChange={onChange}
             className="sr-only"
             tabIndex={-1}
@@ -323,13 +323,13 @@ export default function Home() {
             </div>
           ) : (
             <p className="text-lg font-medium" aria-live="polite">
-              Drop a PDF invoice here, or click to upload
+              Drop a PDF or image of an invoice here, or click to upload
             </p>
           )}
           <p id={dropzoneHintId} className="mt-2 text-sm text-zinc-500">
             {status.kind === "loading"
               ? "Typically 4-8 seconds. Reading the PDF, sending to Claude, validating fields."
-              : "Max 25 MB. Typed or scanned-with-OCR PDFs."}
+              : "PDF (up to 25 MB) or image (JPG, PNG, GIF, WebP, up to 5 MB)."}
           </p>
         </label>
 

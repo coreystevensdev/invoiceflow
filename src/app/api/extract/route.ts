@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   extractInvoice,
   type InvoiceExtraction,
+  type SupportedImageMediaType,
   type UsageSummary,
 } from "@/lib/claude";
 import { parsePdf, PdfParseError, type PdfParseErrorCode } from "@/lib/pdf";
@@ -27,6 +28,68 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MAX_PDF_BYTES = 25 * 1024 * 1024;
+// Anthropic vision accepts up to ~5 MB per image; cap a bit lower so the
+// base64-encoded payload (~1.33x the binary) stays comfortably under the
+// API's request-size envelope.
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+const IMAGE_MIME_TYPES: Record<string, SupportedImageMediaType> = {
+  "image/jpeg": "image/jpeg",
+  "image/jpg": "image/jpeg",
+  "image/png": "image/png",
+  "image/gif": "image/gif",
+  "image/webp": "image/webp",
+};
+
+function detectImageMime(
+  declaredMime: string,
+  bytes: Buffer,
+): SupportedImageMediaType | null {
+  if (declaredMime in IMAGE_MIME_TYPES) {
+    return IMAGE_MIME_TYPES[declaredMime];
+  }
+  // Magic-number sniffing as a fallback for clients that send octet-stream.
+  if (
+    bytes.length >= 3 &&
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff
+  ) {
+    return "image/jpeg";
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  if (
+    bytes.length >= 6 &&
+    bytes[0] === 0x47 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x38
+  ) {
+    return "image/gif";
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
 
 export interface ExtractResponse {
   correlation_id: string;
@@ -128,47 +191,76 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   }
 
-  if (file.size > MAX_PDF_BYTES) {
-    return respond("oversized-PDF", {
-      detected: { size_bytes: file.size, mime: file.type || "unknown" },
-    });
-  }
+  const declaredMime = (file.type || "").toLowerCase();
+  const looksLikePdf =
+    declaredMime === "application/pdf" ||
+    file.name.toLowerCase().endsWith(".pdf");
 
   const bytes = Buffer.from(await file.arrayBuffer());
+  const imageMime = looksLikePdf ? null : detectImageMime(declaredMime, bytes);
 
-  const pdfStart = Date.now();
-  let pdfResult;
-  try {
-    pdfResult = await parsePdf(bytes);
-  } catch (err) {
-    if (err instanceof PdfParseError) {
-      return respond(mapPdfError(err.code), {
-        detected: err.detected,
-        message: err.message,
-      });
-    }
-    logger.error({
-      route: "extract",
-      category: "corrupt-PDF",
-      http_status: 500,
-      duration_ms: Date.now() - start,
-      note: "unexpected pdf-parse failure",
+  if (!looksLikePdf && !imageMime) {
+    return respond("non-PDF", {
+      detected: { mime: declaredMime || "unknown", size_bytes: file.size },
     });
-    return respond("corrupt-PDF");
   }
-  const pdfMs = Date.now() - pdfStart;
+
+  const sizeCap = imageMime ? MAX_IMAGE_BYTES : MAX_PDF_BYTES;
+  if (file.size > sizeCap) {
+    return respond("oversized-PDF", {
+      detected: {
+        size_bytes: file.size,
+        mime: imageMime ?? declaredMime ?? "unknown",
+        cap_bytes: sizeCap,
+      },
+    });
+  }
+
+  let pdfText: string | null = null;
+  let pdfNumPages = 1;
+  let pdfMs = 0;
+
+  if (!imageMime) {
+    const pdfStart = Date.now();
+    try {
+      const pdfResult = await parsePdf(bytes);
+      pdfText = pdfResult.text;
+      pdfNumPages = pdfResult.num_pages;
+    } catch (err) {
+      if (err instanceof PdfParseError) {
+        return respond(mapPdfError(err.code), {
+          detected: err.detected,
+          message: err.message,
+        });
+      }
+      logger.error({
+        route: "extract",
+        category: "corrupt-PDF",
+        http_status: 500,
+        duration_ms: Date.now() - start,
+        note: "unexpected pdf-parse failure",
+      });
+      return respond("corrupt-PDF");
+    }
+    pdfMs = Date.now() - pdfStart;
+  }
 
   logger.info({
     route: "extract",
-    category: "pdf-parsed",
+    category: imageMime ? "image-received" : "pdf-parsed",
     pdf_size_bytes: bytes.length,
-    pdf_num_pages: pdfResult.num_pages,
-    pdf_mime: file.type || "application/pdf",
+    pdf_num_pages: pdfNumPages,
+    pdf_mime: imageMime ?? declaredMime ?? "application/pdf",
     duration_ms: pdfMs,
   });
 
   try {
-    const extraction = await extractInvoice(pdfResult.text, { logger });
+    const extraction = await extractInvoice(
+      imageMime
+        ? { kind: "image", data: bytes, mediaType: imageMime }
+        : { kind: "text", text: pdfText ?? "" },
+      { logger },
+    );
     const modelFlags = extraction.invoice.flags;
     const detFlags = deterministicFlags(extraction.invoice);
     const flags = mergeFlags(modelFlags, detFlags);
@@ -178,7 +270,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       correlation_id: correlationId,
       invoice,
       confidence_summary: confidenceSummary(invoice),
-      pdf: { num_pages: pdfResult.num_pages, size_bytes: bytes.length },
+      pdf: { num_pages: pdfNumPages, size_bytes: bytes.length },
       usage: extraction.usage,
       duration_ms: {
         pdf_parse: pdfMs,
@@ -195,7 +287,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       category: "ok",
       http_status: 200,
       pdf_size_bytes: bytes.length,
-      pdf_num_pages: pdfResult.num_pages,
+      pdf_num_pages: pdfNumPages,
       duration_ms: Date.now() - start,
       cost_usd: extraction.cost_usd ?? undefined,
       retry_count: extraction.retry_count,
