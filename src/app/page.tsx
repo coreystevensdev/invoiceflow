@@ -13,6 +13,13 @@ import type { ExtractResponse } from "./api/extract/route";
 import type { InvoiceExtraction, ExtractionFlag } from "@/lib/claude";
 import type { ExtractionErrorCode } from "@/lib/errors";
 import { deterministicFlags, mergeFlags } from "@/lib/validate";
+import {
+  CUSTOM_FIELD_LIMITS,
+  loadCustomFields,
+  saveCustomFields,
+  type CustomField,
+  type CustomFieldType,
+} from "@/lib/custom-fields";
 import { ErrorState } from "@/components/error-state";
 import { PdfPreview } from "@/components/pdf-preview";
 import { PrivacySection } from "@/components/privacy-section";
@@ -72,43 +79,79 @@ export default function Home() {
   const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(
     null,
   );
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropzoneHintId = useId();
 
-  const handleFile = useCallback(async (file: File) => {
-    setStatus((prev) => {
-      if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
-      return { kind: "loading", filename: file.name };
-    });
-    setWebhookStatus(null);
-    const form = new FormData();
-    form.append("pdf", file);
-    try {
-      const res = await fetch("/api/extract", { method: "POST", body: form });
-      if (!res.ok) {
-        const body: ErrorBody = await res.json().catch(() => ({}));
-        setStatus({
-          kind: "error",
-          code: body.code ?? "model-API-failure",
-          correlation_id: body.correlation_id,
-          retry_after_seconds: body.retry_after_seconds,
-          detected: body.detected,
-        });
-        return;
-      }
-      const data = (await res.json()) as ExtractResponse;
-      const pdfUrl = URL.createObjectURL(file);
-      setStatus({ kind: "success", result: data, filename: file.name, pdfUrl });
-    } catch (err) {
-      // Network failure (offline, DNS, CORS, function cold-start timeout) or
-      // response-body parse failure. Without this catch, the promise rejects
-      // unhandled and status stays in "loading" indefinitely. Map all such
-      // failures to model-API-failure so the same ErrorState handles them
-      // and the user gets a retry path instead of a frozen spinner.
-      console.error("[handleFile] extraction request failed:", err);
-      setStatus({ kind: "error", code: "model-API-failure" });
-    }
+  // Load custom fields from localStorage after mount. Doing this in an
+  // effect (not the useState initializer) keeps SSR consistent: the server
+  // and first client render both see [], then the client hydrates from
+  // localStorage on the next paint. The react-hooks/set-state-in-effect
+  // rule fires here, but this is the documented hydration-from-external-
+  // store pattern; the alternative (useSyncExternalStore with a custom
+  // subscribe layer) is overkill for a localStorage list.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCustomFields(loadCustomFields());
   }, []);
+
+  // Persist on every change. Bypasses the initial mount (length === 0)
+  // unless the user had something previously saved and is now clearing it.
+  // Tracking that edge case isn't worth the ref-based "is-this-the-first-
+  // run" dance; writing [] on first mount is harmless.
+  useEffect(() => {
+    saveCustomFields(customFields);
+  }, [customFields]);
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      setStatus((prev) => {
+        if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
+        return { kind: "loading", filename: file.name };
+      });
+      setWebhookStatus(null);
+      const form = new FormData();
+      form.append("pdf", file);
+      if (customFields.length > 0) {
+        form.append("custom_fields", JSON.stringify(customFields));
+      }
+      try {
+        const res = await fetch("/api/extract", {
+          method: "POST",
+          body: form,
+        });
+        if (!res.ok) {
+          const body: ErrorBody = await res.json().catch(() => ({}));
+          setStatus({
+            kind: "error",
+            code: body.code ?? "model-API-failure",
+            correlation_id: body.correlation_id,
+            retry_after_seconds: body.retry_after_seconds,
+            detected: body.detected,
+          });
+          return;
+        }
+        const data = (await res.json()) as ExtractResponse;
+        const pdfUrl = URL.createObjectURL(file);
+        setStatus({
+          kind: "success",
+          result: data,
+          filename: file.name,
+          pdfUrl,
+        });
+      } catch (err) {
+        // Network failure (offline, DNS, CORS, function cold-start timeout)
+        // or response-body parse failure. Without this catch, the promise
+        // rejects unhandled and status stays in "loading" indefinitely. Map
+        // all such failures to model-API-failure so the same ErrorState
+        // handles them and the user gets a retry path instead of a frozen
+        // spinner.
+        console.error("[handleFile] extraction request failed:", err);
+        setStatus({ kind: "error", code: "model-API-failure" });
+      }
+    },
+    [customFields],
+  );
 
   // Bulk-upload runner. Drains the file queue with bounded concurrency so we
   // don't saturate Anthropic's per-IP rate limits or the per-instance extract
@@ -156,6 +199,9 @@ export default function Home() {
       try {
         const form = new FormData();
         form.append("pdf", file);
+        if (customFields.length > 0) {
+          form.append("custom_fields", JSON.stringify(customFields));
+        }
         const res = await fetch("/api/extract", {
           method: "POST",
           body: form,
@@ -199,7 +245,7 @@ export default function Home() {
     await Promise.all(
       Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker),
     );
-  }, []);
+  }, [customFields]);
 
   // Route file selection: 1 file → rich single-file flow with inline edits,
   // PDF preview, JSON view, webhook test. >1 → batch flow with summary
@@ -556,7 +602,15 @@ export default function Home() {
           </p>
         )}
 
-        {status.kind === "idle" && <PreviewCard />}
+        {status.kind === "idle" && (
+          <>
+            <PreviewCard />
+            <CustomFieldsManager
+              fields={customFields}
+              onChange={setCustomFields}
+            />
+          </>
+        )}
 
         {status.kind === "error" && (
           <ErrorState
@@ -573,6 +627,7 @@ export default function Home() {
             result={status.result}
             filename={status.filename}
             pdfUrl={status.pdfUrl}
+            customFields={customFields}
             downloadCsv={downloadCsv}
             webhookUrl={webhookUrl}
             setWebhookUrl={setWebhookUrl}
@@ -656,6 +711,7 @@ interface ResultsViewProps {
   result: ExtractResponse;
   filename: string;
   pdfUrl: string;
+  customFields: CustomField[];
   downloadCsv: (
     format: "summary" | "line_items",
     invoice: InvoiceExtraction,
@@ -673,6 +729,7 @@ function ResultsView({
   result,
   filename,
   pdfUrl,
+  customFields,
   downloadCsv,
   webhookUrl,
   setWebhookUrl,
@@ -879,8 +936,48 @@ function ResultsView({
             currency: { ...prev.currency, value: v as string | null },
           })),
       },
+      // User-defined custom fields, appended after the standard nine. Skip
+      // any whose definition was deleted from localStorage but whose value
+      // still lives in the result, and any whose value the model didn't
+      // populate (extracted: false / undefined). The label uses the user's
+      // current display name from localStorage; the response key is the
+      // stable id so name changes don't lose data.
+      ...customFields.flatMap<FieldDef>((cf) => {
+        const ext = inv.custom_fields?.[cf.id];
+        if (!ext) return [];
+        const { bbox, text } = parseBboxFromReasoning(ext.reasoning);
+        const isMoney = false;
+        return [
+          {
+            label: cf.name.trim() || cf.id,
+            field: {
+              value: ext.value,
+              confidence: ext.confidence,
+              reasoning: text,
+            },
+            bbox,
+            money: isMoney,
+            onSave: (v) =>
+              setEdited((prev) => ({
+                ...prev,
+                custom_fields: {
+                  ...(prev.custom_fields ?? {}),
+                  [cf.id]: {
+                    value: v,
+                    confidence:
+                      prev.custom_fields?.[cf.id]?.confidence ??
+                      ext.confidence,
+                    reasoning:
+                      prev.custom_fields?.[cf.id]?.reasoning ??
+                      ext.reasoning,
+                  },
+                },
+              })),
+          },
+        ];
+      }),
     ];
-  }, [inv]);
+  }, [inv, customFields]);
 
   return (
     <section className="mt-8 space-y-6" aria-label="Extraction results">
@@ -1721,6 +1818,216 @@ function PreviewCard() {
         Plus line items, currency, confidence flags, and reasoning per field.
       </p>
     </section>
+  );
+}
+
+function CustomFieldsManager({
+  fields,
+  onChange,
+}: {
+  fields: CustomField[];
+  onChange: (next: CustomField[]) => void;
+}) {
+  const summaryId = useId();
+  const atLimit = fields.length >= CUSTOM_FIELD_LIMITS.maxFields;
+
+  const addField = () => {
+    if (atLimit) return;
+    onChange([
+      ...fields,
+      {
+        id: crypto.randomUUID(),
+        name: "",
+        type: "string",
+        description: "",
+      },
+    ]);
+  };
+
+  const updateField = (id: string, patch: Partial<CustomField>) => {
+    onChange(fields.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+  };
+
+  const removeField = (id: string) => {
+    onChange(fields.filter((f) => f.id !== id));
+  };
+
+  const validateField = (f: CustomField) => {
+    const issues: string[] = [];
+    const trimmedName = f.name.trim();
+    const trimmedDesc = f.description.trim();
+    if (trimmedName.length < CUSTOM_FIELD_LIMITS.nameMin) {
+      issues.push("name required");
+    } else if (trimmedName.length > CUSTOM_FIELD_LIMITS.nameMax) {
+      issues.push(`name ≤ ${CUSTOM_FIELD_LIMITS.nameMax} chars`);
+    }
+    if (trimmedDesc.length < CUSTOM_FIELD_LIMITS.descriptionMin) {
+      issues.push(
+        `description ≥ ${CUSTOM_FIELD_LIMITS.descriptionMin} chars`,
+      );
+    } else if (trimmedDesc.length > CUSTOM_FIELD_LIMITS.descriptionMax) {
+      issues.push(
+        `description ≤ ${CUSTOM_FIELD_LIMITS.descriptionMax} chars`,
+      );
+    }
+    return issues;
+  };
+
+  return (
+    <details className="mt-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <summary
+        id={summaryId}
+        className="cursor-pointer select-none px-6 py-4 text-sm font-medium text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-xl dark:text-zinc-100"
+      >
+        Custom fields{" "}
+        <span className="text-zinc-500 dark:text-zinc-400">
+          ({fields.length}
+          {fields.length > 0 ? ` defined` : " — add fields beyond the standard 9"}
+          )
+        </span>
+      </summary>
+      <div className="border-t border-zinc-200 px-6 py-4 dark:border-zinc-800">
+        <p className="mb-3 text-xs text-zinc-600 dark:text-zinc-400">
+          Tell Claude to extract additional fields beyond the standard nine
+          (cost center, GL code, project number, anything domain-specific).
+          Definitions are stored in your browser only and sent with each
+          extraction request. Up to {CUSTOM_FIELD_LIMITS.maxFields} fields.
+        </p>
+
+        {fields.length === 0 && (
+          <p className="mb-3 text-xs italic text-zinc-500">
+            No custom fields yet.
+          </p>
+        )}
+
+        <ul className="space-y-3">
+          {fields.map((f) => {
+            const issues = validateField(f);
+            return (
+              <li
+                key={f.id}
+                className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-950"
+              >
+                <CustomFieldRow
+                  field={f}
+                  issues={issues}
+                  onUpdate={(patch) => updateField(f.id, patch)}
+                  onRemove={() => removeField(f.id)}
+                />
+              </li>
+            );
+          })}
+        </ul>
+
+        <button
+          type="button"
+          onClick={addField}
+          disabled={atLimit}
+          className="mt-3 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          aria-label={
+            atLimit
+              ? `Maximum ${CUSTOM_FIELD_LIMITS.maxFields} custom fields reached`
+              : "Add a custom field"
+          }
+        >
+          + Add field
+        </button>
+      </div>
+    </details>
+  );
+}
+
+function CustomFieldRow({
+  field,
+  issues,
+  onUpdate,
+  onRemove,
+}: {
+  field: CustomField;
+  issues: string[];
+  onUpdate: (patch: Partial<CustomField>) => void;
+  onRemove: () => void;
+}) {
+  const nameId = useId();
+  const typeId = useId();
+  const descId = useId();
+  const errorId = useId();
+  const hasIssues = issues.length > 0;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex-1 min-w-[120px]">
+          <label
+            htmlFor={nameId}
+            className="block text-xs font-medium text-zinc-700 dark:text-zinc-300"
+          >
+            Name
+          </label>
+          <input
+            id={nameId}
+            type="text"
+            value={field.name}
+            onChange={(e) => onUpdate({ name: e.target.value })}
+            maxLength={CUSTOM_FIELD_LIMITS.nameMax}
+            placeholder="Cost Center"
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+          />
+        </div>
+        <div className="w-28">
+          <label
+            htmlFor={typeId}
+            className="block text-xs font-medium text-zinc-700 dark:text-zinc-300"
+          >
+            Type
+          </label>
+          <select
+            id={typeId}
+            value={field.type}
+            onChange={(e) =>
+              onUpdate({ type: e.target.value as CustomFieldType })
+            }
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+          >
+            <option value="string">text</option>
+            <option value="number">number</option>
+            <option value="date">date</option>
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove field ${field.name || "(unnamed)"}`}
+          className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs hover:bg-red-50 hover:border-red-300 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+        >
+          Remove
+        </button>
+      </div>
+      <div>
+        <label
+          htmlFor={descId}
+          className="block text-xs font-medium text-zinc-700 dark:text-zinc-300"
+        >
+          Description (told to Claude)
+        </label>
+        <textarea
+          id={descId}
+          value={field.description}
+          onChange={(e) => onUpdate({ description: e.target.value })}
+          maxLength={CUSTOM_FIELD_LIMITS.descriptionMax}
+          rows={2}
+          placeholder="Extract the GL cost center code. Usually 4 digits, sometimes prefixed with 'CC-'."
+          aria-invalid={hasIssues ? true : undefined}
+          aria-describedby={hasIssues ? errorId : undefined}
+          className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900"
+        />
+      </div>
+      {hasIssues && (
+        <p id={errorId} className="text-xs text-amber-700 dark:text-amber-400">
+          {issues.join("; ")}
+        </p>
+      )}
+    </div>
   );
 }
 
