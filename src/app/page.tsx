@@ -13,6 +13,7 @@ import type { ExtractResponse } from "./api/extract/route";
 import type { InvoiceExtraction, ExtractionFlag } from "@/lib/claude";
 import type { ExtractionErrorCode } from "@/lib/errors";
 import { ErrorState } from "@/components/error-state";
+import { PdfPreview } from "@/components/pdf-preview";
 import { PrivacySection } from "@/components/privacy-section";
 
 type Status =
@@ -482,10 +483,16 @@ function ResultsView({
   // a "prev props" sentinel instead of useEffect avoids the
   // react-hooks/set-state-in-effect lint and resets cleanly on the same
   // render that result changes.
+  const isImage = result.input_type === "image";
+  const [pdfBboxMap, setPdfBboxMap] = useState<Record<string, number[]>>({});
+  const handlePdfBboxes = useCallback((map: Record<string, number[]>) => {
+    setPdfBboxMap(map);
+  }, []);
   if (editedFor !== result) {
     setEditedFor(result);
     setEdited(result.invoice);
     setActiveBbox(null);
+    setPdfBboxMap({});
   }
   const inv = edited;
   const summary = result.confidence_summary;
@@ -493,7 +500,6 @@ function ResultsView({
   const jsonTabId = useId();
   const fieldsPanelId = useId();
   const jsonPanelId = useId();
-  const isImage = result.input_type === "image";
 
   const onTabKeyDown = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>) => {
@@ -710,10 +716,12 @@ function ResultsView({
               )}
             </div>
           ) : (
-            <iframe
-              src={pdfUrl}
-              title={`Original PDF: ${filename}`}
-              className="aspect-[8.5/11] w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
+            <PdfPreview
+              pdfUrl={pdfUrl}
+              filename={filename}
+              invoice={inv}
+              activeBbox={activeBbox}
+              onBboxesComputed={handlePdfBboxes}
             />
           )}
         </div>
@@ -767,23 +775,28 @@ function ResultsView({
               aria-labelledby={fieldsTabId}
             >
               <dl className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
-                {fields.map((f) => (
-                  <FieldRow
-                    key={f.label}
-                    label={f.label}
-                    field={f.field}
-                    money={f.money}
-                    onSave={f.onSave}
-                    onActivate={
-                      isImage && f.bbox
-                        ? () => setActiveBbox(f.bbox)
-                        : undefined
-                    }
-                    onDeactivate={
-                      isImage && f.bbox ? () => setActiveBbox(null) : undefined
-                    }
-                  />
-                ))}
+                {fields.map((f) => {
+                  const bboxForField = isImage
+                    ? f.bbox
+                    : (pdfBboxMap[f.label] ?? null);
+                  return (
+                    <FieldRow
+                      key={f.label}
+                      label={f.label}
+                      field={f.field}
+                      money={f.money}
+                      onSave={f.onSave}
+                      onActivate={
+                        bboxForField
+                          ? () => setActiveBbox(bboxForField)
+                          : undefined
+                      }
+                      onDeactivate={
+                        bboxForField ? () => setActiveBbox(null) : undefined
+                      }
+                    />
+                  );
+                })}
               </dl>
             </div>
           ) : (
