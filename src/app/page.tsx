@@ -557,7 +557,6 @@ function ResultsView({
               role="tabpanel"
               id={fieldsPanelId}
               aria-labelledby={fieldsTabId}
-              className="space-y-6"
             >
               <dl className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
                 {fields.map((f) => (
@@ -569,9 +568,6 @@ function ResultsView({
                   />
                 ))}
               </dl>
-              {inv.line_items.length > 0 && (
-                <LineItemsTable items={inv.line_items} />
-              )}
             </div>
           ) : (
             <JsonPanel
@@ -582,6 +578,10 @@ function ResultsView({
           )}
         </div>
       </div>
+
+      {view === "fields" && inv.line_items.length > 0 && (
+        <LineItemsTable items={inv.line_items} />
+      )}
 
       <div>
         <div className="flex flex-wrap gap-3">
