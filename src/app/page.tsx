@@ -2084,6 +2084,16 @@ function BatchView({
     return `${(n / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // Sum of cost_usd across all successful extractions. Null cost_usd values
+  // (model not in the pricing table) are excluded so a single unpriced
+  // call doesn't poison the total. This is informational only; the rolling
+  // median + monthly cap in src/lib/cost.ts is the actual budget guard.
+  const totalCostUsd = successes.reduce(
+    (sum, s) => sum + (s.result.cost_usd ?? 0),
+    0,
+  );
+  const anyCostKnown = successes.some((s) => s.result.cost_usd != null);
+
   return (
     <section
       aria-label="Batch extraction results"
@@ -2116,6 +2126,14 @@ function BatchView({
           {" of "}
           {files.length}
           {inProgress && " (running…)"}
+          {anyCostKnown && (
+            <>
+              {" · "}
+              <span className="text-zinc-600 dark:text-zinc-400">
+                ${totalCostUsd.toFixed(3)} total
+              </span>
+            </>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -2167,6 +2185,12 @@ function BatchView({
                     {f.result.duration_ms.total
                       ? `${(f.result.duration_ms.total / 1000).toFixed(1)}s`
                       : ""}
+                    {f.result.cost_usd != null && (
+                      <>
+                        {" · "}
+                        {`$${f.result.cost_usd.toFixed(3)}`}
+                      </>
+                    )}
                   </>
                 ) : f.kind === "error" ? (
                   <>
