@@ -1034,10 +1034,7 @@ function FieldRow({
           />
         </dd>
       ) : (
-        <dd
-          className="mt-1 flex items-center gap-2 text-lg font-medium"
-          aria-describedby={field.reasoning ? reasoningId : undefined}
-        >
+        <dd className="mt-1 flex items-center gap-2 text-lg font-medium">
           <button
             id={inputId}
             type="button"
@@ -1047,6 +1044,7 @@ function FieldRow({
             }}
             className="rounded text-left hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             aria-label={`${label}, ${display}. Click to edit.`}
+            aria-describedby={field.reasoning ? reasoningId : undefined}
           >
             {display}
           </button>
