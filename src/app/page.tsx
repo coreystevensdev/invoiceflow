@@ -489,12 +489,28 @@ function ResultsView({
     [view, fieldsTabId, jsonTabId],
   );
 
-  const fields = useMemo<FieldDef[]>(
-    () => [
+  const fields = useMemo<FieldDef[]>(() => {
+    const wrap = <T extends FieldLike>(f: T) => {
+      const { bbox, text } = parseBboxFromReasoning(f.reasoning);
+      return { field: { ...f, reasoning: text }, bbox };
+    };
+    const inv_num = wrap(inv.invoice_number);
+    const vendor = wrap({
+      value: inv.vendor.name,
+      confidence: inv.vendor.confidence,
+      reasoning: inv.vendor.reasoning,
+    });
+    const bill_date = wrap(inv.bill_date);
+    const due_date = wrap(inv.due_date);
+    const po_number = wrap(inv.po_number);
+    const subtotal = wrap(inv.subtotal);
+    const tax = wrap(inv.tax);
+    const total = wrap(inv.total);
+    const currency = wrap(inv.currency);
+    return [
       {
         label: "Invoice #",
-        field: inv.invoice_number,
-        bbox: inv.invoice_number.source_bbox ?? null,
+        ...inv_num,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -506,12 +522,7 @@ function ResultsView({
       },
       {
         label: "Vendor",
-        field: {
-          value: inv.vendor.name,
-          confidence: inv.vendor.confidence,
-          reasoning: inv.vendor.reasoning,
-        },
-        bbox: inv.vendor.source_bbox ?? null,
+        ...vendor,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -520,8 +531,7 @@ function ResultsView({
       },
       {
         label: "Bill date",
-        field: inv.bill_date,
-        bbox: inv.bill_date.source_bbox ?? null,
+        ...bill_date,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -530,8 +540,7 @@ function ResultsView({
       },
       {
         label: "Due date",
-        field: inv.due_date,
-        bbox: inv.due_date.source_bbox ?? null,
+        ...due_date,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -540,8 +549,7 @@ function ResultsView({
       },
       {
         label: "PO #",
-        field: inv.po_number,
-        bbox: inv.po_number.source_bbox ?? null,
+        ...po_number,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -550,9 +558,8 @@ function ResultsView({
       },
       {
         label: "Subtotal",
-        field: inv.subtotal,
+        ...subtotal,
         money: true,
-        bbox: inv.subtotal.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -564,9 +571,8 @@ function ResultsView({
       },
       {
         label: "Tax",
-        field: inv.tax,
+        ...tax,
         money: true,
-        bbox: inv.tax.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -578,9 +584,8 @@ function ResultsView({
       },
       {
         label: "Total",
-        field: inv.total,
+        ...total,
         money: true,
-        bbox: inv.total.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -592,17 +597,15 @@ function ResultsView({
       },
       {
         label: "Currency",
-        field: inv.currency,
-        bbox: inv.currency.source_bbox ?? null,
+        ...currency,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
             currency: { ...prev.currency, value: v as string | null },
           })),
       },
-    ],
-    [inv],
-  );
+    ];
+  }, [inv]);
 
   return (
     <section className="mt-8 space-y-6" aria-label="Extraction results">
@@ -861,6 +864,26 @@ type FieldDef = {
   bbox: Bbox | null;
   onSave: (value: string | number | null) => void;
 };
+
+const BBOX_PATTERN = /^\[bbox:\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\]\s*/;
+
+function parseBboxFromReasoning(reasoning: string): {
+  bbox: Bbox | null;
+  text: string;
+} {
+  const m = reasoning.match(BBOX_PATTERN);
+  if (!m) return { bbox: null, text: reasoning };
+  const bbox = [
+    Number.parseFloat(m[1]),
+    Number.parseFloat(m[2]),
+    Number.parseFloat(m[3]),
+    Number.parseFloat(m[4]),
+  ];
+  if (bbox.some((n) => !Number.isFinite(n))) {
+    return { bbox: null, text: reasoning.replace(BBOX_PATTERN, "") };
+  }
+  return { bbox, text: reasoning.replace(BBOX_PATTERN, "") };
+}
 
 function FieldRow({
   label,
