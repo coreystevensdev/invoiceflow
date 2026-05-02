@@ -86,22 +86,63 @@ export function PdfPreview({
           ];
         };
 
-        const search = (label: string, query: string | null | undefined) => {
-          if (!query) return;
-          const trimmed = String(query).trim();
-          if (trimmed.length < 2) return;
-          const lower = trimmed.toLowerCase();
-          const item = items.find(
-            (it) => it.str && it.str.toLowerCase().includes(lower),
-          );
+        const findItem = (queries: string[]): PdfTextItem | undefined => {
+          for (const q of queries) {
+            const trimmed = q.trim();
+            if (trimmed.length < 2) continue;
+            const lower = trimmed.toLowerCase();
+            const item = items.find(
+              (it) => it.str && it.str.toLowerCase().includes(lower),
+            );
+            if (item) return item;
+          }
+          return undefined;
+        };
+
+        const search = (label: string, queries: (string | null | undefined)[]) => {
+          const usable = queries.filter((q): q is string => !!q);
+          const item = findItem(usable);
           if (item) recordBbox(label, item);
         };
 
-        search("Invoice #", invoice.invoice_number.value);
-        search("Vendor", invoice.vendor.name);
-        search("Bill date", invoice.bill_date.value);
-        search("Due date", invoice.due_date.value);
-        search("PO #", invoice.po_number.value);
+        // ISO date "2026-04-15" → also try natural-language variants that
+        // typed invoices commonly use ("April 15, 2026", "Apr 15, 2026",
+        // "04/15/2026", "15/04/2026", "2026-04-15").
+        const dateVariants = (iso: string | null): string[] => {
+          if (!iso) return [];
+          const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (!m) return [iso];
+          const [, y, mm, dd] = m;
+          const monthIdx = Number.parseInt(mm, 10) - 1;
+          const day = Number.parseInt(dd, 10);
+          const monthLong = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December",
+          ][monthIdx];
+          const monthShort = monthLong?.slice(0, 3);
+          return [
+            iso,
+            `${monthLong} ${day}, ${y}`,
+            `${monthShort} ${day}, ${y}`,
+            `${mm}/${dd}/${y}`,
+            `${dd}/${mm}/${y}`,
+            `${monthLong} ${day}`,
+          ].filter(Boolean) as string[];
+        };
+
+        // For multi-word strings (vendor names) PDF.js may split text into
+        // separate items per font run. Generate fallback queries for each
+        // word longer than 3 chars so we still get a partial match.
+        const wordFallbacks = (s: string | null): string[] => {
+          if (!s) return [];
+          return [s, ...s.split(/\s+/).filter((w) => w.length > 3)];
+        };
+
+        search("Invoice #", [invoice.invoice_number.value]);
+        search("Vendor", wordFallbacks(invoice.vendor.name));
+        search("Bill date", dateVariants(invoice.bill_date.value));
+        search("Due date", dateVariants(invoice.due_date.value));
+        search("PO #", [invoice.po_number.value]);
         const formatMoney = (n: number | null) =>
           n != null
             ? n.toLocaleString("en-US", {
@@ -109,10 +150,10 @@ export function PdfPreview({
                 maximumFractionDigits: 2,
               })
             : null;
-        search("Subtotal", formatMoney(invoice.subtotal.value));
-        search("Tax", formatMoney(invoice.tax.value));
-        search("Total", formatMoney(invoice.total.value));
-        search("Currency", invoice.currency.value);
+        search("Subtotal", [formatMoney(invoice.subtotal.value)]);
+        search("Tax", [formatMoney(invoice.tax.value)]);
+        search("Total", [formatMoney(invoice.total.value)]);
+        search("Currency", [invoice.currency.value]);
 
         if (!cancelled) {
           setLoaded(true);
