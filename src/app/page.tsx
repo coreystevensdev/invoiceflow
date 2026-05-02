@@ -210,6 +210,7 @@ export default function Home() {
             accept="application/pdf,.pdf"
             onChange={onChange}
             className="sr-only"
+            tabIndex={-1}
             aria-describedby={dropzoneHintId}
           />
           {status.kind === "loading" ? (
