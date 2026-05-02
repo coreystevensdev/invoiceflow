@@ -753,7 +753,24 @@ function ResultsView({
       </div>
 
       {view === "fields" && inv.line_items.length > 0 && (
-        <LineItemsTable items={inv.line_items} />
+        <LineItemsTable
+          items={inv.line_items}
+          onChange={(index, field, value) => {
+            setEdited((prev) => {
+              const next = prev.line_items.map((li, i) => {
+                if (i !== index) return li;
+                if (field === "description") {
+                  return { ...li, description: value as string | null };
+                }
+                return {
+                  ...li,
+                  [field]: typeof value === "number" ? value : null,
+                };
+              });
+              return { ...prev, line_items: next };
+            });
+          }}
+        />
       )}
 
       <div>
@@ -1117,15 +1134,33 @@ function FlagsList({ flags }: { flags: ExtractionFlag[] }) {
   );
 }
 
+type LineItem = InvoiceExtraction["line_items"][number];
+type LineItemKey = "description" | "quantity" | "unit_price" | "amount";
+
+function formatMoney(n: number): string {
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 function LineItemsTable({
   items,
+  onChange,
 }: {
-  items: InvoiceExtraction["line_items"];
+  items: LineItem[];
+  onChange: (
+    index: number,
+    field: LineItemKey,
+    value: string | number | null,
+  ) => void;
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
       <table className="w-full text-sm sm:min-w-[28rem]">
-        <caption className="sr-only">Extracted line items</caption>
+        <caption className="sr-only">
+          Extracted line items. Click any cell to edit.
+        </caption>
         <thead className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
           <tr>
             <th scope="col" className="px-4 py-3">
@@ -1148,31 +1183,137 @@ function LineItemsTable({
               key={i}
               className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
             >
-              <td className="px-4 py-3">{li.description ?? "-"}</td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {li.quantity ?? "-"}
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {li.unit_price != null
-                  ? li.unit_price.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })
-                  : "-"}
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {li.amount != null
-                  ? li.amount.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })
-                  : "-"}
-              </td>
+              <EditableCell
+                value={li.description ?? null}
+                kind="text"
+                ariaLabel={`Description, row ${i + 1}`}
+                onSave={(v) => onChange(i, "description", v)}
+              />
+              <EditableCell
+                value={li.quantity ?? null}
+                kind="number"
+                align="right"
+                ariaLabel={`Quantity, row ${i + 1}`}
+                onSave={(v) => onChange(i, "quantity", v)}
+              />
+              <EditableCell
+                value={li.unit_price ?? null}
+                kind="money"
+                align="right"
+                ariaLabel={`Unit price, row ${i + 1}`}
+                onSave={(v) => onChange(i, "unit_price", v)}
+              />
+              <EditableCell
+                value={li.amount ?? null}
+                kind="money"
+                align="right"
+                ariaLabel={`Amount, row ${i + 1}`}
+                onSave={(v) => onChange(i, "amount", v)}
+              />
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function EditableCell({
+  value,
+  kind,
+  align,
+  ariaLabel,
+  onSave,
+}: {
+  value: string | number | null;
+  kind: "text" | "number" | "money";
+  align?: "right";
+  ariaLabel: string;
+  onSave: (value: string | number | null) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const display =
+    value === null || value === undefined
+      ? "-"
+      : kind === "money" && typeof value === "number"
+        ? formatMoney(value)
+        : String(value);
+
+  const draftFromValue = () => {
+    if (value === null || value === undefined) return "";
+    if (kind === "money" && typeof value === "number") return value.toFixed(2);
+    return String(value);
+  };
+
+  const startEditing = () => {
+    setDraft(draftFromValue());
+    setIsEditing(true);
+  };
+
+  useEffect(() => {
+    if (isEditing) inputRef.current?.select();
+  }, [isEditing]);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (kind === "text") {
+      onSave(trimmed === "" ? null : trimmed);
+    } else {
+      if (trimmed === "") {
+        onSave(null);
+      } else {
+        const cleaned = trimmed.replace(/,/g, "");
+        const parsed = Number.parseFloat(cleaned);
+        if (Number.isFinite(parsed)) onSave(parsed);
+      }
+    }
+    setIsEditing(false);
+  };
+
+  const alignClass = align === "right" ? "text-right" : "text-left";
+
+  return (
+    <td className={`px-4 py-3 ${alignClass}`}>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode={kind === "text" ? "text" : "decimal"}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsEditing(false);
+            }
+          }}
+          spellCheck={false}
+          aria-label={ariaLabel}
+          className={`w-full rounded-md border border-indigo-400 bg-white px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-indigo-500 dark:bg-zinc-950 dark:text-zinc-100 ${
+            kind === "text" ? "text-left" : "text-right tabular-nums"
+          }`}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={startEditing}
+          aria-label={`${ariaLabel}, ${display}. Click to edit.`}
+          className={`rounded text-inherit hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
+            kind === "text" ? "text-left" : "tabular-nums"
+          }`}
+        >
+          {display}
+        </button>
+      )}
+    </td>
   );
 }
 
