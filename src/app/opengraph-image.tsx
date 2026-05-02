@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { getSiteUrl } from "@/lib/site";
 
 export const runtime = "nodejs";
 export const alt = "InvoiceFlow, PDF invoices structured by Claude in seconds";
@@ -6,6 +7,11 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function Image() {
+  // OG images are cached and shared across surfaces, so they should show the
+  // canonical production URL even when generated on a preview deployment.
+  // Vercel sets VERCEL_PROJECT_PRODUCTION_URL on every deploy (production and
+  // preview), and getSiteUrl() falls through to it after SITE_URL.
+  const displayUrl = getSiteUrl().replace(/^https?:\/\//, "");
   return new ImageResponse(
     (
       <div
@@ -120,7 +126,7 @@ export default async function Image() {
             github.com/coreystevensdev/invoiceflow
           </div>
           <div style={{ fontSize: 22, color: "#71717a" }}>
-            invoiceflow-cs.vercel.app
+            {displayUrl}
           </div>
         </div>
       </div>

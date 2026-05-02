@@ -21,8 +21,9 @@ export function getSiteUrl(): string {
   return "http://localhost:3000";
 }
 
-// TODO: Update once Tellsight no-account demo deploys (target 2026-05-04).
-// Reused by Story 2.2 (CSV success CTA) and Story 2.0 (`monthly-budget-exhausted` error CTA).
+// Placeholder until Tellsight's no-account demo deploys; isTellsightDemoUrlConfigured()
+// gates the consuming UI surfaces (CSV success CTA, monthly-budget-exhausted error CTA)
+// so the link is suppressed rather than rendered as a broken anchor.
 export const TELLSIGHT_DEMO_URL = "https://tellsight.example.com/demo";
 
 const TELLSIGHT_DEMO_URL_PLACEHOLDER = "https://tellsight.example.com/demo";

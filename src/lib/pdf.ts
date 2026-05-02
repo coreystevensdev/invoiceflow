@@ -6,9 +6,10 @@ export interface PdfTextResult {
 }
 
 /**
- * Parse raw PDF bytes into text. Surfaces a specific error shape so the route
- * handler can return a clean "this isn't a parseable PDF" response to the UI
- * (brainstorm idea #9, graceful corrupt-PDF handling).
+ * Parse raw PDF bytes into text. Throws PdfParseError with a typed code so
+ * the route handler can map each failure mode to a typed user-facing
+ * response (mapPdfError in api/extract/route.ts) without parsing free-form
+ * messages.
  */
 export async function parsePdf(bytes: Buffer): Promise<PdfTextResult> {
   if (bytes.length === 0) {
