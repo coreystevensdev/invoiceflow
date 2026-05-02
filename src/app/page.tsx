@@ -989,8 +989,7 @@ function FieldRow({
 
   return (
     <div
-      className={`group relative ${field.reasoning && !isEditing ? "cursor-pointer" : ""}`}
-      tabIndex={field.reasoning && !isEditing ? 0 : undefined}
+      className="group relative"
       onKeyDown={handleKeyDown}
       onFocus={() => {
         resetDismissal();
@@ -1002,12 +1001,6 @@ function FieldRow({
         onActivate?.();
       }}
       onMouseLeave={() => onDeactivate?.()}
-      onClick={(e) => {
-        if (isEditing) return;
-        if (field.reasoning) {
-          (e.currentTarget as HTMLDivElement).focus();
-        }
-      }}
     >
       <dt className="text-xs uppercase tracking-wide text-zinc-500">
         <label htmlFor={inputId}>{label}</label>
