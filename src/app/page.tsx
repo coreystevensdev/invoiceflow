@@ -519,21 +519,27 @@ function ResultsView({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => downloadCsv("summary")}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          Download summary CSV
-        </button>
-        <button
-          type="button"
-          onClick={() => downloadCsv("line_items")}
-          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-        >
-          Download line-items CSV
-        </button>
+      <div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => downloadCsv("summary")}
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            Download summary CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadCsv("line_items")}
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          >
+            Download line-items CSV
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          Summary is one row per invoice (vendor, dates, totals). Line-items is
+          one row per item. Both import into QuickBooks Online and Xero.
+        </p>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
@@ -857,8 +863,8 @@ const PREVIEW_FIELDS: ReadonlyArray<{ label: string; value: string }> = [
   { label: "Vendor", value: "Acme Office Supplies, LLC" },
   { label: "Bill date", value: "2026-04-15" },
   { label: "Due date", value: "2026-05-15" },
-  { label: "Subtotal", value: "2007.00" },
-  { label: "Total", value: "2167.56" },
+  { label: "Subtotal", value: "2,007.00" },
+  { label: "Total", value: "2,167.56" },
 ];
 
 function PreviewCard() {
