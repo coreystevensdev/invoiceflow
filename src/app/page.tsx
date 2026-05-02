@@ -79,6 +79,19 @@ export default function Home() {
     };
   }, [status]);
 
+  useEffect(() => {
+    if (status.kind !== "success") return;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    document
+      .querySelector('section[aria-label="Extraction results"]')
+      ?.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+  }, [status.kind]);
+
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLLabelElement>) => {
       e.preventDefault();
