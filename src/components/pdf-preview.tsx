@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { InvoiceExtraction } from "@/lib/claude";
 
-const PDF_PREVIEW_BUILD = "v4-legacy-static-worker";
+const PDF_PREVIEW_BUILD = "v5-canvas-only-render";
 
 type Bbox = number[];
 
@@ -101,16 +101,37 @@ export function PdfPreview({
         if (!canvas || cancelled) return;
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        await page.render({ canvasContext: ctx, canvas, viewport }).promise;
+        // pdfjs-dist v5 docs: "If the context must absolutely be used to
+        // render the page, the canvas must be null." Passing both can leave
+        // the canvas blank on some browsers (observed on iOS Safari). Pass
+        // only `canvas` and let pdfjs grab its own 2d context.
+        await page.render({ canvas, viewport }).promise;
         if (cancelled) return;
 
-        const textContent = await page.getTextContent();
-        if (cancelled) return;
+        // Text extraction is a separate failure mode from canvas rendering.
+        // pdfjs-dist v5's getTextContent uses iterator helpers that older
+        // iOS Safari versions don't ship (the legacy build polyfills core-js
+        // features but iterator-helpers like Iterator.prototype.map aren't
+        // fully covered). When this fails, keep the rendered canvas visible
+        // and degrade gracefully: empty items means findItem returns nothing,
+        // bbox map stays empty, hover-highlight silently does nothing. That
+        // beats falling all the way back to the iframe and losing the
+        // canvas render the user already paid for.
+        let items: PdfTextItem[] = [];
+        try {
+          const textContent = await page.getTextContent();
+          if (cancelled) return;
+          items = textContent.items as PdfTextItem[];
+        } catch (textErr) {
+          if (cancelled) return;
+          console.warn(
+            "[PdfPreview] getTextContent failed; highlights disabled:",
+            textErr,
+          );
+        }
 
         setRendered({
-          items: textContent.items as PdfTextItem[],
+          items,
           viewportWidth: viewport.width,
           viewportHeight: viewport.height,
           viewportScale: viewport.scale,
@@ -245,15 +266,45 @@ export function PdfPreview({
   if (error) {
     return (
       <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
-        <iframe
-          src={pdfUrl}
-          title={`Original PDF: ${filename}`}
-          className="h-[600px] w-full rounded-t-xl"
-        />
+        <object
+          data={pdfUrl}
+          type="application/pdf"
+          aria-label={`Original PDF: ${filename}`}
+          className="block h-[600px] w-full rounded-t-xl"
+        >
+          {/* iOS Safari often refuses to render blob: PDFs inside <object>
+              or <iframe>. The link below is the guaranteed-works fallback,
+              opening the PDF in a new tab where Safari's full-screen viewer
+              handles it natively. */}
+          <p className="p-4 text-sm text-zinc-700 dark:text-zinc-300">
+            Inline PDF preview unavailable on this browser.{" "}
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-indigo-700 underline dark:text-indigo-400"
+            >
+              Open PDF in a new tab
+            </a>
+            .
+          </p>
+        </object>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+          <span>
+            Native PDF preview, source-region highlight unavailable on this
+            browser.
+          </span>
+          <a
+            href={pdfUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-indigo-700 underline dark:text-indigo-400"
+          >
+            Open PDF in new tab
+          </a>
+        </div>
         <details className="border-t border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
-          <summary className="cursor-pointer select-none">
-            Showing native PDF preview, source-region highlight unavailable on this browser
-          </summary>
+          <summary className="cursor-pointer select-none">Diagnostic</summary>
           <pre className="mt-2 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-snug text-zinc-500 dark:text-zinc-500">
             build: {PDF_PREVIEW_BUILD}
             {"\n"}
