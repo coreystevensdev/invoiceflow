@@ -885,10 +885,17 @@ function parseBboxFromReasoning(reasoning: string): {
     Number.parseFloat(m[3]),
     Number.parseFloat(m[4]),
   ];
+  const text = reasoning.replace(BBOX_PATTERN, "");
   if (bbox.some((n) => !Number.isFinite(n))) {
-    return { bbox: null, text: reasoning.replace(BBOX_PATTERN, "") };
+    return { bbox: null, text };
   }
-  return { bbox, text: reasoning.replace(BBOX_PATTERN, "") };
+  // Coordinates are normalized to [0, 1] per the prompt contract. Allow a
+  // small tolerance for model imprecision; reject values that are wildly
+  // out of range (would render the overlay far outside the image bounds).
+  if (bbox.some((n) => n < -0.1 || n > 1.1)) {
+    return { bbox: null, text };
+  }
+  return { bbox, text };
 }
 
 function FieldRow({
