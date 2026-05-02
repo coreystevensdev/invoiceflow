@@ -134,13 +134,17 @@ export default function Home() {
   );
 
   const onSampleClick = useCallback(async () => {
-    const res = await fetch("/sample-invoice.pdf");
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const file = new File([blob], "sample-invoice.pdf", {
-      type: "application/pdf",
-    });
-    await handleFile(file);
+    try {
+      const res = await fetch("/sample-invoice.pdf");
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const file = new File([blob], "sample-invoice.pdf", {
+        type: "application/pdf",
+      });
+      await handleFile(file);
+    } catch (err) {
+      console.error("[onSampleClick] fetch failed:", err);
+    }
   }, [handleFile]);
 
   const onDropzoneKey = useCallback(
@@ -158,19 +162,26 @@ export default function Home() {
       format: "summary" | "line_items",
       invoice: InvoiceExtraction,
     ) => {
-      const res = await fetch("/api/csv", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ format, invoices: [invoice] }),
-      });
-      if (!res.ok) return;
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `invoiceflow-${format}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      try {
+        const res = await fetch("/api/csv", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ format, invoices: [invoice] }),
+        });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `invoiceflow-${format}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        // Network failure during CSV export. No status UI exists for this
+        // surface, so log and let the user retry. Without the catch this
+        // would surface as an unhandled promise rejection.
+        console.error("[downloadCsv] export failed:", err);
+      }
     },
     [],
   );
@@ -410,6 +421,7 @@ export default function Home() {
 
         {status.kind === "success" && (
           <ResultsView
+            key={status.pdfUrl}
             result={status.result}
             filename={status.filename}
             pdfUrl={status.pdfUrl}
@@ -434,7 +446,8 @@ export default function Home() {
                 className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
                 href="https://www.anthropic.com/claude"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
+                aria-label="Claude Sonnet 4.6 (opens in a new tab)"
               >
                 Claude Sonnet 4.6
               </a>
@@ -444,7 +457,8 @@ export default function Home() {
               className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
               href="https://github.com/coreystevensdev/invoiceflow"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
+              aria-label="Source on GitHub (opens in a new tab)"
             >
               Source on GitHub
             </a>
@@ -456,7 +470,8 @@ export default function Home() {
                 className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
                 href="https://github.com/coreystevensdev"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
+                aria-label="Corey Stevens on GitHub (opens in a new tab)"
               >
                 Corey Stevens
               </a>
@@ -468,7 +483,8 @@ export default function Home() {
                 className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
                 href="https://github.com/coreystevensdev/tellsight"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
+                aria-label="Tellsight on GitHub (opens in a new tab)"
               >
                 Tellsight
               </a>
@@ -517,25 +533,19 @@ function ResultsView({
       return false;
     }
   }, [webhookUrl]);
+  // The parent passes key={pdfUrl} so a new extraction remounts this
+  // component with fresh useState initializers. That resets not just the
+  // local state below but every descendant's state too (FieldRow.isEditing,
+  // EditableCell.isEditing) — a prev-props sentinel here couldn't reach
+  // those.
   const [view, setView] = useState<ResultView>("fields");
   const [edited, setEdited] = useState<InvoiceExtraction>(result.invoice);
   const [activeBbox, setActiveBbox] = useState<number[] | null>(null);
-  const [editedFor, setEditedFor] = useState(result);
-  // Reset edits and any active highlight when a new extraction arrives. Using
-  // a "prev props" sentinel instead of useEffect avoids the
-  // react-hooks/set-state-in-effect lint and resets cleanly on the same
-  // render that result changes.
-  const isImage = result.input_type === "image";
   const [pdfBboxMap, setPdfBboxMap] = useState<Record<string, number[]>>({});
   const handlePdfBboxes = useCallback((map: Record<string, number[]>) => {
     setPdfBboxMap(map);
   }, []);
-  if (editedFor !== result) {
-    setEditedFor(result);
-    setEdited(result.invoice);
-    setActiveBbox(null);
-    setPdfBboxMap({});
-  }
+  const isImage = result.input_type === "image";
   const inv = edited;
   const summary = result.confidence_summary;
   const fieldsTabId = useId();
