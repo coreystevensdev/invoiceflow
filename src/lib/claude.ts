@@ -142,13 +142,64 @@ export type SupportedImageMediaType =
 
 export type ExtractionInput =
   | { kind: "text"; text: string }
-  | { kind: "image"; data: Buffer; mediaType: SupportedImageMediaType };
+  | { kind: "image"; data: Buffer; mediaType: SupportedImageMediaType }
+  | { kind: "pdf"; data: Buffer };
 
 /**
- * Extract structured invoice data using Claude. Accepts either parsed PDF
- * text (input.kind === 'text') or a raw image buffer (input.kind === 'image').
- * The image path uses Claude vision; the schema, system prompt, and output
- * shape are identical so downstream consumers don't branch.
+ * Build the user-message content for the Claude call. Three shapes:
+ *   - text input → a single string with <today> tag and <invoice_text> wrapper.
+ *   - image input → [image block, text block with bbox-prefix instruction].
+ *   - pdf input  → [document block (application/pdf), text block with the
+ *                   same bbox-prefix instruction scoped to page 1, since
+ *                   PdfPreview only renders page 1].
+ */
+function buildUserContent(input: ExtractionInput, today: string) {
+  if (input.kind === "text") {
+    return `<today>${today}</today>\n<invoice_text>\n${input.text}\n</invoice_text>\n\nExtract the invoice data per the schema.`;
+  }
+  if (input.kind === "image") {
+    return [
+      {
+        type: "image" as const,
+        source: {
+          type: "base64" as const,
+          media_type: input.mediaType,
+          data: input.data.toString("base64"),
+        },
+      },
+      {
+        type: "text" as const,
+        text: `<today>${today}</today>\n\nThe image above is an invoice. Extract the invoice data per the schema. For every reasoning string, prefix it with "[bbox: x, y, w, h] " where x, y, w, h are normalized 0..1 coordinates of the region in the image (e.g., "[bbox: 0.7, 0.05, 0.25, 0.06] Invoice number labeled at top-right..."). If you can't localize visually, prefix with "[bbox: none] ".`,
+      },
+    ];
+  }
+  // input.kind === "pdf" — scanned/image-only PDF routed through vision.
+  return [
+    {
+      type: "document" as const,
+      source: {
+        type: "base64" as const,
+        media_type: "application/pdf" as const,
+        data: input.data.toString("base64"),
+      },
+    },
+    {
+      type: "text" as const,
+      text: `<today>${today}</today>\n\nThe document above is a scanned (image-only) invoice PDF. Extract the invoice data per the schema. For every reasoning string, prefix it with "[bbox: x, y, w, h] " where x, y, w, h are normalized 0..1 coordinates of the region on the FIRST page of the document (the rendered preview shows page 1 only). If the value doesn't appear on page 1, or you can't localize visually, prefix with "[bbox: none] ".`,
+    },
+  ];
+}
+
+/**
+ * Extract structured invoice data using Claude. Three input modes:
+ *   - 'text': parsed PDF text (digital PDFs).
+ *   - 'image': a raw image buffer (JPG/PNG/GIF/WebP via vision).
+ *   - 'pdf':   a raw PDF buffer routed through Claude vision via document
+ *              content blocks. Used when pdf-parse returned empty text
+ *              (image-only / scanned PDFs).
+ *
+ * The schema, system prompt, and output shape are identical across all
+ * three so downstream consumers don't branch on input type.
  *
  * Retries transient API failures up to EXTRACTION_MAX_RETRIES times.
  * Aborts after EXTRACTION_TIMEOUT_MS. Applies a per-request cost cap.
@@ -174,6 +225,7 @@ export async function extractInvoice(
     : timeoutSignal;
 
   const start = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt <= EXTRACTION_MAX_RETRIES; attempt++) {
@@ -191,26 +243,7 @@ export async function extractInvoice(
             },
           ],
           messages: [
-            {
-              role: "user",
-              content:
-                input.kind === "text"
-                  ? `<today>${new Date().toISOString().slice(0, 10)}</today>\n<invoice_text>\n${input.text}\n</invoice_text>\n\nExtract the invoice data per the schema.`
-                  : [
-                      {
-                        type: "image",
-                        source: {
-                          type: "base64",
-                          media_type: input.mediaType,
-                          data: input.data.toString("base64"),
-                        },
-                      },
-                      {
-                        type: "text",
-                        text: `<today>${new Date().toISOString().slice(0, 10)}</today>\n\nThe image above is an invoice. Extract the invoice data per the schema. For every reasoning string, prefix it with "[bbox: x, y, w, h] " where x, y, w, h are normalized 0..1 coordinates of the region in the image (e.g., "[bbox: 0.7, 0.05, 0.25, 0.06] Invoice number labeled at top-right..."). If you can't localize visually, prefix with "[bbox: none] ".`,
-                      },
-                    ],
-            },
+            { role: "user", content: buildUserContent(input, today) },
           ],
           output_config: {
             format: zodOutputFormat(InvoiceExtractionSchema),

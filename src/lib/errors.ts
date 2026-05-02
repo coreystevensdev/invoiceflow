@@ -52,11 +52,11 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
         "Export the invoice as a PDF, take a photo of it, or save it as an image, then drop it here.",
     },
     "not-an-invoice": {
-      title: "No readable text in this PDF",
+      title: "This doesn't look like an invoice",
       message:
-        "The PDF contains no extractable text. It's likely an image-only scan that needs OCR first.",
+        "The file was readable, but the model couldn't find invoice fields. It may be a different kind of document (a manual, a flyer, a receipt fragment) or too low-quality to extract reliably.",
       nextStep:
-        "Run the file through an OCR tool (most scanners and PDF editors can do this), then upload the OCR'd version.",
+        "Confirm the file is an invoice and try again. If it's a poor scan, re-scan at higher resolution.",
     },
     "model-API-failure": {
       title: "The extraction model is unavailable",

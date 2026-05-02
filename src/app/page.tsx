@@ -546,6 +546,11 @@ function ResultsView({
     setPdfBboxMap(map);
   }, []);
   const isImage = result.input_type === "image";
+  // True when extraction used Claude vision (image input or scanned-PDF
+  // fallback). Determines bbox source: vision-derived (parsed from each
+  // field's reasoning prefix) vs text-derived (PdfPreview's text-item
+  // matching, only valid when the PDF has an extractable text layer).
+  const useVisionBboxes = result.vision_used;
   const inv = edited;
   const summary = result.confidence_summary;
   const fieldsTabId = useId();
@@ -861,7 +866,7 @@ function ResultsView({
             >
               <dl className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
                 {fields.map((f) => {
-                  const bboxForField = isImage
+                  const bboxForField = useVisionBboxes
                     ? f.bbox
                     : (pdfBboxMap[f.label] ?? null);
                   return (

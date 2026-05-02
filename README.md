@@ -196,7 +196,7 @@ A few honest gaps:
 
 - **No persistence.** Zero retention is a feature, but any workflow needing history or resume-on-failure has to be rebuilt on top.
 - **In-memory rate limiter and cost history.** Per Fluid Compute instance, not globally shared. The 20/hr extract cap is effectively 20/hr × instance count under horizontal scale. Migration target is Redis or Vercel KV.
-- **`pdf-parse` is text-only.** Image-only PDFs (scanned receipts without OCR) come back as `not-an-invoice`. Handwritten receipts need an OCR pre-pass that doesn't exist here yet.
+- **Scanned-PDF support routes through Claude vision, not local OCR.** When `pdf-parse` returns no text layer, the raw PDF is sent to Claude as a `document` content block. This keeps the pipeline single-vendor (no Tesseract/Textract dependency) and gets you ~5-10x the cost of a digital extraction. Handwriting accuracy depends on Claude vision's quality; some scrawled receipts will still come back with low confidence flags.
 - **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
 - **Unit tests cover the pure-logic library only.** Vitest covers `cost.ts`, `errors.ts`, `validate.ts`, `rate-limit.ts`, and `csv.ts`. No integration tests against the route handlers, no end-to-end coverage of the upload flow.

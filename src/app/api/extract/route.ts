@@ -101,6 +101,13 @@ export interface ExtractResponse {
     size_bytes: number;
   };
   input_type: "pdf" | "image";
+  /**
+   * True when extraction used Claude vision (image input or scanned-PDF
+   * fallback) rather than parsed text. The client uses this to pick the
+   * bbox source: vision-derived (from reasoning prefix) vs text-derived
+   * (PdfPreview's text-item matching).
+   */
+  vision_used: boolean;
   usage: UsageSummary;
   duration_ms: {
     pdf_parse: number;
@@ -221,6 +228,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let pdfText: string | null = null;
   let pdfNumPages = 1;
   let pdfMs = 0;
+  // True when pdf-parse returned empty text and we route the raw PDF
+  // through Claude vision instead. Distinct from imageMime (which signals
+  // a JPG/PNG/GIF/WebP upload).
+  let pdfVisionFallback = false;
 
   if (!imageMime) {
     const pdfStart = Date.now();
@@ -230,26 +241,44 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       pdfNumPages = pdfResult.num_pages;
     } catch (err) {
       if (err instanceof PdfParseError) {
-        return respond(mapPdfError(err.code), {
-          detected: err.detected,
-          message: err.message,
+        // Scanned / image-only PDFs used to surface as "not-an-invoice".
+        // Instead, route the raw PDF bytes through Claude vision so the
+        // user gets a successful extraction even without a text layer.
+        if (err.code === "image_only") {
+          pdfVisionFallback = true;
+          const detectedPages = err.detected?.num_pages;
+          if (typeof detectedPages === "number") {
+            pdfNumPages = detectedPages;
+          }
+        } else {
+          return respond(mapPdfError(err.code), {
+            detected: err.detected,
+            message: err.message,
+          });
+        }
+      } else {
+        logger.error({
+          route: "extract",
+          category: "corrupt-PDF",
+          http_status: 500,
+          duration_ms: Date.now() - start,
+          note: "unexpected pdf-parse failure",
         });
+        return respond("corrupt-PDF");
       }
-      logger.error({
-        route: "extract",
-        category: "corrupt-PDF",
-        http_status: 500,
-        duration_ms: Date.now() - start,
-        note: "unexpected pdf-parse failure",
-      });
-      return respond("corrupt-PDF");
     }
     pdfMs = Date.now() - pdfStart;
   }
 
+  const visionUsed = imageMime !== null || pdfVisionFallback;
+
   logger.info({
     route: "extract",
-    category: imageMime ? "image-received" : "pdf-parsed",
+    category: imageMime
+      ? "image-received"
+      : pdfVisionFallback
+        ? "pdf-vision-fallback"
+        : "pdf-parsed",
     pdf_size_bytes: bytes.length,
     pdf_num_pages: pdfNumPages,
     pdf_mime: imageMime ?? declaredMime ?? "application/pdf",
@@ -260,7 +289,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const extraction = await extractInvoice(
       imageMime
         ? { kind: "image", data: bytes, mediaType: imageMime }
-        : { kind: "text", text: pdfText ?? "" },
+        : pdfVisionFallback
+          ? { kind: "pdf", data: bytes }
+          : { kind: "text", text: pdfText ?? "" },
       { logger },
     );
     const modelFlags = extraction.invoice.flags;
@@ -274,6 +305,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       confidence_summary: confidenceSummary(invoice),
       pdf: { num_pages: pdfNumPages, size_bytes: bytes.length },
       input_type: imageMime ? "image" : "pdf",
+      vision_used: visionUsed,
       usage: extraction.usage,
       duration_ms: {
         pdf_parse: pdfMs,
