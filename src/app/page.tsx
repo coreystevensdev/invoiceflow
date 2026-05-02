@@ -41,11 +41,18 @@ interface ErrorBody {
   detected?: Record<string, unknown>;
 }
 
+type WebhookStatus = {
+  kind: "ok" | "upstream-error" | "api-error";
+  message: string;
+};
+
 export default function Home() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [isDragging, setIsDragging] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [webhookStatus, setWebhookStatus] = useState<string | null>(null);
+  const [webhookStatus, setWebhookStatus] = useState<WebhookStatus | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const dropzoneHintId = useId();
 
@@ -163,7 +170,7 @@ export default function Home() {
     async (invoice: InvoiceExtraction) => {
       if (webhookFiring) return;
       setWebhookFiring(true);
-      setWebhookStatus("Firing…");
+      setWebhookStatus(null);
       try {
         const res = await fetch("/api/webhook", {
           method: "POST",
@@ -173,12 +180,26 @@ export default function Home() {
             invoice,
           }),
         });
-        const data = await res.json();
-        setWebhookStatus(
-          res.ok
-            ? `Sent, upstream responded ${data.status} in ${data.duration_ms}ms.`
-            : `Failed, ${data.error ?? "unknown reason"}.`,
-        );
+        const data = (await res.json().catch(() => ({}))) as {
+          status?: number;
+          duration_ms?: number;
+          error?: string;
+        };
+        if (res.ok && typeof data.status === "number") {
+          const upstreamOk = data.status >= 200 && data.status < 300;
+          const ms = data.duration_ms ?? 0;
+          setWebhookStatus({
+            kind: upstreamOk ? "ok" : "upstream-error",
+            message: upstreamOk
+              ? `Sent, upstream responded ${data.status} in ${ms}ms.`
+              : `Sent, but upstream responded ${data.status} in ${ms}ms.`,
+          });
+        } else {
+          setWebhookStatus({
+            kind: "api-error",
+            message: `Failed, ${data.error ?? "unknown reason"}.`,
+          });
+        }
       } finally {
         setWebhookFiring(false);
       }
@@ -449,7 +470,7 @@ interface ResultsViewProps {
   webhookUrl: string;
   setWebhookUrl: (v: string) => void;
   fireWebhook: (invoice: InvoiceExtraction) => void;
-  webhookStatus: string | null;
+  webhookStatus: WebhookStatus | null;
   webhookFiring: boolean;
 }
 
@@ -500,6 +521,8 @@ function ResultsView({
   const jsonTabId = useId();
   const fieldsPanelId = useId();
   const jsonPanelId = useId();
+  const webhookHelpId = useId();
+  const webhookUrlError = webhookUrl !== "" && !webhookUrlValid;
 
   const onTabKeyDown = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>) => {
@@ -872,7 +895,9 @@ function ResultsView({
             spellCheck={false}
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
-            placeholder="https://your-webhook-url"
+            placeholder="https://api.example.com/webhooks/invoiceflow"
+            aria-invalid={webhookUrlError ? true : undefined}
+            aria-describedby={webhookUrlError ? webhookHelpId : undefined}
             className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-950"
           />
           <button
@@ -907,18 +932,27 @@ function ResultsView({
             <span>{webhookFiring ? "Sending" : "Send POST"}</span>
           </button>
         </div>
-        {webhookUrl && !webhookUrlValid && !webhookFiring && (
-          <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
+        {webhookUrlError && !webhookFiring && (
+          <p
+            id={webhookHelpId}
+            className="mt-2 text-sm text-amber-700 dark:text-amber-400"
+          >
             Enter a valid http or https URL to enable sending.
           </p>
         )}
         {webhookStatus && (
           <p
-            className="mt-2 text-sm text-zinc-600 dark:text-zinc-400"
+            className={`mt-2 text-sm ${
+              webhookStatus.kind === "ok"
+                ? "text-green-700 dark:text-green-400"
+                : webhookStatus.kind === "upstream-error"
+                  ? "text-amber-700 dark:text-amber-400"
+                  : "text-red-700 dark:text-red-400"
+            }`}
             role="status"
             aria-live="polite"
           >
-            {webhookStatus}
+            {webhookStatus.message}
           </p>
         )}
       </div>
