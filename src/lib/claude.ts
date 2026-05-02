@@ -9,6 +9,7 @@ import {
   recordMonthlyCost,
 } from "./cost";
 import type { Logger } from "./log";
+import type { CustomField } from "./custom-fields";
 
 const ConfidenceEnum = z.enum(["high", "medium", "low"]);
 
@@ -53,9 +54,51 @@ export const InvoiceExtractionSchema = z.object({
   flags: z.array(Flag),
 });
 
-export type InvoiceExtraction = z.infer<typeof InvoiceExtractionSchema>;
+type BaseInvoiceExtraction = z.infer<typeof InvoiceExtractionSchema>;
 export type ExtractionConfidence = z.infer<typeof ConfidenceEnum>;
 export type ExtractionFlag = z.infer<typeof Flag>;
+
+/**
+ * A user-defined custom field's extraction result. Same {value, confidence,
+ * reasoning} shape as the standard fields but with a wider value type since
+ * custom fields can be string-, number-, or date-typed (date stays a string
+ * at the schema level).
+ */
+export interface CustomFieldExtraction {
+  value: string | number | null;
+  confidence: ExtractionConfidence;
+  reasoning: string;
+}
+
+/**
+ * Invoice extraction with optional user-defined custom fields. The base
+ * shape comes from InvoiceExtractionSchema; custom_fields is added at the
+ * type level (the runtime schema is built per-request when custom fields
+ * are supplied) so consumers that don't care can ignore the optional key.
+ */
+export type InvoiceExtraction = BaseInvoiceExtraction & {
+  custom_fields?: Record<string, CustomFieldExtraction>;
+};
+
+/**
+ * Build a Zod schema for the response when custom fields are in play.
+ * Falls through to the base schema when there are none, so the cache_key
+ * (which depends on the JSON Schema sent to Anthropic) stays stable for
+ * the common no-custom-fields case.
+ */
+function buildExtractionSchema(customFields: CustomField[] | undefined) {
+  if (!customFields || customFields.length === 0) {
+    return InvoiceExtractionSchema;
+  }
+  const customShape: Record<string, z.ZodTypeAny> = {};
+  for (const f of customFields) {
+    const valueSchema = f.type === "number" ? z.number() : z.string();
+    customShape[f.id] = FieldWithReasoning(valueSchema);
+  }
+  return InvoiceExtractionSchema.extend({
+    custom_fields: z.object(customShape),
+  });
+}
 
 export const EXTRACTION_SYSTEM_PROMPT = `You are an expert accounts payable clerk with 15 years of experience reading invoices across industries and languages. Your job is to extract structured data from raw invoice text with maximum accuracy and transparency.
 
@@ -115,6 +158,12 @@ export interface ExtractInvoiceOptions {
   model?: string;
   logger?: Logger;
   signal?: AbortSignal;
+  /**
+   * User-defined custom fields. When non-empty, the response schema is
+   * extended with a `custom_fields` object and the prompt instructs Claude
+   * to populate it. Defaults to no custom fields.
+   */
+  customFields?: CustomField[];
 }
 
 function isRetryable(err: unknown): boolean {
@@ -146,16 +195,41 @@ export type ExtractionInput =
   | { kind: "pdf"; data: Buffer };
 
 /**
+ * Build the custom-fields instruction block. Empty string when no fields
+ * are defined so the prompt stays cache-friendly for the common case.
+ * Uses each field's id (UUID) as the JSON key so user-supplied names
+ * never become schema keys (avoids name-based prompt-injection vectors).
+ */
+function buildCustomFieldsBlock(customFields: CustomField[] = []): string {
+  if (customFields.length === 0) return "";
+  const lines = customFields
+    .map(
+      (f) =>
+        `- ID "${f.id}" (${f.type}, displayed as "${f.name.trim()}"): ${f.description.trim()}`,
+    )
+    .join("\n");
+  return `\n\nAdditionally, extract these user-defined custom fields. Place them under "custom_fields" in the response, keyed exactly by the IDs below. Each value uses the same {value, confidence, reasoning} shape as the standard fields:\n${lines}`;
+}
+
+/**
  * Build the user-message content for the Claude call. Three shapes:
  *   - text input → a single string with <today> tag and <invoice_text> wrapper.
  *   - image input → [image block, text block with bbox-prefix instruction].
  *   - pdf input  → [document block (application/pdf), text block with the
  *                   same bbox-prefix instruction scoped to page 1, since
  *                   PdfPreview only renders page 1].
+ *
+ * The custom-fields instruction block is appended to whichever text portion
+ * exists in each shape.
  */
-function buildUserContent(input: ExtractionInput, today: string) {
+function buildUserContent(
+  input: ExtractionInput,
+  today: string,
+  customFields: CustomField[] = [],
+) {
+  const customBlock = buildCustomFieldsBlock(customFields);
   if (input.kind === "text") {
-    return `<today>${today}</today>\n<invoice_text>\n${input.text}\n</invoice_text>\n\nExtract the invoice data per the schema.`;
+    return `<today>${today}</today>\n<invoice_text>\n${input.text}\n</invoice_text>\n\nExtract the invoice data per the schema.${customBlock}`;
   }
   if (input.kind === "image") {
     return [
@@ -169,7 +243,7 @@ function buildUserContent(input: ExtractionInput, today: string) {
       },
       {
         type: "text" as const,
-        text: `<today>${today}</today>\n\nThe image above is an invoice. Extract the invoice data per the schema. For every reasoning string, prefix it with "[bbox: x, y, w, h] " where x, y, w, h are normalized 0..1 coordinates of the region in the image (e.g., "[bbox: 0.7, 0.05, 0.25, 0.06] Invoice number labeled at top-right..."). If you can't localize visually, prefix with "[bbox: none] ".`,
+        text: `<today>${today}</today>\n\nThe image above is an invoice. Extract the invoice data per the schema. For every reasoning string, prefix it with "[bbox: x, y, w, h] " where x, y, w, h are normalized 0..1 coordinates of the region in the image (e.g., "[bbox: 0.7, 0.05, 0.25, 0.06] Invoice number labeled at top-right..."). If you can't localize visually, prefix with "[bbox: none] ".${customBlock}`,
       },
     ];
   }
@@ -185,7 +259,7 @@ function buildUserContent(input: ExtractionInput, today: string) {
     },
     {
       type: "text" as const,
-      text: `<today>${today}</today>\n\nThe document above is a scanned (image-only) invoice PDF. Extract the invoice data per the schema. For every reasoning string, prefix it with "[bbox: x, y, w, h] " where x, y, w, h are normalized 0..1 coordinates of the region on the FIRST page of the document (the rendered preview shows page 1 only). If the value doesn't appear on page 1, or you can't localize visually, prefix with "[bbox: none] ".`,
+      text: `<today>${today}</today>\n\nThe document above is a scanned (image-only) invoice PDF. Extract the invoice data per the schema. For every reasoning string, prefix it with "[bbox: x, y, w, h] " where x, y, w, h are normalized 0..1 coordinates of the region on the FIRST page of the document (the rendered preview shows page 1 only). If the value doesn't appear on page 1, or you can't localize visually, prefix with "[bbox: none] ".${customBlock}`,
     },
   ];
 }
@@ -226,6 +300,8 @@ export async function extractInvoice(
 
   const start = Date.now();
   const today = new Date().toISOString().slice(0, 10);
+  const customFields = options.customFields ?? [];
+  const schema = buildExtractionSchema(customFields);
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt <= EXTRACTION_MAX_RETRIES; attempt++) {
@@ -243,10 +319,13 @@ export async function extractInvoice(
             },
           ],
           messages: [
-            { role: "user", content: buildUserContent(input, today) },
+            {
+              role: "user",
+              content: buildUserContent(input, today, customFields),
+            },
           ],
           output_config: {
-            format: zodOutputFormat(InvoiceExtractionSchema),
+            format: zodOutputFormat(schema),
           },
         },
         { signal },

@@ -23,6 +23,10 @@ import {
   exceedsMonthlyBudget,
   getMonthlyCumulativeUsd,
 } from "@/lib/cost";
+import {
+  CustomFieldsArraySchema,
+  type CustomField,
+} from "@/lib/custom-fields";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -200,6 +204,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   }
 
+  // Optional user-defined custom fields (sent as JSON-stringified
+  // multipart form field). Validated against the same schema the client
+  // uses for localStorage so the server can't be tricked into building
+  // a Zod schema with weird key/value shapes.
+  let customFields: CustomField[] = [];
+  const customFieldsRaw = formData.get("custom_fields");
+  if (typeof customFieldsRaw === "string" && customFieldsRaw.length > 0) {
+    let parsedRaw: unknown;
+    try {
+      parsedRaw = JSON.parse(customFieldsRaw);
+    } catch {
+      return respond("non-PDF", {
+        message: "Malformed custom_fields field; expected JSON array.",
+      });
+    }
+    const parseResult = CustomFieldsArraySchema.safeParse(parsedRaw);
+    if (!parseResult.success) {
+      return respond("non-PDF", {
+        message: "Invalid custom_fields shape.",
+        detected: { issues: parseResult.error.format() },
+      });
+    }
+    customFields = parseResult.data;
+  }
+
   const declaredMime = (file.type || "").toLowerCase();
   const looksLikePdf =
     declaredMime === "application/pdf" ||
@@ -292,7 +321,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         : pdfVisionFallback
           ? { kind: "pdf", data: bytes }
           : { kind: "text", text: pdfText ?? "" },
-      { logger },
+      { logger, customFields },
     );
     const modelFlags = extraction.invoice.flags;
     const detFlags = deterministicFlags(extraction.invoice);

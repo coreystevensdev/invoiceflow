@@ -10,7 +10,7 @@
 
 # InvoiceFlow
 
-Drop a PDF or image of an invoice and get the vendor, line items, tax, total, and due date back as structured JSON. Typically under five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL. Drop multiple files at once for batch extraction with a single bulk CSV.
+Drop a PDF or image of an invoice and get the vendor, line items, tax, total, and due date back as structured JSON. Typically under five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL. Drop multiple files at once for batch extraction with a single bulk CSV. Define custom fields (cost center, GL code, project number) on the landing page to extract domain-specific data beyond the standard nine.
 
 PDFs run through `pdf-parse` first and Claude reads the extracted text. Scanned (image-only) PDFs fall back to Claude's `document` content blocks; uploaded images go through `image` content blocks directly. Same Zod schema, same response shape, same zero-retention posture either way.
 
