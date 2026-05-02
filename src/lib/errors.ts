@@ -40,7 +40,7 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
     "oversized-PDF": {
       title: "That file is too large",
       message:
-        "We accept PDFs up to 25 MB and images up to 5 MB. Larger PDFs usually contain embedded images that can be compressed; phone photos may need to be saved at a smaller resolution.",
+        "We accept PDFs up to 25 MB and images up to 3.5 MB (Anthropic vision's per-image envelope after base64 encoding). Larger PDFs usually contain embedded images that can be compressed; phone photos may need to be saved at a smaller resolution.",
       nextStep:
         "Compress the PDF (most viewers have a 'Reduce file size' option) or re-save the image at a smaller resolution, then upload again.",
     },
