@@ -134,13 +134,27 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export type SupportedImageMediaType =
+  | "image/jpeg"
+  | "image/png"
+  | "image/gif"
+  | "image/webp";
+
+export type ExtractionInput =
+  | { kind: "text"; text: string }
+  | { kind: "image"; data: Buffer; mediaType: SupportedImageMediaType };
+
 /**
- * Extract structured invoice data from raw PDF text using Claude.
+ * Extract structured invoice data using Claude. Accepts either parsed PDF
+ * text (input.kind === 'text') or a raw image buffer (input.kind === 'image').
+ * The image path uses Claude vision; the schema, system prompt, and output
+ * shape are identical so downstream consumers don't branch.
+ *
  * Retries transient API failures up to EXTRACTION_MAX_RETRIES times.
  * Aborts after EXTRACTION_TIMEOUT_MS. Applies a per-request cost cap.
  */
 export async function extractInvoice(
-  rawPdfText: string,
+  input: ExtractionInput,
   options: ExtractInvoiceOptions = {},
 ): Promise<ExtractionResult> {
   const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
@@ -179,7 +193,23 @@ export async function extractInvoice(
           messages: [
             {
               role: "user",
-              content: `<today>${new Date().toISOString().slice(0, 10)}</today>\n<invoice_text>\n${rawPdfText}\n</invoice_text>\n\nExtract the invoice data per the schema.`,
+              content:
+                input.kind === "text"
+                  ? `<today>${new Date().toISOString().slice(0, 10)}</today>\n<invoice_text>\n${input.text}\n</invoice_text>\n\nExtract the invoice data per the schema.`
+                  : [
+                      {
+                        type: "image",
+                        source: {
+                          type: "base64",
+                          media_type: input.mediaType,
+                          data: input.data.toString("base64"),
+                        },
+                      },
+                      {
+                        type: "text",
+                        text: `<today>${new Date().toISOString().slice(0, 10)}</today>\n\nThe image above is an invoice. Extract the invoice data per the schema. Use what you see in the image as the source content for the reasoning strings.`,
+                      },
+                    ],
             },
           ],
           output_config: {

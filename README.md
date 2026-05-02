@@ -10,9 +10,11 @@
 
 # InvoiceFlow
 
-Drop a PDF invoice and get vendor, line items, tax, total, and due date back as structured JSON in about five seconds. Each field includes the source text Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL.
+Drop a PDF or image of an invoice and get vendor, line items, tax, total, and due date back as structured JSON in about five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL.
 
-There's no login or database. PDFs process in memory inside a single Vercel Function and disappear when the request ends.
+PDFs run through `pdf-parse` first and Claude reads the extracted text. Images go directly to Claude vision (image content blocks). Same Zod schema, same response shape, same zero-retention posture either way.
+
+There's no login or database. Files process in memory inside a single Vercel Function and disappear when the request ends.
 
 <p align="center">
   <img src="public/screenshots/landing.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
@@ -50,7 +52,7 @@ Open http://localhost:3000 and drop a PDF.
 | Route | Method | What it does |
 |---|---|---|
 | `/` | GET | Landing + extraction UI |
-| `/api/extract` | POST (multipart) | `pdf` form field returns an `ExtractResponse` JSON |
+| `/api/extract` | POST (multipart) | `pdf` form field (PDF or image: JPG, PNG, GIF, WebP) returns an `ExtractResponse` JSON |
 | `/api/csv` | POST (JSON) | `{invoices, format: "summary" \| "line_items"}` returns a CSV download |
 | `/api/webhook` | POST (JSON) | `{webhook_url, invoice, verbose?}` POSTs to your URL |
 | `/robots.txt`, `/sitemap.xml`, `/schema.jsonld` | GET | SEO surfaces |
@@ -62,12 +64,16 @@ Every API response carries a `correlation_id` (UUID v4) for log lookups. Errors 
 ```
 Browser              Vercel Function                       Anthropic API
   │                         │                                    │
-  │ ── POST PDF ─────────>  │                                    │
+  │ ── POST PDF/image ───>  │                                    │
   │                         │  rate-limit by IP                  │
-  │                         │  pdf-parse → text + page count     │
+  │                         │  detect type from MIME + magic     │
+  │                         │   PDF  → pdf-parse → text          │
+  │                         │   image → base64-encode bytes      │
   │                         │                                    │
   │                         │ ── messages.parse(sys+user) ────>  │
-  │                         │   system prompt cached             │
+  │                         │   text path: text user message     │
+  │                         │   image path: image content block  │
+  │                         │   system prompt cached either way  │
   │                         │   Zod schema enforces output       │
   │                         │ <── parsed_output, usage ────────  │
   │                         │                                    │
@@ -87,7 +93,7 @@ src/
 │   ├── page.tsx                  Upload UI + reasoning tooltips
 │   ├── layout.tsx                Metadata, OG, Twitter, JSON-LD link
 │   ├── globals.css               :focus-visible ring + reduced-motion guard
-│   ├── api/extract/route.ts      PDF → Claude → structured JSON
+│   ├── api/extract/route.ts      PDF (text via pdf-parse) or image (Claude vision) → structured JSON
 │   ├── api/csv/route.ts          Invoice JSON → CSV (QBO or Xero)
 │   ├── api/webhook/route.ts      Invoice JSON → POST to user URL
 │   └── schema.jsonld/route.ts    SoftwareApplication structured data

@@ -38,18 +38,18 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
         "Open it in your PDF viewer, re-save as a standard PDF, and try again.",
     },
     "oversized-PDF": {
-      title: "That PDF is too large",
+      title: "That file is too large",
       message:
-        "We accept PDFs up to 25 MB. Larger files usually contain embedded images that can be compressed.",
+        "We accept PDFs up to 25 MB and images up to 5 MB. Larger PDFs usually contain embedded images that can be compressed; phone photos may need to be saved at a smaller resolution.",
       nextStep:
-        "Use your PDF viewer's 'Reduce file size' or 'Save as Optimized PDF' option, then upload again.",
+        "Compress the PDF (most viewers have a 'Reduce file size' option) or re-save the image at a smaller resolution, then upload again.",
     },
     "non-PDF": {
-      title: "That file isn't a PDF",
+      title: "That file isn't a supported format",
       message:
-        "We only process PDF invoices right now. Image files and office documents aren't supported.",
+        "We accept PDF invoices and image-format invoices (JPG, PNG, GIF, WebP). Office documents (.docx, .xlsx) and other formats aren't supported.",
       nextStep:
-        "Export or scan your invoice as a PDF, then drop it here.",
+        "Export the invoice as a PDF, take a photo of it, or save it as an image, then drop it here.",
     },
     "not-an-invoice": {
       title: "No readable text in this PDF",
