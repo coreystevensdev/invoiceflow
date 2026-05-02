@@ -575,7 +575,10 @@ function FieldRow({
     field.value === null || field.value === undefined
       ? "-"
       : money && typeof field.value === "number"
-        ? field.value.toFixed(2)
+        ? field.value.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
         : String(field.value);
   const dotColor =
     field.confidence === "high"
@@ -699,7 +702,7 @@ function LineItemsTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <table className="w-full text-sm">
+      <table className="w-full min-w-[28rem] text-sm">
         <caption className="sr-only">Extracted line items</caption>
         <thead className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
           <tr>
@@ -728,10 +731,20 @@ function LineItemsTable({
                 {li.quantity ?? "-"}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">
-                {li.unit_price?.toFixed(2) ?? "-"}
+                {li.unit_price != null
+                  ? li.unit_price.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
+                  : "-"}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">
-                {li.amount?.toFixed(2) ?? "-"}
+                {li.amount != null
+                  ? li.amount.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
+                  : "-"}
               </td>
             </tr>
           ))}
