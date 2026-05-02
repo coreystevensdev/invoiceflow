@@ -475,7 +475,11 @@ function ResultsView({
 
   return (
     <section className="mt-8 space-y-6" aria-label="Extraction results">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-zinc-500">
+      <div
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-zinc-500"
+        role="status"
+        aria-live="polite"
+      >
         <span>
           <span className="font-medium text-zinc-700 dark:text-zinc-300">
             {filename}
