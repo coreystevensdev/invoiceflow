@@ -68,12 +68,12 @@ export function PdfPreview({
     let cancelled = false;
     (async () => {
       try {
-        // pdfjs-dist v5 ships a Node entry (build/pdf.mjs) that hits
-        // process.getBuiltinModule from CanvasFactory paths and breaks in
-        // browsers. webpack.mjs is the documented browser entry and also
-        // wires the worker via new URL(..., import.meta.url) so Turbopack
-        // emits it as a chunk, no /public copy needed.
-        const pdfjs = await import("pdfjs-dist/webpack.mjs");
+        // pdfjs-dist v5's modern build uses APIs (Promise.withResolvers,
+        // iterator helpers, Uint8Array.fromBase64) that aren't available on
+        // older iOS Safari. The legacy build polyfills these via core-js,
+        // and its webpack.mjs entry wires the worker via
+        // new URL(..., import.meta.url) so Turbopack emits it as a chunk.
+        const pdfjs = await import("pdfjs-dist/legacy/webpack.mjs");
 
         const data = await fetch(pdfUrl).then((r) => r.arrayBuffer());
         if (cancelled) return;
@@ -104,6 +104,10 @@ export function PdfPreview({
         });
       } catch (err) {
         if (!cancelled) {
+          // Log the full error to DevTools (stack + cause) so a real failure
+          // can be diagnosed beyond the user-facing message banner. The
+          // banner only renders err.message; everything else lives here.
+          console.error("[PdfPreview] render failed:", err);
           setError(err instanceof Error ? err.message : "PDF render failed");
         }
       }
