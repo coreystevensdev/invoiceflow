@@ -28,10 +28,11 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MAX_PDF_BYTES = 25 * 1024 * 1024;
-// Anthropic vision accepts up to ~5 MB per image; cap a bit lower so the
-// base64-encoded payload (~1.33x the binary) stays comfortably under the
-// API's request-size envelope.
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+// Anthropic vision's per-image limit is 5 MB after base64 encoding. Base64
+// inflates raw bytes by ~1.33x, so the equivalent raw cap is ~3.75 MB. Use
+// 3.5 MB to leave a small buffer for JSON payload overhead and avoid
+// model-API-failure responses on legitimate uploads near the limit.
+const MAX_IMAGE_BYTES = Math.floor(3.5 * 1024 * 1024);
 
 const IMAGE_MIME_TYPES: Record<string, SupportedImageMediaType> = {
   "image/jpeg": "image/jpeg",

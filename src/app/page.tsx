@@ -335,7 +335,7 @@ export default function Home() {
           <p id={dropzoneHintId} className="mt-2 text-sm text-zinc-500">
             {status.kind === "loading"
               ? "Typically 4-8 seconds. Reading the PDF, sending to Claude, validating fields."
-              : "PDF (up to 25 MB) or image (JPG, PNG, GIF, WebP, up to 5 MB)."}
+              : "PDF (up to 25 MB) or image (JPG, PNG, GIF, WebP, up to 3.5 MB)."}
           </p>
         </label>
 
