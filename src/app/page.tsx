@@ -229,24 +229,41 @@ export default function Home() {
         <label
           htmlFor="pdf-input"
           role="button"
-          tabIndex={0}
+          tabIndex={status.kind === "loading" ? -1 : 0}
           aria-label="Upload a PDF invoice. Press Enter or Space to open the file picker, or drop a file onto this area."
           aria-describedby={dropzoneHintId}
-          onKeyDown={onDropzoneKey}
+          aria-disabled={status.kind === "loading"}
+          onKeyDown={(e) => {
+            if (status.kind === "loading") return;
+            onDropzoneKey(e);
+          }}
           onDragEnter={(e) => {
             e.preventDefault();
+            if (status.kind === "loading") return;
             setIsDragging(true);
           }}
           onDragOver={(e) => {
             e.preventDefault();
+            if (status.kind === "loading") return;
             setIsDragging(true);
           }}
           onDragLeave={() => setIsDragging(false)}
-          onDrop={onDrop}
-          className={`block cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950 ${
-            isDragging
-              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
-              : "border-zinc-300 bg-white hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500"
+          onDrop={(e) => {
+            if (status.kind === "loading") {
+              e.preventDefault();
+              return;
+            }
+            onDrop(e);
+          }}
+          onClick={(e) => {
+            if (status.kind === "loading") e.preventDefault();
+          }}
+          className={`block rounded-xl border-2 border-dashed p-12 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950 ${
+            status.kind === "loading"
+              ? "cursor-wait border-zinc-300 bg-white opacity-90 dark:border-zinc-700 dark:bg-zinc-900"
+              : isDragging
+                ? "cursor-pointer border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
+                : "cursor-pointer border-zinc-300 bg-white hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500"
           }`}
         >
           <input
