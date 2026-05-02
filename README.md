@@ -28,13 +28,18 @@ There's no login or database. Files process in memory inside a single Vercel Fun
   <img src="public/screenshots/extract-highlight-v2.png" alt="Image upload with click-to-highlight: hovering the Vendor field highlights the source region in the invoice image" width="100%">
 </p>
 
+<p align="center">
+  <img src="public/screenshots/batch-extraction-v2.png" alt="Batch upload: three PDFs extracted in parallel with per-file status icons, vendor totals, and bulk CSV download buttons" width="100%">
+</p>
+
 <table>
 <tr>
+<td width="50%"><img src="public/screenshots/custom-fields-v2.png" alt="Custom fields disclosure with two user-defined fields (Cost Center, PO Reference) and their Claude-facing descriptions"></td>
 <td width="50%"><img src="public/screenshots/extract-json-v2.png" alt="JSON view tab showing the api/extract response shape"></td>
-<td width="50%"><img src="public/screenshots/csv-export-v2.png" alt="CSV export buttons for QuickBooks and Xero schemas"></td>
 </tr>
 <tr>
-<td colspan="2"><img src="public/screenshots/error-state-v2.png" alt="Typed error surface with code, retry guidance, and correlation id"></td>
+<td width="50%"><img src="public/screenshots/csv-export-v2.png" alt="CSV export buttons for QuickBooks and Xero schemas"></td>
+<td width="50%"><img src="public/screenshots/error-state-v2.png" alt="Typed error surface with code, retry guidance, and correlation id"></td>
 </tr>
 </table>
 

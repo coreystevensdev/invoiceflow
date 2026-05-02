@@ -62,3 +62,4 @@ AGENTS.md
 
 # Build artifact copied from node_modules by postinstall
 public/pdf.worker.min.mjs
+.env*.local
