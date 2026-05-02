@@ -10,9 +10,9 @@
 
 # InvoiceFlow
 
-Drop a PDF or image of an invoice and get the vendor, line items, tax, total, and due date back as structured JSON. Typically under five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL.
+Drop a PDF or image of an invoice and get the vendor, line items, tax, total, and due date back as structured JSON. Typically under five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL. Drop multiple files at once for batch extraction with a single bulk CSV.
 
-PDFs run through `pdf-parse` first and Claude reads the extracted text. Images go directly to Claude vision (image content blocks). Same Zod schema, same response shape, same zero-retention posture either way.
+PDFs run through `pdf-parse` first and Claude reads the extracted text. Scanned (image-only) PDFs fall back to Claude's `document` content blocks; uploaded images go through `image` content blocks directly. Same Zod schema, same response shape, same zero-retention posture either way.
 
 There's no login or database. Files process in memory inside a single Vercel Function and disappear when the request ends.
 
