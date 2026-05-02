@@ -642,6 +642,9 @@ function ResultsView({
           <input
             id="webhook-url"
             type="url"
+            inputMode="url"
+            autoComplete="url"
+            spellCheck={false}
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
             placeholder="https://your-webhook-url"
