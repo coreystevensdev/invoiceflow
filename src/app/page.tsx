@@ -463,9 +463,7 @@ function ResultsView({
   const jsonTabId = useId();
   const fieldsPanelId = useId();
   const jsonPanelId = useId();
-  const [activeBbox, setActiveBbox] = useState<
-    [number, number, number, number] | null
-  >(null);
+  const [activeBbox, setActiveBbox] = useState<number[] | null>(null);
   const isImage = result.input_type === "image";
 
   const onTabKeyDown = useCallback(
@@ -854,7 +852,7 @@ interface FieldLike {
   reasoning: string;
 }
 
-type Bbox = [number, number, number, number];
+type Bbox = number[];
 
 type FieldDef = {
   label: string;
