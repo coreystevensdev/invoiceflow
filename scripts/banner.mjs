@@ -95,9 +95,9 @@ async function main() {
     const page = await ctx.newPage();
     await page.setContent(bannerHtml(), { waitUntil: "networkidle" });
     await page.waitForTimeout(500);
-    await page.screenshot({ path: join(OUT, "banner.png"), omitBackground: false });
+    await page.screenshot({ path: join(OUT, "banner-v2.png"), omitBackground: false });
     await ctx.close();
-    console.log(`[banner] wrote ${join(OUT, "banner.png")}`);
+    console.log(`[banner] wrote ${join(OUT, "banner-v2.png")}`);
   } finally {
     await browser.close();
   }

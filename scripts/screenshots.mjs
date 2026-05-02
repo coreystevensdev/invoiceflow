@@ -112,7 +112,7 @@ async function generateInvoiceImage(browser) {
 
 async function captureLanding(page) {
   await page.goto(BASE, { waitUntil: "networkidle" });
-  await page.screenshot({ path: join(OUT, "landing.png") });
+  await page.screenshot({ path: join(OUT, "landing-v2.png") });
   console.log("[screenshot] landing.png");
 }
 
@@ -134,7 +134,7 @@ async function captureExtraction(page, pdfBuffer) {
     await totalBtn.hover();
     await page.waitForTimeout(400);
   }
-  await page.screenshot({ path: join(OUT, "extract-success.png") });
+  await page.screenshot({ path: join(OUT, "extract-success-v2.png") });
   console.log("[screenshot] extract-success.png");
 }
 
@@ -143,7 +143,7 @@ async function captureImageHighlight(browser, imageBuffer) {
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.setInputFiles("#pdf-input", {
-    name: "invoice.png",
+    name: "invoice-v2.png",
     mimeType: "image/png",
     buffer: imageBuffer,
   });
@@ -156,7 +156,7 @@ async function captureImageHighlight(browser, imageBuffer) {
   const vendorField = page.locator("div.group").nth(1);
   await vendorField.hover();
   await page.waitForTimeout(500);
-  await page.screenshot({ path: join(OUT, "extract-highlight.png") });
+  await page.screenshot({ path: join(OUT, "extract-highlight-v2.png") });
   console.log("[screenshot] extract-highlight.png");
   await ctx.close();
 }
@@ -166,7 +166,7 @@ async function captureJsonView(page) {
   const jsonTab = page.getByRole("tab", { name: "JSON" });
   await jsonTab.click();
   await page.waitForTimeout(400);
-  await page.screenshot({ path: join(OUT, "extract-json.png") });
+  await page.screenshot({ path: join(OUT, "extract-json-v2.png") });
   console.log("[screenshot] extract-json.png");
   // Reset to Fields tab so subsequent CSV shot keeps the standard view.
   await page.getByRole("tab", { name: "Fields" }).click();
@@ -179,7 +179,7 @@ async function captureCsvExport(page) {
   await csvBtn.scrollIntoViewIfNeeded();
   await csvBtn.hover();
   await page.waitForTimeout(250);
-  await page.screenshot({ path: join(OUT, "csv-export.png") });
+  await page.screenshot({ path: join(OUT, "csv-export-v2.png") });
   console.log("[screenshot] csv-export.png");
 }
 
@@ -192,7 +192,7 @@ async function captureError(page) {
   });
   // Error UI renders client-side from a typed-error code.
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: join(OUT, "error-state.png") });
+  await page.screenshot({ path: join(OUT, "error-state-v2.png") });
   console.log("[screenshot] error-state.png");
 }
 
