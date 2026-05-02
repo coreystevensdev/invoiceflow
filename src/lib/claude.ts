@@ -285,10 +285,20 @@ export async function extractInvoice(
 
       if (attempt < EXTRACTION_MAX_RETRIES && isRetryable(err)) {
         const backoffMs = 400 * Math.pow(2, attempt);
+        // Include the error class and (if APIError) the HTTP status so
+        // log triage can distinguish rate-limit pressure from upstream 5xx
+        // from network blips. The retry policy treats them all the same,
+        // but operator response differs.
+        const errorTag =
+          err instanceof APIError
+            ? `APIError${err.status ? ` ${err.status}` : ""}`
+            : err instanceof Error
+              ? err.name
+              : "unknown";
         logger?.warn({
           category: "model-API-failure",
           retry_count: attempt,
-          note: "transient, retrying",
+          note: `transient (${errorTag}), retrying`,
           duration_ms: Date.now() - start,
         });
         await sleep(backoffMs);
