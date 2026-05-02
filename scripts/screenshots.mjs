@@ -124,8 +124,16 @@ async function captureExtraction(page, pdfBuffer) {
     buffer: pdfBuffer,
   });
   await page.waitForSelector('section[aria-label="Extraction results"]', { timeout: 90_000 });
-  // Allow the PDF iframe to settle before screenshotting.
-  await page.waitForTimeout(1500);
+  // Wait for PDF.js to lazy-load, fetch the blob, render to canvas, and
+  // extract text positions for the bbox map.
+  await page.waitForTimeout(4_500);
+  // Hover a money field whose value reliably appears verbatim in the PDF
+  // text so the bbox highlight is visible in the capture.
+  const totalBtn = page.locator('button[aria-label^="Total,"]').first();
+  if (await totalBtn.count()) {
+    await totalBtn.hover();
+    await page.waitForTimeout(400);
+  }
   await page.screenshot({ path: join(OUT, "extract-success.png") });
   console.log("[screenshot] extract-success.png");
 }
