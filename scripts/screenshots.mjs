@@ -98,6 +98,18 @@ async function generateInvoicePdf(browser) {
   return buffer;
 }
 
+async function generateInvoiceImage(browser) {
+  // Render the same synthetic invoice as a PNG image at Letter aspect ratio.
+  const ctx = await browser.newContext({
+    viewport: { width: 850, height: 1100 },
+  });
+  const page = await ctx.newPage();
+  await page.setContent(INVOICE_HTML, { waitUntil: "networkidle" });
+  const buffer = await page.screenshot({ type: "png", fullPage: false });
+  await ctx.close();
+  return buffer;
+}
+
 async function captureLanding(page) {
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.screenshot({ path: join(OUT, "landing.png") });
@@ -116,6 +128,29 @@ async function captureExtraction(page, pdfBuffer) {
   await page.waitForTimeout(1500);
   await page.screenshot({ path: join(OUT, "extract-success.png") });
   console.log("[screenshot] extract-success.png");
+}
+
+async function captureImageHighlight(browser, imageBuffer) {
+  const ctx = await browser.newContext({ viewport: VIEWPORT });
+  const page = await ctx.newPage();
+  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.setInputFiles("#pdf-input", {
+    name: "invoice.png",
+    mimeType: "image/png",
+    buffer: imageBuffer,
+  });
+  await page.waitForSelector('section[aria-label="Extraction results"]', {
+    timeout: 90_000,
+  });
+  // Wait for the image to load and bbox-aware extraction to settle.
+  await page.waitForTimeout(2_000);
+  // Hover the Vendor field so the source bbox highlight shows in the capture.
+  const vendorField = page.locator("div.group").nth(1);
+  await vendorField.hover();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "extract-highlight.png") });
+  console.log("[screenshot] extract-highlight.png");
+  await ctx.close();
 }
 
 async function captureJsonView(page) {
@@ -164,6 +199,8 @@ async function main() {
   try {
     const pdfBuffer = await generateInvoicePdf(browser);
     console.log(`[screenshot] synthetic invoice PDF: ${pdfBuffer.byteLength} bytes`);
+    const imageBuffer = await generateInvoiceImage(browser);
+    console.log(`[screenshot] synthetic invoice PNG: ${imageBuffer.byteLength} bytes`);
     const ctx = await browser.newContext({ viewport: VIEWPORT });
     const page = await ctx.newPage();
     await captureLanding(page);
@@ -172,6 +209,7 @@ async function main() {
     await captureCsvExport(page);
     await captureError(page);
     await ctx.close();
+    await captureImageHighlight(browser, imageBuffer);
   } finally {
     await browser.close();
   }

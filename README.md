@@ -24,6 +24,10 @@ There's no login or database. Files process in memory inside a single Vercel Fun
   <img src="public/screenshots/extract-success.png" alt="Side-by-side PDF preview and extracted fields with confidence dots" width="100%">
 </p>
 
+<p align="center">
+  <img src="public/screenshots/extract-highlight.png" alt="Image upload with click-to-highlight: hovering the Vendor field highlights the source region in the invoice image" width="100%">
+</p>
+
 <table>
 <tr>
 <td width="50%"><img src="public/screenshots/extract-json.png" alt="JSON view tab showing the api/extract response shape"></td>
@@ -116,6 +120,10 @@ src/
 ## Design decisions worth calling out
 
 **Per-field confidence and reasoning.** Every extracted field is a `{value, confidence, reasoning}` tuple. Hover or focus a field to see the source-cited reasoning. The tooltip is keyboard-accessible (Tab to reveal, Escape to dismiss) and wired to the field via `aria-describedby`.
+
+**Click-to-highlight (image inputs).** When the input is an image, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag using normalized 0..1 coordinates. The client parses the prefix off, strips it from the displayed reasoning, and uses the coordinates to overlay an indigo highlight on the source region whenever the field is hovered or focused. PDFs use the existing iframe preview (cross-origin sandboxing prevents overlays on browser-rendered PDFs); the bbox is image-only.
+
+**Inline editing.** Click any field value in the results panel to swap the display for an input. Money fields parse to numbers via `parseFloat`, dates and strings save as-is, Enter or blur commits, Escape cancels. CSV export and webhook fire use the edited values, not the original extraction. State resets when a new file is uploaded.
 
 **Two-pass validation.** Claude flags cross-field issues during extraction. A deterministic pass in `lib/validate.ts` runs independently and merges its findings. Either alone misses things the other catches.
 
