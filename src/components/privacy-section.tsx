@@ -27,7 +27,8 @@ export function PrivacySection() {
             <a
               href={`${REPO_BASE}/src/lib/log.ts`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
+              aria-label="src/lib/log.ts on GitHub (opens in a new tab)"
               className="font-mono text-xs underline underline-offset-2 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-indigo-400"
             >
               src/lib/log.ts
@@ -63,7 +64,8 @@ export function PrivacySection() {
             <a
               href={`${REPO_BASE}/src/app/api/webhook/route.ts`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
+              aria-label="src/app/api/webhook/route.ts on GitHub (opens in a new tab)"
               className="font-mono text-xs underline underline-offset-2 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-indigo-400"
             >
               src/app/api/webhook/route.ts
