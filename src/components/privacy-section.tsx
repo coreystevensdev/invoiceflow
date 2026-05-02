@@ -1,48 +1,25 @@
 const REPO_BASE = "https://github.com/coreystevensdev/invoiceflow/blob/main";
-const TELLSIGHT_URL = "https://github.com/coreystevensdev/tellsight";
 
 export function PrivacySection() {
   return (
     <section
       aria-labelledby="privacy-heading"
-      className="mt-12 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:p-8"
+      className="mt-10 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <h2
         id="privacy-heading"
-        className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
+        className="text-base font-semibold text-zinc-900 dark:text-zinc-100"
       >
-        Your invoice never lives anywhere.
+        Zero retention
       </h2>
-
-      <p className="mt-4 text-zinc-700 dark:text-zinc-300">
-        The PDF you drop disappears the moment your CSV downloads. No disk
-        write. No queue. No log line that contains your vendor name, your line
-        items, or your totals.
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        No database, no PDF persistence, no log line containing invoice
+        content. The promise lives in the code, not a policy.
       </p>
 
-      <p className="mt-3 text-zinc-700 dark:text-zinc-300">
-        The structured logger doesn&apos;t promise not to leak. It
-        can&apos;t. The allowed log keys are enumerated in TypeScript, so trying
-        to log invoice content is a compile error, not a code-review catch.
-      </p>
-
-      <p className="mt-3 text-zinc-700 dark:text-zinc-300">
-        Built on the same principle as{" "}
-        <a
-          href={TELLSIGHT_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="font-medium text-zinc-900 underline underline-offset-2 transition-colors hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:text-zinc-100 dark:hover:text-indigo-400"
-        >
-          Tellsight
-        </a>
-        , the analytics tool I made for the same audience: the privacy promise
-        lives in the code, not in a policy.
-      </p>
-
-      <details className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-950">
+      <details className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-950">
         <summary className="cursor-pointer select-none font-medium text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:text-zinc-200">
-          For engineers: how it&apos;s enforced
+          How it&apos;s enforced
         </summary>
         <div className="mt-3 space-y-2 text-zinc-700 dark:text-zinc-400">
           <p>
@@ -92,12 +69,12 @@ export function PrivacySection() {
               src/app/api/webhook/route.ts
             </a>{" "}
             strips the model&apos;s reasoning strings (which contain extracted
-            text) before forwarding. Verbose mode is opt-in.
+            text) before forwarding to the user&apos;s URL.
           </p>
           <p>
-            No PDF bytes, no extracted fields, no invoice content is written to
-            disk, queued, or persisted anywhere. The architecture has no
-            persistence layer because there&apos;s nothing to keep.
+            No PDF bytes, no extracted fields, no invoice content is written
+            to disk, queued, or persisted anywhere. There&apos;s no
+            persistence layer to leak from.
           </p>
         </div>
       </details>

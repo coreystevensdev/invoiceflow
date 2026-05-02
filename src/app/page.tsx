@@ -170,13 +170,12 @@ export default function Home() {
     >
       <div className="mx-auto max-w-4xl px-6 py-16">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Stop typing invoices into QuickBooks.
+          <h1 className="text-xl font-semibold tracking-tight">
+            InvoiceFlow
           </h1>
-          <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
-            Drop a PDF, get vendor, line items, tax, total, and due date as
-            structured data. Typically under 5 seconds. No login, no database,
-            no logging of invoice content.
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            PDF invoices, structured by Claude. About five seconds, no login,
+            no retention.
           </p>
         </header>
 
