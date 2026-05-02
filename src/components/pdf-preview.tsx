@@ -68,8 +68,12 @@ export function PdfPreview({
     let cancelled = false;
     (async () => {
       try {
-        const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+        // pdfjs-dist v5 ships a Node entry (build/pdf.mjs) that hits
+        // process.getBuiltinModule from CanvasFactory paths and breaks in
+        // browsers. webpack.mjs is the documented browser entry and also
+        // wires the worker via new URL(..., import.meta.url) so Turbopack
+        // emits it as a chunk, no /public copy needed.
+        const pdfjs = await import("pdfjs-dist/webpack.mjs");
 
         const data = await fetch(pdfUrl).then((r) => r.arrayBuffer());
         if (cancelled) return;
