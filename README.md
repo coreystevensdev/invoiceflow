@@ -126,6 +126,8 @@ src/
 
 ## Design decisions worth calling out
 
+Each of these has a longer write-up as an ADR in [`docs/adr/`](docs/adr/) covering context, alternatives considered, and consequences accepted.
+
 **Per-field confidence and reasoning.** Every extracted field is a `{value, confidence, reasoning}` tuple. Hover or focus a field to see the source-cited reasoning. The tooltip is keyboard-accessible (Tab to reveal, Escape to dismiss) and wired to the field via `aria-describedby`.
 
 **Click-to-highlight.** Hover or focus any extracted field and the source region in the original document is highlighted. Image inputs and PDF inputs both work, by different paths. For images, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag in normalized 0..1 coordinates; the client parses the prefix off and overlays an indigo box on the source region. For PDFs, the file renders to a `<canvas>` via PDF.js, `getTextContent()` provides per-text-item positions, and the client substring-matches each extracted field's value against those positions to derive the same overlay coordinates. PDF.js is lazy-loaded only after a successful extraction (~600KB chunk; absent on the landing-page bundle). On older iOS Safari versions where pdfjs-dist v5's iterator-helper polyfills don't reach, the component degrades gracefully: the source PDF stays visible via the browser's native PDF viewer, the highlight overlay is silently disabled.

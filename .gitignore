@@ -47,7 +47,8 @@ yarn-error.log*
 # BMad framework, planning artifacts, and codebase scans (local-only)
 _bmad/
 _bmad-output/
-/docs/
+/docs/*
+!/docs/adr/
 
 # Per-file engineering-notes companions (local-only)
 *_explained.md
