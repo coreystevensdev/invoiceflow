@@ -32,6 +32,24 @@ type Status =
       correlation_id?: string;
       retry_after_seconds?: number;
       detected?: Record<string, unknown>;
+    }
+  | { kind: "batch"; files: BatchFile[] };
+
+type BatchFile =
+  | { kind: "queued"; id: string; filename: string; size: number }
+  | { kind: "loading"; id: string; filename: string; size: number }
+  | {
+      kind: "success";
+      id: string;
+      filename: string;
+      result: ExtractResponse;
+    }
+  | {
+      kind: "error";
+      id: string;
+      filename: string;
+      code: ExtractionErrorCode;
+      correlation_id?: string;
     };
 
 interface ErrorBody {
@@ -92,6 +110,109 @@ export default function Home() {
     }
   }, []);
 
+  // Bulk-upload runner. Drains the file queue with bounded concurrency so we
+  // don't saturate Anthropic's per-IP rate limits or the per-instance extract
+  // quota. Each file's lifecycle (queued → loading → success/error) is
+  // tracked independently in the batch state, so partial failures don't kill
+  // the rest of the batch. The CONCURRENCY constant trades total wall-clock
+  // (lower = serial, slow) against rate-limit pressure (higher = burst, may
+  // trip 429s on large batches).
+  const runBatch = useCallback(async (files: File[]) => {
+    const initial: BatchFile[] = files.map((f) => ({
+      kind: "queued",
+      id: crypto.randomUUID(),
+      filename: f.name,
+      size: f.size,
+    }));
+    setStatus((prev) => {
+      if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
+      return { kind: "batch", files: initial };
+    });
+    setWebhookStatus(null);
+
+    const updateFile = (id: string, next: BatchFile) => {
+      setStatus((prev) => {
+        if (prev.kind !== "batch") return prev;
+        return {
+          kind: "batch",
+          files: prev.files.map((f) => (f.id === id ? next : f)),
+        };
+      });
+    };
+
+    const fileById = new Map(initial.map((f, i) => [f.id, files[i]]));
+    const queue = [...initial];
+    const CONCURRENCY = 3;
+
+    const processOne = async (entry: BatchFile) => {
+      const file = fileById.get(entry.id);
+      if (!file) return;
+      updateFile(entry.id, {
+        kind: "loading",
+        id: entry.id,
+        filename: entry.filename,
+        size: file.size,
+      });
+      try {
+        const form = new FormData();
+        form.append("pdf", file);
+        const res = await fetch("/api/extract", {
+          method: "POST",
+          body: form,
+        });
+        if (!res.ok) {
+          const body: ErrorBody = await res.json().catch(() => ({}));
+          updateFile(entry.id, {
+            kind: "error",
+            id: entry.id,
+            filename: entry.filename,
+            code: body.code ?? "model-API-failure",
+            correlation_id: body.correlation_id,
+          });
+          return;
+        }
+        const data = (await res.json()) as ExtractResponse;
+        updateFile(entry.id, {
+          kind: "success",
+          id: entry.id,
+          filename: entry.filename,
+          result: data,
+        });
+      } catch (err) {
+        console.error(`[runBatch] ${entry.filename} failed:`, err);
+        updateFile(entry.id, {
+          kind: "error",
+          id: entry.id,
+          filename: entry.filename,
+          code: "model-API-failure",
+        });
+      }
+    };
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const next = queue.shift();
+        if (next) await processOne(next);
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker),
+    );
+  }, []);
+
+  // Route file selection: 1 file → rich single-file flow with inline edits,
+  // PDF preview, JSON view, webhook test. >1 → batch flow with summary
+  // table and bulk CSV. Same dropzone, two destinations.
+  const dispatchFiles = useCallback(
+    (files: File[]) => {
+      if (files.length === 0) return;
+      if (files.length === 1) handleFile(files[0]);
+      else runBatch(files);
+    },
+    [handleFile, runBatch],
+  );
+
   useEffect(() => {
     return () => {
       if (status.kind === "success") URL.revokeObjectURL(status.pdfUrl);
@@ -115,22 +236,20 @@ export default function Home() {
     (e: React.DragEvent<HTMLLabelElement>) => {
       e.preventDefault();
       setIsDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      dispatchFiles(Array.from(e.dataTransfer.files));
     },
-    [handleFile],
+    [dispatchFiles],
   );
 
   const onChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
+      dispatchFiles(Array.from(e.target.files ?? []));
       // Clear the input value so picking the same file again still fires
       // onChange. Without this, browsers skip the event when input.files
       // doesn't change, blocking 'upload the same file again' flows.
       e.target.value = "";
     },
-    [handleFile],
+    [dispatchFiles],
   );
 
   const onSampleClick = useCallback(async () => {
@@ -235,6 +354,28 @@ export default function Home() {
     [webhookUrl, webhookFiring],
   );
 
+  // Dropzone is "busy" during single-file extraction OR while a batch still
+  // has queued/loading files. Once every batch file is success-or-error,
+  // the dropzone becomes interactive again so the user can run another batch.
+  const dropzoneBusy =
+    status.kind === "loading" ||
+    (status.kind === "batch" &&
+      status.files.some(
+        (f) => f.kind === "queued" || f.kind === "loading",
+      ));
+  const batchInProgress = status.kind === "batch" && dropzoneBusy;
+  const batchSummary =
+    status.kind === "batch"
+      ? {
+          total: status.files.length,
+          done: status.files.filter(
+            (f) => f.kind === "success" || f.kind === "error",
+          ).length,
+          succeeded: status.files.filter((f) => f.kind === "success").length,
+          failed: status.files.filter((f) => f.kind === "error").length,
+        }
+      : null;
+
   return (
     <main
       id="main-content"
@@ -301,37 +442,37 @@ export default function Home() {
         <label
           htmlFor="pdf-input"
           role="button"
-          tabIndex={status.kind === "loading" ? -1 : 0}
+          tabIndex={dropzoneBusy ? -1 : 0}
           aria-label="Upload a PDF or image of an invoice. Press Enter or Space to open the file picker, or drop a file onto this area."
           aria-describedby={dropzoneHintId}
-          aria-disabled={status.kind === "loading"}
+          aria-disabled={dropzoneBusy}
           onKeyDown={(e) => {
-            if (status.kind === "loading") return;
+            if (dropzoneBusy) return;
             onDropzoneKey(e);
           }}
           onDragEnter={(e) => {
             e.preventDefault();
-            if (status.kind === "loading") return;
+            if (dropzoneBusy) return;
             setIsDragging(true);
           }}
           onDragOver={(e) => {
             e.preventDefault();
-            if (status.kind === "loading") return;
+            if (dropzoneBusy) return;
             setIsDragging(true);
           }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={(e) => {
-            if (status.kind === "loading") {
+            if (dropzoneBusy) {
               e.preventDefault();
               return;
             }
             onDrop(e);
           }}
           onClick={(e) => {
-            if (status.kind === "loading") e.preventDefault();
+            if (dropzoneBusy) e.preventDefault();
           }}
           className={`block rounded-xl border-2 border-dashed p-12 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950 ${
-            status.kind === "loading"
+            dropzoneBusy
               ? "cursor-wait border-zinc-300 bg-white opacity-90 dark:border-zinc-700 dark:bg-zinc-900"
               : isDragging
                 ? "cursor-pointer border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
@@ -342,13 +483,14 @@ export default function Home() {
             id="pdf-input"
             ref={inputRef}
             type="file"
+            multiple
             accept="application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
             onChange={onChange}
             className="sr-only"
             tabIndex={-1}
             aria-describedby={dropzoneHintId}
           />
-          {status.kind === "loading" ? (
+          {status.kind === "loading" || batchInProgress ? (
             <div
               className="flex items-center justify-center gap-3 text-lg font-medium"
               aria-live="polite"
@@ -374,11 +516,15 @@ export default function Home() {
                   strokeLinecap="round"
                 />
               </svg>
-              <span>Extracting {status.filename}</span>
+              <span>
+                {status.kind === "loading"
+                  ? `Extracting ${status.filename}`
+                  : `Extracting batch (${batchSummary?.done ?? 0} of ${batchSummary?.total ?? 0})`}
+              </span>
             </div>
           ) : (
             <p className="text-lg font-medium" aria-live="polite">
-              Drop a PDF or image of an invoice here, or click to upload
+              Drop one or more PDFs or images here, or click to upload
             </p>
           )}
           <p id={dropzoneHintId} className="mt-2 text-sm text-zinc-500">
@@ -388,7 +534,9 @@ export default function Home() {
                     ? "image"
                     : "PDF"
                 }, sending to Claude, validating fields.`
-              : "PDF (up to 25 MB) or image (JPG, PNG, GIF, WebP, up to 3.5 MB)."}
+              : batchInProgress
+                ? `Up to 3 in parallel. Failed files don't stop the batch.`
+                : "PDF (up to 25 MB) or image (JPG, PNG, GIF, WebP, up to 3.5 MB). Drop multiple to batch-extract."}
           </p>
         </label>
 
@@ -431,6 +579,14 @@ export default function Home() {
             fireWebhook={fireWebhook}
             webhookStatus={webhookStatus}
             webhookFiring={webhookFiring}
+          />
+        )}
+
+        {status.kind === "batch" && (
+          <BatchView
+            files={status.files}
+            inProgress={batchInProgress}
+            onReset={() => setStatus({ kind: "idle" })}
           />
         )}
 
@@ -1565,5 +1721,222 @@ function PreviewCard() {
         Plus line items, currency, confidence flags, and reasoning per field.
       </p>
     </section>
+  );
+}
+
+function BatchView({
+  files,
+  inProgress,
+  onReset,
+}: {
+  files: BatchFile[];
+  inProgress: boolean;
+  onReset: () => void;
+}) {
+  const successes = files.filter(
+    (f): f is Extract<BatchFile, { kind: "success" }> => f.kind === "success",
+  );
+  const failures = files.filter(
+    (f): f is Extract<BatchFile, { kind: "error" }> => f.kind === "error",
+  );
+  const pending = files.length - successes.length - failures.length;
+
+  // Use the same /api/csv route as single-file flow; it already accepts
+  // arrays up to 100 invoices, so the bulk path is just "swap one for many"
+  // with no new endpoint. Skipped failures aren't included.
+  const downloadBulkCsv = useCallback(
+    async (format: "summary" | "line_items") => {
+      if (successes.length === 0) return;
+      try {
+        const res = await fetch("/api/csv", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            format,
+            invoices: successes.map((s) => s.result.invoice),
+          }),
+        });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `invoiceflow-batch-${format}-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("[downloadBulkCsv] export failed:", err);
+      }
+    },
+    [successes],
+  );
+
+  const formatBytes = (n: number) => {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  return (
+    <section
+      aria-label="Batch extraction results"
+      className="mt-8 space-y-4"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm">
+          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+            Batch:
+          </span>{" "}
+          <span className="text-green-700 dark:text-green-400">
+            {successes.length} succeeded
+          </span>
+          {failures.length > 0 && (
+            <>
+              {", "}
+              <span className="text-red-700 dark:text-red-400">
+                {failures.length} failed
+              </span>
+            </>
+          )}
+          {pending > 0 && (
+            <>
+              {", "}
+              <span className="text-zinc-600 dark:text-zinc-400">
+                {pending} in progress
+              </span>
+            </>
+          )}
+          {" of "}
+          {files.length}
+          {inProgress && " (running…)"}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => downloadBulkCsv("summary")}
+            disabled={successes.length === 0}
+            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            Download summary CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadBulkCsv("line_items")}
+            disabled={successes.length === 0}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          >
+            Download line-items CSV
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <ul className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        {files.map((f) => (
+          <li
+            key={f.id}
+            className="flex flex-wrap items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-0 dark:border-zinc-800"
+          >
+            <BatchRowIcon kind={f.kind} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {f.filename}
+              </div>
+              <div className="text-xs text-zinc-500">
+                {f.kind === "success" ? (
+                  <>
+                    {f.result.invoice.vendor.name ?? "Unknown vendor"}
+                    {" · "}
+                    {f.result.invoice.total.value != null
+                      ? `${f.result.invoice.currency.value ?? ""} ${f.result.invoice.total.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`.trim()
+                      : "no total"}
+                    {" · "}
+                    {f.result.duration_ms.total
+                      ? `${(f.result.duration_ms.total / 1000).toFixed(1)}s`
+                      : ""}
+                  </>
+                ) : f.kind === "error" ? (
+                  <>
+                    {f.code}
+                    {f.correlation_id && ` · ${f.correlation_id.slice(0, 8)}`}
+                  </>
+                ) : f.kind === "loading" ? (
+                  "extracting…"
+                ) : (
+                  `${formatBytes(f.size)} · queued`
+                )}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function BatchRowIcon({ kind }: { kind: BatchFile["kind"] }) {
+  if (kind === "success") {
+    return (
+      <span
+        aria-label="Success"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400"
+      >
+        ✓
+      </span>
+    );
+  }
+  if (kind === "error") {
+    return (
+      <span
+        aria-label="Failed"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
+      >
+        ✕
+      </span>
+    );
+  }
+  if (kind === "loading") {
+    return (
+      <span
+        aria-label="Extracting"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center"
+      >
+        <svg
+          className="h-4 w-4 animate-spin text-indigo-600 motion-reduce:animate-none dark:text-indigo-400"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeOpacity="0.25"
+            strokeWidth="3"
+          />
+          <path
+            d="M22 12a10 10 0 0 1-10 10"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+  return (
+    <span
+      aria-label="Queued"
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-xs text-zinc-500 dark:border-zinc-700"
+    >
+      ⋯
+    </span>
   );
 }
