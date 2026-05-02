@@ -20,6 +20,16 @@ interface PdfTextItem {
   height: number;
 }
 
+interface RenderedPdf {
+  items: PdfTextItem[];
+  viewportWidth: number;
+  viewportHeight: number;
+  viewportScale: number;
+  viewportTransform: number[];
+  // Imported once on first render to keep Util.transform around for bbox math.
+  Util: { transform: (a: number[], b: number[]) => number[] };
+}
+
 /**
  * Lazy-loads PDF.js (pdfjs-dist) to render the uploaded PDF onto a <canvas>,
  * extracts text-with-positions via getTextContent, and best-effort matches
@@ -27,12 +37,16 @@ interface PdfTextItem {
  * normalized [0..1] bbox coordinates. The activeBbox prop drives the
  * highlight overlay positioned over the canvas.
  *
- * Trade-offs (documented in the README): adds ~600KB to the bundle on first
- * PDF view; matches by case-insensitive substring against the field's value;
- * money values are formatted with thousand-separators to match typical
- * invoice rendering. Fields whose values can't be located in the PDF text
- * (numeric-only, OCR'd glyph splits, paraphrased reasoning) silently skip
- * highlighting rather than emitting a wrong-region overlay.
+ * Two effects:
+ *   1. Render PDF to canvas (depends on pdfUrl only). Runs once per upload.
+ *   2. Compute bbox map (depends on invoice values + cached render data).
+ *      Runs every time the user edits a field value, but does no I/O.
+ *
+ * Trade-offs (documented in the README): adds ~1.2MB pdf.worker plus a
+ * ~600KB main-thread chunk on first PDF view; matches by case-insensitive
+ * substring against the field's value plus date-format and word-fallback
+ * variants. Fields whose values can't be located silently skip highlighting
+ * rather than emitting a wrong-region overlay.
  */
 export function PdfPreview({
   pdfUrl,
@@ -42,9 +56,14 @@ export function PdfPreview({
   onBboxesComputed,
 }: PdfPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [rendered, setRendered] = useState<RenderedPdf | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Effect 1: render PDF once per pdfUrl. No invoice dep, so editing fields
+  // doesn't trigger a re-fetch + re-render of the canvas (which would flicker
+  // visibly on every keystroke). The parent passes a key={pdfUrl} so a new
+  // upload remounts this component fresh; no need to reset state at the top
+  // of the effect (which would trip react-hooks/set-state-in-effect).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -69,96 +88,16 @@ export function PdfPreview({
         if (cancelled) return;
 
         const textContent = await page.getTextContent();
-        const items = textContent.items as PdfTextItem[];
-        const map: Record<string, Bbox> = {};
+        if (cancelled) return;
 
-        const recordBbox = (label: string, item: PdfTextItem) => {
-          const tx = pdfjs.Util.transform(viewport.transform, item.transform);
-          const w = Math.max(item.width * viewport.scale, 4);
-          const h = Math.max(item.height * viewport.scale, Math.hypot(tx[2], tx[3]));
-          const x = tx[4];
-          const y = tx[5] - h;
-          map[label] = [
-            Math.max(0, x / viewport.width),
-            Math.max(0, y / viewport.height),
-            Math.min(1, w / viewport.width),
-            Math.min(1, h / viewport.height),
-          ];
-        };
-
-        const findItem = (queries: string[]): PdfTextItem | undefined => {
-          for (const q of queries) {
-            const trimmed = q.trim();
-            if (trimmed.length < 2) continue;
-            const lower = trimmed.toLowerCase();
-            const item = items.find(
-              (it) => it.str && it.str.toLowerCase().includes(lower),
-            );
-            if (item) return item;
-          }
-          return undefined;
-        };
-
-        const search = (label: string, queries: (string | null | undefined)[]) => {
-          const usable = queries.filter((q): q is string => !!q);
-          const item = findItem(usable);
-          if (item) recordBbox(label, item);
-        };
-
-        // ISO date "2026-04-15" → also try natural-language variants that
-        // typed invoices commonly use ("April 15, 2026", "Apr 15, 2026",
-        // "04/15/2026", "15/04/2026", "2026-04-15").
-        const dateVariants = (iso: string | null): string[] => {
-          if (!iso) return [];
-          const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-          if (!m) return [iso];
-          const [, y, mm, dd] = m;
-          const monthIdx = Number.parseInt(mm, 10) - 1;
-          const day = Number.parseInt(dd, 10);
-          const monthLong = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December",
-          ][monthIdx];
-          const monthShort = monthLong?.slice(0, 3);
-          return [
-            iso,
-            `${monthLong} ${day}, ${y}`,
-            `${monthShort} ${day}, ${y}`,
-            `${mm}/${dd}/${y}`,
-            `${dd}/${mm}/${y}`,
-            `${monthLong} ${day}`,
-          ].filter(Boolean) as string[];
-        };
-
-        // For multi-word strings (vendor names) PDF.js may split text into
-        // separate items per font run. Generate fallback queries for each
-        // word longer than 3 chars so we still get a partial match.
-        const wordFallbacks = (s: string | null): string[] => {
-          if (!s) return [];
-          return [s, ...s.split(/\s+/).filter((w) => w.length > 3)];
-        };
-
-        search("Invoice #", [invoice.invoice_number.value]);
-        search("Vendor", wordFallbacks(invoice.vendor.name));
-        search("Bill date", dateVariants(invoice.bill_date.value));
-        search("Due date", dateVariants(invoice.due_date.value));
-        search("PO #", [invoice.po_number.value]);
-        const formatMoney = (n: number | null) =>
-          n != null
-            ? n.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
-            : null;
-        search("Subtotal", [formatMoney(invoice.subtotal.value)]);
-        search("Tax", [formatMoney(invoice.tax.value)]);
-        search("Total", [formatMoney(invoice.total.value)]);
-        search("Currency", [invoice.currency.value]);
-
-        if (!cancelled) {
-          setLoaded(true);
-          onBboxesComputed?.(map);
-        }
+        setRendered({
+          items: textContent.items as PdfTextItem[],
+          viewportWidth: viewport.width,
+          viewportHeight: viewport.height,
+          viewportScale: viewport.scale,
+          viewportTransform: viewport.transform,
+          Util: pdfjs.Util,
+        });
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "PDF render failed");
@@ -168,7 +107,107 @@ export function PdfPreview({
     return () => {
       cancelled = true;
     };
-  }, [pdfUrl, invoice, onBboxesComputed]);
+  }, [pdfUrl]);
+
+  // Effect 2: compute bbox map whenever the invoice or rendered data changes.
+  // Pure CPU work against cached items; no PDF re-render.
+  useEffect(() => {
+    if (!rendered || !onBboxesComputed) return;
+    const {
+      items,
+      viewportWidth,
+      viewportHeight,
+      viewportScale,
+      viewportTransform,
+      Util,
+    } = rendered;
+    const map: Record<string, Bbox> = {};
+
+    const recordBbox = (label: string, item: PdfTextItem) => {
+      const tx = Util.transform(viewportTransform, item.transform);
+      const w = Math.max(item.width * viewportScale, 4);
+      const h = Math.max(
+        item.height * viewportScale,
+        Math.hypot(tx[2], tx[3]),
+      );
+      const x = tx[4];
+      const y = tx[5] - h;
+      map[label] = [
+        Math.max(0, x / viewportWidth),
+        Math.max(0, y / viewportHeight),
+        Math.min(1, w / viewportWidth),
+        Math.min(1, h / viewportHeight),
+      ];
+    };
+
+    const findItem = (queries: string[]): PdfTextItem | undefined => {
+      for (const q of queries) {
+        const trimmed = q.trim();
+        if (trimmed.length < 2) continue;
+        const lower = trimmed.toLowerCase();
+        const item = items.find(
+          (it) => it.str && it.str.toLowerCase().includes(lower),
+        );
+        if (item) return item;
+      }
+      return undefined;
+    };
+
+    const search = (
+      label: string,
+      queries: (string | null | undefined)[],
+    ) => {
+      const usable = queries.filter((q): q is string => !!q);
+      const item = findItem(usable);
+      if (item) recordBbox(label, item);
+    };
+
+    const dateVariants = (iso: string | null): string[] => {
+      if (!iso) return [];
+      const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return [iso];
+      const [, y, mm, dd] = m;
+      const monthIdx = Number.parseInt(mm, 10) - 1;
+      const day = Number.parseInt(dd, 10);
+      const monthLong = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+      ][monthIdx];
+      const monthShort = monthLong?.slice(0, 3);
+      return [
+        iso,
+        `${monthLong} ${day}, ${y}`,
+        `${monthShort} ${day}, ${y}`,
+        `${mm}/${dd}/${y}`,
+        `${dd}/${mm}/${y}`,
+        `${monthLong} ${day}`,
+      ].filter(Boolean) as string[];
+    };
+
+    const wordFallbacks = (s: string | null): string[] => {
+      if (!s) return [];
+      return [s, ...s.split(/\s+/).filter((w) => w.length > 3)];
+    };
+
+    search("Invoice #", [invoice.invoice_number.value]);
+    search("Vendor", wordFallbacks(invoice.vendor.name));
+    search("Bill date", dateVariants(invoice.bill_date.value));
+    search("Due date", dateVariants(invoice.due_date.value));
+    search("PO #", [invoice.po_number.value]);
+    const formatMoney = (n: number | null) =>
+      n != null
+        ? n.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : null;
+    search("Subtotal", [formatMoney(invoice.subtotal.value)]);
+    search("Tax", [formatMoney(invoice.tax.value)]);
+    search("Total", [formatMoney(invoice.total.value)]);
+    search("Currency", [invoice.currency.value]);
+
+    onBboxesComputed(map);
+  }, [rendered, invoice, onBboxesComputed]);
 
   return (
     <div className="relative">
@@ -178,7 +217,7 @@ export function PdfPreview({
         role="img"
         className="w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
       />
-      {!loaded && !error && (
+      {!rendered && !error && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-zinc-500">
           Rendering PDF…
         </div>
@@ -188,7 +227,7 @@ export function PdfPreview({
           PDF render failed: {error}
         </div>
       )}
-      {activeBbox && loaded && (
+      {activeBbox && rendered && (
         <div
           aria-hidden="true"
           className="pointer-events-none absolute rounded border-2 border-indigo-500 bg-indigo-500/15 shadow-[0_0_0_3px_rgba(99,102,241,0.2)] transition-all duration-150 motion-reduce:transition-none"

@@ -717,6 +717,7 @@ function ResultsView({
             </div>
           ) : (
             <PdfPreview
+              key={pdfUrl}
               pdfUrl={pdfUrl}
               filename={filename}
               invoice={inv}
