@@ -72,7 +72,9 @@ export async function UpgradeBrowserNotice() {
           <a
             className="underline"
             href="https://www.google.com/chrome/"
-            rel="noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chrome (opens in a new tab)"
           >
             Chrome
           </a>
@@ -80,7 +82,9 @@ export async function UpgradeBrowserNotice() {
           <a
             className="underline"
             href="https://www.mozilla.org/firefox/"
-            rel="noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Firefox (opens in a new tab)"
           >
             Firefox
           </a>
@@ -88,7 +92,9 @@ export async function UpgradeBrowserNotice() {
           <a
             className="underline"
             href="https://www.apple.com/safari/"
-            rel="noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Safari (opens in a new tab)"
           >
             Safari
           </a>
@@ -96,7 +102,9 @@ export async function UpgradeBrowserNotice() {
           <a
             className="underline"
             href="https://www.microsoft.com/edge"
-            rel="noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Edge (opens in a new tab)"
           >
             Edge
           </a>
