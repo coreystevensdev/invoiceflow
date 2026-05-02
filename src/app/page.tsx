@@ -846,7 +846,7 @@ function LineItemsTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <table className="w-full min-w-[28rem] text-sm">
+      <table className="w-full text-sm sm:min-w-[28rem]">
         <caption className="sr-only">Extracted line items</caption>
         <thead className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
           <tr>
