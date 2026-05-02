@@ -170,7 +170,54 @@ export default function Home() {
     >
       <div className="mx-auto max-w-4xl px-6 py-16">
         <header className="mb-8">
-          <h1 className="text-xl font-semibold tracking-tight">
+          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 40 40"
+              fill="none"
+              aria-hidden="true"
+              className="shrink-0"
+            >
+              <rect
+                x="11"
+                y="7"
+                width="18"
+                height="26"
+                rx="2.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <line
+                x1="14"
+                y1="13"
+                x2="26"
+                y2="13"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="14"
+                y1="18"
+                x2="26"
+                y2="18"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <line
+                x1="14"
+                y1="23"
+                x2="22"
+                y2="23"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <circle cx="26" cy="27" r="2.5" fill="currentColor" />
+            </svg>
             InvoiceFlow
           </h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
