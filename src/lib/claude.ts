@@ -12,11 +12,18 @@ import type { Logger } from "./log";
 
 const ConfidenceEnum = z.enum(["high", "medium", "low"]);
 
+const SourceBbox = z
+  .tuple([z.number(), z.number(), z.number(), z.number()])
+  .describe(
+    "Normalized [x, y, width, height] coordinates (0..1) of the visual region in the source image, only populated when the input is an image.",
+  );
+
 const FieldWithReasoning = <T extends z.ZodTypeAny>(valueSchema: T) =>
   z.object({
     value: valueSchema.nullable(),
     confidence: ConfidenceEnum,
     reasoning: z.string(),
+    source_bbox: SourceBbox.nullable().optional(),
   });
 
 const VendorField = z.object({
@@ -24,6 +31,7 @@ const VendorField = z.object({
   address: z.string().nullable(),
   confidence: ConfidenceEnum,
   reasoning: z.string(),
+  source_bbox: SourceBbox.nullable().optional(),
 });
 
 const LineItem = z.object({
@@ -207,7 +215,7 @@ export async function extractInvoice(
                       },
                       {
                         type: "text",
-                        text: `<today>${new Date().toISOString().slice(0, 10)}</today>\n\nThe image above is an invoice. Extract the invoice data per the schema. Use what you see in the image as the source content for the reasoning strings.`,
+                        text: `<today>${new Date().toISOString().slice(0, 10)}</today>\n\nThe image above is an invoice. Extract the invoice data per the schema. Use what you see in the image as the source content for the reasoning strings. For each field, also populate source_bbox as [x, y, width, height] using normalized 0..1 coordinates relative to the full image (e.g., a value in the top-right quadrant might have bbox [0.7, 0.05, 0.25, 0.06]). If you cannot localize a field visually, omit source_bbox or set it to null.`,
                       },
                     ],
             },

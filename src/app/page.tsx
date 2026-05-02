@@ -463,6 +463,10 @@ function ResultsView({
   const jsonTabId = useId();
   const fieldsPanelId = useId();
   const jsonPanelId = useId();
+  const [activeBbox, setActiveBbox] = useState<
+    [number, number, number, number] | null
+  >(null);
+  const isImage = result.input_type === "image";
 
   const onTabKeyDown = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>) => {
@@ -492,6 +496,7 @@ function ResultsView({
       {
         label: "Invoice #",
         field: inv.invoice_number,
+        bbox: inv.invoice_number.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -508,6 +513,7 @@ function ResultsView({
           confidence: inv.vendor.confidence,
           reasoning: inv.vendor.reasoning,
         },
+        bbox: inv.vendor.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -517,6 +523,7 @@ function ResultsView({
       {
         label: "Bill date",
         field: inv.bill_date,
+        bbox: inv.bill_date.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -526,6 +533,7 @@ function ResultsView({
       {
         label: "Due date",
         field: inv.due_date,
+        bbox: inv.due_date.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -535,6 +543,7 @@ function ResultsView({
       {
         label: "PO #",
         field: inv.po_number,
+        bbox: inv.po_number.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -545,6 +554,7 @@ function ResultsView({
         label: "Subtotal",
         field: inv.subtotal,
         money: true,
+        bbox: inv.subtotal.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -558,6 +568,7 @@ function ResultsView({
         label: "Tax",
         field: inv.tax,
         money: true,
+        bbox: inv.tax.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -571,6 +582,7 @@ function ResultsView({
         label: "Total",
         field: inv.total,
         money: true,
+        bbox: inv.total.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -583,6 +595,7 @@ function ResultsView({
       {
         label: "Currency",
         field: inv.currency,
+        bbox: inv.currency.source_bbox ?? null,
         onSave: (v) =>
           setEdited((prev) => ({
             ...prev,
@@ -627,11 +640,35 @@ function ResultsView({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="min-w-0 lg:sticky lg:top-4 lg:self-start">
-          <iframe
-            src={pdfUrl}
-            title={`Original PDF: ${filename}`}
-            className="aspect-[8.5/11] w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
-          />
+          {isImage ? (
+            <div className="relative">
+              {/* Disable Next/Image lint rule - blob URLs don't go through next/image. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={pdfUrl}
+                alt={`Original invoice: ${filename}`}
+                className="w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
+              />
+              {activeBbox && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute rounded border-2 border-indigo-500 bg-indigo-500/15 shadow-[0_0_0_3px_rgba(99,102,241,0.2)] transition-all duration-150 motion-reduce:transition-none"
+                  style={{
+                    left: `${activeBbox[0] * 100}%`,
+                    top: `${activeBbox[1] * 100}%`,
+                    width: `${activeBbox[2] * 100}%`,
+                    height: `${activeBbox[3] * 100}%`,
+                  }}
+                />
+              )}
+            </div>
+          ) : (
+            <iframe
+              src={pdfUrl}
+              title={`Original PDF: ${filename}`}
+              className="aspect-[8.5/11] w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
+            />
+          )}
         </div>
 
         <div className="min-w-0 space-y-6">
@@ -690,6 +727,14 @@ function ResultsView({
                     field={f.field}
                     money={f.money}
                     onSave={f.onSave}
+                    onActivate={
+                      isImage && f.bbox
+                        ? () => setActiveBbox(f.bbox)
+                        : undefined
+                    }
+                    onDeactivate={
+                      isImage && f.bbox ? () => setActiveBbox(null) : undefined
+                    }
                   />
                 ))}
               </dl>
@@ -809,10 +854,13 @@ interface FieldLike {
   reasoning: string;
 }
 
+type Bbox = [number, number, number, number];
+
 type FieldDef = {
   label: string;
   field: FieldLike;
   money?: boolean;
+  bbox: Bbox | null;
   onSave: (value: string | number | null) => void;
 };
 
@@ -821,11 +869,15 @@ function FieldRow({
   field,
   money,
   onSave,
+  onActivate,
+  onDeactivate,
 }: {
   label: string;
   field: FieldLike;
   money?: boolean;
   onSave: (value: string | number | null) => void;
+  onActivate?: () => void;
+  onDeactivate?: () => void;
 }) {
   const reasoningId = useId();
   const inputId = useId();
@@ -919,8 +971,16 @@ function FieldRow({
       className={`group relative ${field.reasoning && !isEditing ? "cursor-pointer" : ""}`}
       tabIndex={field.reasoning && !isEditing ? 0 : undefined}
       onKeyDown={handleKeyDown}
-      onFocus={resetDismissal}
-      onMouseEnter={resetDismissal}
+      onFocus={() => {
+        resetDismissal();
+        onActivate?.();
+      }}
+      onBlur={() => onDeactivate?.()}
+      onMouseEnter={() => {
+        resetDismissal();
+        onActivate?.();
+      }}
+      onMouseLeave={() => onDeactivate?.()}
       onClick={(e) => {
         if (isEditing) return;
         if (field.reasoning) {

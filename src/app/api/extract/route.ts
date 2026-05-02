@@ -99,6 +99,7 @@ export interface ExtractResponse {
     num_pages: number;
     size_bytes: number;
   };
+  input_type: "pdf" | "image";
   usage: UsageSummary;
   duration_ms: {
     pdf_parse: number;
@@ -271,6 +272,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       invoice,
       confidence_summary: confidenceSummary(invoice),
       pdf: { num_pages: pdfNumPages, size_bytes: bytes.length },
+      input_type: imageMime ? "image" : "pdf",
       usage: extraction.usage,
       duration_ms: {
         pdf_parse: pdfMs,
