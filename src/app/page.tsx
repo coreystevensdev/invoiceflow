@@ -135,12 +135,14 @@ export default function Home() {
   );
 
   const downloadCsv = useCallback(
-    async (format: "summary" | "line_items") => {
-      if (status.kind !== "success") return;
+    async (
+      format: "summary" | "line_items",
+      invoice: InvoiceExtraction,
+    ) => {
       const res = await fetch("/api/csv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ format, invoices: [status.result.invoice] }),
+        body: JSON.stringify({ format, invoices: [invoice] }),
       });
       if (!res.ok) return;
       const blob = await res.blob();
@@ -151,34 +153,37 @@ export default function Home() {
       a.click();
       URL.revokeObjectURL(url);
     },
-    [status],
+    [],
   );
 
   const [webhookFiring, setWebhookFiring] = useState(false);
 
-  const fireWebhook = useCallback(async () => {
-    if (status.kind !== "success" || webhookFiring) return;
-    setWebhookFiring(true);
-    setWebhookStatus("Firing…");
-    try {
-      const res = await fetch("/api/webhook", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          webhook_url: webhookUrl,
-          invoice: status.result.invoice,
-        }),
-      });
-      const data = await res.json();
-      setWebhookStatus(
-        res.ok
-          ? `Sent, upstream responded ${data.status} in ${data.duration_ms}ms.`
-          : `Failed, ${data.error ?? "unknown reason"}.`,
-      );
-    } finally {
-      setWebhookFiring(false);
-    }
-  }, [status, webhookUrl, webhookFiring]);
+  const fireWebhook = useCallback(
+    async (invoice: InvoiceExtraction) => {
+      if (webhookFiring) return;
+      setWebhookFiring(true);
+      setWebhookStatus("Firing…");
+      try {
+        const res = await fetch("/api/webhook", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            webhook_url: webhookUrl,
+            invoice,
+          }),
+        });
+        const data = await res.json();
+        setWebhookStatus(
+          res.ok
+            ? `Sent, upstream responded ${data.status} in ${data.duration_ms}ms.`
+            : `Failed, ${data.error ?? "unknown reason"}.`,
+        );
+      } finally {
+        setWebhookFiring(false);
+      }
+    },
+    [webhookUrl, webhookFiring],
+  );
 
   return (
     <main
@@ -409,10 +414,13 @@ interface ResultsViewProps {
   result: ExtractResponse;
   filename: string;
   pdfUrl: string;
-  downloadCsv: (format: "summary" | "line_items") => void;
+  downloadCsv: (
+    format: "summary" | "line_items",
+    invoice: InvoiceExtraction,
+  ) => void;
   webhookUrl: string;
   setWebhookUrl: (v: string) => void;
-  fireWebhook: () => void;
+  fireWebhook: (invoice: InvoiceExtraction) => void;
   webhookStatus: string | null;
   webhookFiring: boolean;
 }
@@ -440,7 +448,16 @@ function ResultsView({
     }
   }, [webhookUrl]);
   const [view, setView] = useState<ResultView>("fields");
-  const inv = result.invoice;
+  const [edited, setEdited] = useState<InvoiceExtraction>(result.invoice);
+  const [editedFor, setEditedFor] = useState(result);
+  // Reset edits when a new extraction arrives. Using a "prev props" sentinel
+  // instead of useEffect avoids the react-hooks/set-state-in-effect lint and
+  // resets cleanly on the same render that result changes.
+  if (editedFor !== result) {
+    setEditedFor(result);
+    setEdited(result.invoice);
+  }
+  const inv = edited;
   const summary = result.confidence_summary;
   const fieldsTabId = useId();
   const jsonTabId = useId();
@@ -470,9 +487,20 @@ function ResultsView({
     [view, fieldsTabId, jsonTabId],
   );
 
-  const fields = useMemo(
+  const fields = useMemo<FieldDef[]>(
     () => [
-      { label: "Invoice #", field: inv.invoice_number },
+      {
+        label: "Invoice #",
+        field: inv.invoice_number,
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            invoice_number: {
+              ...prev.invoice_number,
+              value: v as string | null,
+            },
+          })),
+      },
       {
         label: "Vendor",
         field: {
@@ -480,14 +508,87 @@ function ResultsView({
           confidence: inv.vendor.confidence,
           reasoning: inv.vendor.reasoning,
         },
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            vendor: { ...prev.vendor, name: v as string | null },
+          })),
       },
-      { label: "Bill date", field: inv.bill_date },
-      { label: "Due date", field: inv.due_date },
-      { label: "PO #", field: inv.po_number },
-      { label: "Subtotal", field: inv.subtotal, money: true },
-      { label: "Tax", field: inv.tax, money: true },
-      { label: "Total", field: inv.total, money: true },
-      { label: "Currency", field: inv.currency },
+      {
+        label: "Bill date",
+        field: inv.bill_date,
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            bill_date: { ...prev.bill_date, value: v as string | null },
+          })),
+      },
+      {
+        label: "Due date",
+        field: inv.due_date,
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            due_date: { ...prev.due_date, value: v as string | null },
+          })),
+      },
+      {
+        label: "PO #",
+        field: inv.po_number,
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            po_number: { ...prev.po_number, value: v as string | null },
+          })),
+      },
+      {
+        label: "Subtotal",
+        field: inv.subtotal,
+        money: true,
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            subtotal: {
+              ...prev.subtotal,
+              value: typeof v === "number" ? v : null,
+            },
+          })),
+      },
+      {
+        label: "Tax",
+        field: inv.tax,
+        money: true,
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            tax: {
+              ...prev.tax,
+              value: typeof v === "number" ? v : null,
+            },
+          })),
+      },
+      {
+        label: "Total",
+        field: inv.total,
+        money: true,
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            total: {
+              ...prev.total,
+              value: typeof v === "number" ? v : null,
+            },
+          })),
+      },
+      {
+        label: "Currency",
+        field: inv.currency,
+        onSave: (v) =>
+          setEdited((prev) => ({
+            ...prev,
+            currency: { ...prev.currency, value: v as string | null },
+          })),
+      },
     ],
     [inv],
   );
@@ -588,6 +689,7 @@ function ResultsView({
                     label={f.label}
                     field={f.field}
                     money={f.money}
+                    onSave={f.onSave}
                   />
                 ))}
               </dl>
@@ -610,14 +712,14 @@ function ResultsView({
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => downloadCsv("summary")}
+            onClick={() => downloadCsv("summary", edited)}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             Download summary CSV
           </button>
           <button
             type="button"
-            onClick={() => downloadCsv("line_items")}
+            onClick={() => downloadCsv("line_items", edited)}
             className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
             Download line-items CSV
@@ -652,7 +754,7 @@ function ResultsView({
           />
           <button
             type="button"
-            onClick={fireWebhook}
+            onClick={() => fireWebhook(edited)}
             disabled={!webhookUrlValid || webhookFiring}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
@@ -707,18 +809,32 @@ interface FieldLike {
   reasoning: string;
 }
 
+type FieldDef = {
+  label: string;
+  field: FieldLike;
+  money?: boolean;
+  onSave: (value: string | number | null) => void;
+};
+
 function FieldRow({
   label,
   field,
   money,
+  onSave,
 }: {
   label: string;
   field: FieldLike;
   money?: boolean;
+  onSave: (value: string | number | null) => void;
 }) {
   const reasoningId = useId();
+  const inputId = useId();
   const [escapeDismissed, setEscapeDismissed] = useState(false);
-  const value =
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const display =
     field.value === null || field.value === undefined
       ? "-"
       : money && typeof field.value === "number"
@@ -727,6 +843,15 @@ function FieldRow({
             maximumFractionDigits: 2,
           })
         : String(field.value);
+
+  const draftFromField = () => {
+    if (field.value === null || field.value === undefined) return "";
+    if (money && typeof field.value === "number") {
+      return field.value.toFixed(2);
+    }
+    return String(field.value);
+  };
+
   const dotColor =
     field.confidence === "high"
       ? "bg-green-500"
@@ -746,6 +871,33 @@ function FieldRow({
         ? "Medium"
         : "Low";
 
+  const startEditing = () => {
+    setDraft(draftFromField());
+    setIsEditing(true);
+  };
+
+  useEffect(() => {
+    if (isEditing) inputRef.current?.select();
+  }, [isEditing]);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (money) {
+      if (trimmed === "") {
+        onSave(null);
+      } else {
+        const cleaned = trimmed.replace(/,/g, "");
+        const parsed = Number.parseFloat(cleaned);
+        if (Number.isFinite(parsed)) onSave(parsed);
+      }
+    } else {
+      onSave(trimmed === "" ? null : trimmed);
+    }
+    setIsEditing(false);
+  };
+
+  const cancel = () => setIsEditing(false);
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape" && field.reasoning && !escapeDismissed) {
       event.stopPropagation();
@@ -757,37 +909,77 @@ function FieldRow({
     if (escapeDismissed) setEscapeDismissed(false);
   };
 
-  const tooltipVisibility = escapeDismissed
-    ? "hidden"
-    : "hidden group-hover:block group-focus-within:block";
+  const tooltipVisibility =
+    escapeDismissed || isEditing
+      ? "hidden"
+      : "hidden group-hover:block group-focus-within:block";
 
   return (
     <div
-      className={`group relative ${field.reasoning ? "cursor-pointer" : ""}`}
-      tabIndex={field.reasoning ? 0 : undefined}
+      className={`group relative ${field.reasoning && !isEditing ? "cursor-pointer" : ""}`}
+      tabIndex={field.reasoning && !isEditing ? 0 : undefined}
       onKeyDown={handleKeyDown}
       onFocus={resetDismissal}
       onMouseEnter={resetDismissal}
       onClick={(e) => {
+        if (isEditing) return;
         if (field.reasoning) {
           (e.currentTarget as HTMLDivElement).focus();
         }
       }}
     >
-      <dt className="text-xs uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd
-        className="mt-1 flex items-center gap-2 text-lg font-medium"
-        aria-describedby={field.reasoning ? reasoningId : undefined}
-      >
-        <span>{value}</span>
-        <span
-          aria-hidden="true"
-          className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] leading-none text-white ${dotColor}`}
+      <dt className="text-xs uppercase tracking-wide text-zinc-500">
+        <label htmlFor={inputId}>{label}</label>
+      </dt>
+      {isEditing ? (
+        <dd className="mt-1 text-lg font-medium">
+          <input
+            ref={inputRef}
+            id={inputId}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+                cancel();
+              }
+            }}
+            inputMode={money ? "decimal" : "text"}
+            spellCheck={false}
+            className="w-full rounded-md border border-indigo-400 bg-white px-2 py-1 text-lg font-medium text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-indigo-500 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+        </dd>
+      ) : (
+        <dd
+          className="mt-1 flex items-center gap-2 text-lg font-medium"
+          aria-describedby={field.reasoning ? reasoningId : undefined}
         >
-          {confidenceGlyph}
-        </span>
-        <span className="sr-only">{confidenceWord} confidence.</span>
-      </dd>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              startEditing();
+            }}
+            className="rounded text-left hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            aria-label={`${label}, ${display}. Click to edit.`}
+          >
+            {display}
+          </button>
+          <span
+            aria-hidden="true"
+            className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] leading-none text-white ${dotColor}`}
+          >
+            {confidenceGlyph}
+          </span>
+          <span className="sr-only">{confidenceWord} confidence.</span>
+        </dd>
+      )}
       {field.reasoning && (
         <div
           id={reasoningId}
