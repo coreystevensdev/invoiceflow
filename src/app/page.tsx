@@ -624,6 +624,23 @@ function ResultsView({
           {result.pdf.num_pages} page{result.pdf.num_pages === 1 ? "" : "s"},{" "}
           {(result.duration_ms.total / 1000).toFixed(1)}s,{" "}
           {result.usage.input_tokens + result.usage.output_tokens} tokens
+          {edited !== result.invoice && (
+            <>
+              {" · "}
+              <span className="text-amber-700 dark:text-amber-400">edited</span>
+              {" · "}
+              <button
+                type="button"
+                onClick={() => {
+                  setEdited(result.invoice);
+                  setActiveBbox(null);
+                }}
+                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+              >
+                Reset
+              </button>
+            </>
+          )}
         </span>
         <span>
           <b className="text-green-700 dark:text-green-400">
