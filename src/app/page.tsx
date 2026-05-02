@@ -93,6 +93,10 @@ export default function Home() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) handleFile(file);
+      // Clear the input value so picking the same file again still fires
+      // onChange. Without this, browsers skip the event when input.files
+      // doesn't change, blocking 'upload the same file again' flows.
+      e.target.value = "";
     },
     [handleFile],
   );
