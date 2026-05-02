@@ -536,7 +536,7 @@ function ResultsView({
   // The parent passes key={pdfUrl} so a new extraction remounts this
   // component with fresh useState initializers. That resets not just the
   // local state below but every descendant's state too (FieldRow.isEditing,
-  // EditableCell.isEditing) — a prev-props sentinel here couldn't reach
+  // EditableCell.isEditing); a prev-props sentinel here couldn't reach
   // those.
   const [view, setView] = useState<ResultView>("fields");
   const [edited, setEdited] = useState<InvoiceExtraction>(result.invoice);
