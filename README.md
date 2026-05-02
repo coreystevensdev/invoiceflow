@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/screenshots/banner.png" alt="InvoiceFlow" width="100%">
+  <img src="public/screenshots/banner-v2.png" alt="InvoiceFlow" width="100%">
 </p>
 
 <p align="center">
@@ -17,24 +17,24 @@ PDFs run through `pdf-parse` first and Claude reads the extracted text. Images g
 There's no login or database. Files process in memory inside a single Vercel Function and disappear when the request ends.
 
 <p align="center">
-  <img src="public/screenshots/landing.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
+  <img src="public/screenshots/landing-v2.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
 </p>
 
 <p align="center">
-  <img src="public/screenshots/extract-success.png" alt="Side-by-side PDF preview and extracted fields with confidence dots" width="100%">
+  <img src="public/screenshots/extract-success-v2.png" alt="Side-by-side PDF preview and extracted fields with confidence dots" width="100%">
 </p>
 
 <p align="center">
-  <img src="public/screenshots/extract-highlight.png" alt="Image upload with click-to-highlight: hovering the Vendor field highlights the source region in the invoice image" width="100%">
+  <img src="public/screenshots/extract-highlight-v2.png" alt="Image upload with click-to-highlight: hovering the Vendor field highlights the source region in the invoice image" width="100%">
 </p>
 
 <table>
 <tr>
-<td width="50%"><img src="public/screenshots/extract-json.png" alt="JSON view tab showing the api/extract response shape"></td>
-<td width="50%"><img src="public/screenshots/csv-export.png" alt="CSV export buttons for QuickBooks and Xero schemas"></td>
+<td width="50%"><img src="public/screenshots/extract-json-v2.png" alt="JSON view tab showing the api/extract response shape"></td>
+<td width="50%"><img src="public/screenshots/csv-export-v2.png" alt="CSV export buttons for QuickBooks and Xero schemas"></td>
 </tr>
 <tr>
-<td colspan="2"><img src="public/screenshots/error-state.png" alt="Typed error surface with code, retry guidance, and correlation id"></td>
+<td colspan="2"><img src="public/screenshots/error-state-v2.png" alt="Typed error surface with code, retry guidance, and correlation id"></td>
 </tr>
 </table>
 
