@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { InvoiceExtraction } from "@/lib/claude";
 
+const PDF_PREVIEW_BUILD = "v4-legacy-static-worker";
+
 type Bbox = number[];
 
 interface PdfPreviewProps {
@@ -30,6 +32,12 @@ interface RenderedPdf {
   Util: { transform: (a: number[], b: number[]) => number[] };
 }
 
+interface RenderError {
+  name: string;
+  message: string;
+  stack: string;
+}
+
 /**
  * Lazy-loads PDF.js (pdfjs-dist) to render the uploaded PDF onto a <canvas>,
  * extracts text-with-positions via getTextContent, and best-effort matches
@@ -41,6 +49,11 @@ interface RenderedPdf {
  *   1. Render PDF to canvas (depends on pdfUrl only). Runs once per upload.
  *   2. Compute bbox map (depends on invoice values + cached render data).
  *      Runs every time the user edits a field value, but does no I/O.
+ *
+ * If the canvas pipeline fails (typically on older iOS Safari versions that
+ * pdfjs-dist v5 doesn't fully support), the component falls back to the
+ * browser's native PDF viewer in an <iframe>. The bbox highlight overlay is
+ * canvas-only, so the fallback view loses it; the source PDF is still shown.
  *
  * Trade-offs (documented in the README): adds ~1.2MB pdf.worker plus a
  * ~600KB main-thread chunk on first PDF view; matches by case-insensitive
@@ -57,7 +70,7 @@ export function PdfPreview({
 }: PdfPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [rendered, setRendered] = useState<RenderedPdf | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RenderError | null>(null);
 
   // Effect 1: render PDF once per pdfUrl. No invoice dep, so editing fields
   // doesn't trigger a re-fetch + re-render of the canvas (which would flicker
@@ -68,12 +81,14 @@ export function PdfPreview({
     let cancelled = false;
     (async () => {
       try {
-        // pdfjs-dist v5's modern build uses APIs (Promise.withResolvers,
-        // iterator helpers, Uint8Array.fromBase64) that aren't available on
-        // older iOS Safari. The legacy build polyfills these via core-js,
-        // and its webpack.mjs entry wires the worker via
-        // new URL(..., import.meta.url) so Turbopack emits it as a chunk.
-        const pdfjs = await import("pdfjs-dist/legacy/webpack.mjs");
+        // Direct legacy/build/pdf.mjs import + manual workerSrc keeps the
+        // wiring identical across Turbopack / webpack / vite. The legacy
+        // build polyfills modern APIs (Promise.withResolvers, iterator
+        // helpers, Uint8Array.fromBase64) that pdfjs-dist v5 assumes but
+        // older iOS Safari doesn't ship. The worker file at the static
+        // /pdf.worker.min.mjs URL is copied from the package in postinstall.
+        const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
         const data = await fetch(pdfUrl).then((r) => r.arrayBuffer());
         if (cancelled) return;
@@ -104,11 +119,13 @@ export function PdfPreview({
         });
       } catch (err) {
         if (!cancelled) {
-          // Log the full error to DevTools (stack + cause) so a real failure
-          // can be diagnosed beyond the user-facing message banner. The
-          // banner only renders err.message; everything else lives here.
           console.error("[PdfPreview] render failed:", err);
-          setError(err instanceof Error ? err.message : "PDF render failed");
+          const e = err instanceof Error ? err : new Error(String(err));
+          setError({
+            name: e.name,
+            message: e.message,
+            stack: e.stack ?? "(no stack)",
+          });
         }
       }
     })();
@@ -197,25 +214,57 @@ export function PdfPreview({
       return [s, ...s.split(/\s+/).filter((w) => w.length > 3)];
     };
 
+    // Money fields: try the en-US formatted string first ("1,234.56"), then
+    // the raw decimal ("1234.56") in case the PDF omits the thousands
+    // separator. Substring match means "$1,234.56" still hits the formatted
+    // variant; "1234.56" only hits if the formatted variant misses.
+    const moneyVariants = (n: number | null): string[] => {
+      if (n == null) return [];
+      return [
+        n.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }),
+        n.toFixed(2),
+      ];
+    };
+
     search("Invoice #", [invoice.invoice_number.value]);
     search("Vendor", wordFallbacks(invoice.vendor.name));
     search("Bill date", dateVariants(invoice.bill_date.value));
     search("Due date", dateVariants(invoice.due_date.value));
     search("PO #", [invoice.po_number.value]);
-    const formatMoney = (n: number | null) =>
-      n != null
-        ? n.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })
-        : null;
-    search("Subtotal", [formatMoney(invoice.subtotal.value)]);
-    search("Tax", [formatMoney(invoice.tax.value)]);
-    search("Total", [formatMoney(invoice.total.value)]);
+    search("Subtotal", moneyVariants(invoice.subtotal.value));
+    search("Tax", moneyVariants(invoice.tax.value));
+    search("Total", moneyVariants(invoice.total.value));
     search("Currency", [invoice.currency.value]);
 
     onBboxesComputed(map);
   }, [rendered, invoice, onBboxesComputed]);
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
+        <iframe
+          src={pdfUrl}
+          title={`Original PDF: ${filename}`}
+          className="h-[600px] w-full rounded-t-xl"
+        />
+        <details className="border-t border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+          <summary className="cursor-pointer select-none">
+            Showing native PDF preview, source-region highlight unavailable on this browser
+          </summary>
+          <pre className="mt-2 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-snug text-zinc-500 dark:text-zinc-500">
+            build: {PDF_PREVIEW_BUILD}
+            {"\n"}
+            error: {error.name}: {error.message}
+            {"\n\n"}
+            {error.stack}
+          </pre>
+        </details>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -225,14 +274,9 @@ export function PdfPreview({
         role="img"
         className="w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
       />
-      {!rendered && !error && (
+      {!rendered && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-zinc-500">
           Rendering PDF…
-        </div>
-      )}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-zinc-50/90 p-4 text-center text-xs text-red-700 dark:bg-zinc-950/90 dark:text-red-300">
-          PDF render failed: {error}
         </div>
       )}
       {activeBbox && rendered && (
