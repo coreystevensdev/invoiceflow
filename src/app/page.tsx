@@ -1039,6 +1039,7 @@ function FieldRow({
           aria-describedby={field.reasoning ? reasoningId : undefined}
         >
           <button
+            id={inputId}
             type="button"
             onClick={(e) => {
               e.stopPropagation();
