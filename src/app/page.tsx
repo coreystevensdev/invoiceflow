@@ -746,7 +746,7 @@ function ResultsView({
             <JsonPanel
               panelId={jsonPanelId}
               tabId={jsonTabId}
-              result={result}
+              result={{ ...result, invoice: edited }}
             />
           )}
         </div>
