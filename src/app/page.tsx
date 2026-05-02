@@ -1047,10 +1047,7 @@ function FieldRow({
           <button
             id={inputId}
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              startEditing();
-            }}
+            onClick={startEditing}
             className="rounded text-left hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             aria-label={`${label}, ${display}. Click to edit.`}
             aria-describedby={field.reasoning ? reasoningId : undefined}
