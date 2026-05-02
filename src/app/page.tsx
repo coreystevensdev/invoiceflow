@@ -506,7 +506,7 @@ function ResultsView({
           <iframe
             src={pdfUrl}
             title={`Original PDF: ${filename}`}
-            className="h-[600px] w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 lg:h-[820px]"
+            className="aspect-[8.5/11] w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
           />
         </div>
 
