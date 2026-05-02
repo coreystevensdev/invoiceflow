@@ -449,13 +449,16 @@ function ResultsView({
   }, [webhookUrl]);
   const [view, setView] = useState<ResultView>("fields");
   const [edited, setEdited] = useState<InvoiceExtraction>(result.invoice);
+  const [activeBbox, setActiveBbox] = useState<number[] | null>(null);
   const [editedFor, setEditedFor] = useState(result);
-  // Reset edits when a new extraction arrives. Using a "prev props" sentinel
-  // instead of useEffect avoids the react-hooks/set-state-in-effect lint and
-  // resets cleanly on the same render that result changes.
+  // Reset edits and any active highlight when a new extraction arrives. Using
+  // a "prev props" sentinel instead of useEffect avoids the
+  // react-hooks/set-state-in-effect lint and resets cleanly on the same
+  // render that result changes.
   if (editedFor !== result) {
     setEditedFor(result);
     setEdited(result.invoice);
+    setActiveBbox(null);
   }
   const inv = edited;
   const summary = result.confidence_summary;
@@ -463,7 +466,6 @@ function ResultsView({
   const jsonTabId = useId();
   const fieldsPanelId = useId();
   const jsonPanelId = useId();
-  const [activeBbox, setActiveBbox] = useState<number[] | null>(null);
   const isImage = result.input_type === "image";
 
   const onTabKeyDown = useCallback(
