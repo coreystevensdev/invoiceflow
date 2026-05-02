@@ -196,6 +196,121 @@ async function captureError(page) {
   console.log("[screenshot] error-state.png");
 }
 
+async function captureCustomFields(browser) {
+  // Capture the landing page with the "Custom fields" disclosure expanded
+  // and two fields defined. Pure UI state; no API call. Placeholder-based
+  // selectors avoid coupling to React's useId() format, which differs
+  // between React 18 and 19 and between dev/prod hydration.
+  const ctx = await browser.newContext({ viewport: VIEWPORT });
+  const page = await ctx.newPage();
+  await page.goto(BASE, { waitUntil: "networkidle" });
+
+  // Setting details.open directly via JS is more reliable than relying on
+  // summary-click event handling, which can fail under hydration timing.
+  await page.evaluate(() => {
+    document.querySelectorAll("details").forEach((d) => {
+      const summary = d.querySelector("summary");
+      if (summary?.textContent?.includes("Custom fields")) {
+        d.open = true;
+      }
+    });
+  });
+  await page.waitForTimeout(200);
+
+  // Match the button's aria-label (the accessible name when set), which
+  // is "Add a custom field" rather than the visible "+ Add field".
+  const addButton = page.getByRole("button", { name: "Add a custom field" });
+  await addButton.click();
+  await page.waitForTimeout(150);
+
+  // Inputs and textareas inside the disclosure carry stable placeholders
+  // ("Cost Center" / "Extract the GL cost center code...") that don't
+  // depend on framework-generated IDs.
+  await page
+    .locator('input[placeholder="Cost Center"]')
+    .first()
+    .fill("Cost Center");
+  await page
+    .locator('textarea[placeholder^="Extract the GL"]')
+    .first()
+    .fill(
+      "Extract the GL cost center code. Usually 4 digits, sometimes prefixed with 'CC-'.",
+    );
+
+  await addButton.click();
+  await page.waitForTimeout(150);
+  await page
+    .locator('input[placeholder="Cost Center"]')
+    .nth(1)
+    .fill("PO Reference");
+  await page
+    .locator('textarea[placeholder^="Extract the GL"]')
+    .nth(1)
+    .fill(
+      "Extract any project or PO reference number, typically labeled 'Project #' or 'Ref:'.",
+    );
+
+  await page
+    .locator("summary", { hasText: /Custom fields/i })
+    .scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: join(OUT, "custom-fields-v2.png") });
+  console.log("[screenshot] custom-fields.png");
+  await ctx.close();
+}
+
+async function captureBatchExtraction(browser, pdfBuffer) {
+  // Capture the batch results view after extracting multiple files. Three
+  // copies of the synthetic invoice with distinct filenames is enough to
+  // show the per-row table, status icons, and bulk-download buttons.
+  // Costs ~3 Claude calls (~$0.06 with Sonnet 4.6 against the live demo).
+  const ctx = await browser.newContext({ viewport: VIEWPORT });
+  const page = await ctx.newPage();
+  await page.goto(BASE, { waitUntil: "networkidle" });
+
+  await page.setInputFiles("#pdf-input", [
+    {
+      name: "april-acme.pdf",
+      mimeType: "application/pdf",
+      buffer: pdfBuffer,
+    },
+    {
+      name: "april-globex.pdf",
+      mimeType: "application/pdf",
+      buffer: pdfBuffer,
+    },
+    {
+      name: "april-veridian.pdf",
+      mimeType: "application/pdf",
+      buffer: pdfBuffer,
+    },
+  ]);
+
+  // Wait for the batch summary section to appear, then for all three to
+  // resolve (success or error). The "(running…)" text disappears when the
+  // batch is fully done.
+  await page.waitForSelector(
+    'section[aria-label="Batch extraction results"]',
+    { timeout: 90_000 },
+  );
+  await page.waitForFunction(
+    () => {
+      const section = document.querySelector(
+        'section[aria-label="Batch extraction results"]',
+      );
+      if (!section) return false;
+      return !section.textContent?.includes("(running…)");
+    },
+    null,
+    { timeout: 120_000 },
+  );
+  // Brief settle for dark-mode sync and any final paint.
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: join(OUT, "batch-extraction-v2.png") });
+  console.log("[screenshot] batch-extraction.png");
+  await ctx.close();
+}
+
 async function main() {
   await mkdir(OUT, { recursive: true });
   console.log(`[screenshot] target: ${BASE}`);
@@ -218,6 +333,8 @@ async function main() {
     await captureError(page);
     await ctx.close();
     await captureImageHighlight(browser, imageBuffer);
+    await captureCustomFields(browser);
+    await captureBatchExtraction(browser, pdfBuffer);
   } finally {
     await browser.close();
   }
