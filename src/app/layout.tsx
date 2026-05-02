@@ -59,7 +59,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME}, extract invoice data as CSV in seconds`,
+        alt: `${SITE_NAME}, PDF invoices structured by Claude in seconds`,
       },
     ],
   },
