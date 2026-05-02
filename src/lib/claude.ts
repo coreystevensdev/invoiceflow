@@ -13,7 +13,9 @@ import type { Logger } from "./log";
 const ConfidenceEnum = z.enum(["high", "medium", "low"]);
 
 const SourceBbox = z
-  .tuple([z.number(), z.number(), z.number(), z.number()])
+  .array(z.number())
+  .min(4)
+  .max(4)
   .describe(
     "Normalized [x, y, width, height] coordinates (0..1) of the visual region in the source image, only populated when the input is an image.",
   );
