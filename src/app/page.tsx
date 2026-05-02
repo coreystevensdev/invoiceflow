@@ -137,24 +137,31 @@ export default function Home() {
     [status],
   );
 
+  const [webhookFiring, setWebhookFiring] = useState(false);
+
   const fireWebhook = useCallback(async () => {
-    if (status.kind !== "success" || !webhookUrl) return;
+    if (status.kind !== "success" || webhookFiring) return;
+    setWebhookFiring(true);
     setWebhookStatus("Firing…");
-    const res = await fetch("/api/webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        webhook_url: webhookUrl,
-        invoice: status.result.invoice,
-      }),
-    });
-    const data = await res.json();
-    setWebhookStatus(
-      res.ok
-        ? `Sent, upstream responded ${data.status} in ${data.duration_ms}ms.`
-        : `Failed, ${data.error ?? "unknown reason"}.`,
-    );
-  }, [status, webhookUrl]);
+    try {
+      const res = await fetch("/api/webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          webhook_url: webhookUrl,
+          invoice: status.result.invoice,
+        }),
+      });
+      const data = await res.json();
+      setWebhookStatus(
+        res.ok
+          ? `Sent, upstream responded ${data.status} in ${data.duration_ms}ms.`
+          : `Failed, ${data.error ?? "unknown reason"}.`,
+      );
+    } finally {
+      setWebhookFiring(false);
+    }
+  }, [status, webhookUrl, webhookFiring]);
 
   return (
     <main
@@ -280,6 +287,7 @@ export default function Home() {
             setWebhookUrl={setWebhookUrl}
             fireWebhook={fireWebhook}
             webhookStatus={webhookStatus}
+            webhookFiring={webhookFiring}
           />
         )}
 
@@ -323,6 +331,7 @@ interface ResultsViewProps {
   setWebhookUrl: (v: string) => void;
   fireWebhook: () => void;
   webhookStatus: string | null;
+  webhookFiring: boolean;
 }
 
 type ResultView = "fields" | "json";
@@ -336,7 +345,17 @@ function ResultsView({
   setWebhookUrl,
   fireWebhook,
   webhookStatus,
+  webhookFiring,
 }: ResultsViewProps) {
+  const webhookUrlValid = useMemo(() => {
+    if (!webhookUrl) return false;
+    try {
+      const u = new URL(webhookUrl);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, [webhookUrl]);
   const [view, setView] = useState<ResultView>("fields");
   const inv = result.invoice;
   const summary = result.confidence_summary;
@@ -518,8 +537,12 @@ function ResultsView({
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="text-sm font-medium">Fire webhook</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <h2 className="text-base font-semibold">Fire webhook</h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          POST the extracted invoice JSON to your URL. Useful for testing
+          downstream integrations.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
           <label htmlFor="webhook-url" className="sr-only">
             Webhook URL
           </label>
@@ -534,12 +557,40 @@ function ResultsView({
           <button
             type="button"
             onClick={fireWebhook}
-            disabled={!webhookUrl}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            disabled={!webhookUrlValid || webhookFiring}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
-            Fire
+            {webhookFiring && (
+              <svg
+                className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeOpacity="0.3"
+                  strokeWidth="3"
+                />
+                <path
+                  d="M22 12a10 10 0 0 1-10 10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+            <span>{webhookFiring ? "Sending" : "Send POST"}</span>
           </button>
         </div>
+        {webhookUrl && !webhookUrlValid && !webhookFiring && (
+          <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
+            Enter a valid http or https URL to enable sending.
+          </p>
+        )}
         {webhookStatus && (
           <p
             className="mt-2 text-sm text-zinc-600 dark:text-zinc-400"
