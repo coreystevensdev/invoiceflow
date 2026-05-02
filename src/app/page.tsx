@@ -316,9 +316,11 @@ export default function Home() {
           </p>
         </label>
 
-        {status.kind === "idle" && (
+        {(status.kind === "idle" || status.kind === "error") && (
           <p className="mt-3 text-center text-sm text-zinc-500">
-            Don&apos;t have a PDF handy?{" "}
+            {status.kind === "error"
+              ? "Or try with a known-good sample: "
+              : "Don't have a PDF handy? "}
             <button
               type="button"
               onClick={onSampleClick}
