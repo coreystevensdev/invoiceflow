@@ -208,7 +208,7 @@ npx vercel          # preview
 npx vercel --prod   # production
 ```
 
-Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-sonnet-4-6`), `SITE_URL`, `MAX_PDF_SIZE_MB`. See `.env.example`.
+Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-sonnet-4-6`), `SITE_URL`, `MONTHLY_BUDGET_USD` (default 25). See `.env.example`. The 25 MB PDF size cap and 3.5 MB image cap are set in code at `src/app/api/extract/route.ts`.
 
 ## Sister project
 
