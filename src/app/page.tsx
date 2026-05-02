@@ -383,27 +383,54 @@ export default function Home() {
       </div>
 
       <footer className="mt-auto border-t border-zinc-200 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-4 gap-y-2 px-6">
-          <span>
-            Powered by{" "}
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-y-2 px-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <span>
+              Powered by{" "}
+              <a
+                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                href="https://www.anthropic.com/claude"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Claude Sonnet 4.6
+              </a>
+            </span>
+            <span aria-hidden="true">·</span>
             <a
               className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
-              href="https://www.anthropic.com/claude"
+              href="https://github.com/coreystevensdev/invoiceflow"
               target="_blank"
               rel="noreferrer"
             >
-              Claude Sonnet 4.6
+              Source on GitHub
             </a>
-          </span>
-          <span aria-hidden="true">·</span>
-          <a
-            className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
-            href="https://github.com/coreystevensdev/invoiceflow"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Source on GitHub
-          </a>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <span>
+              By{" "}
+              <a
+                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                href="https://github.com/coreystevensdev"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Corey Stevens
+              </a>
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>
+              Sister project:{" "}
+              <a
+                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                href="https://github.com/coreystevensdev/tellsight"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Tellsight
+              </a>
+            </span>
+          </div>
         </div>
       </footer>
     </main>
