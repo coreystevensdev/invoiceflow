@@ -6,6 +6,7 @@ interface TellsightCtaProps {
 
 export function TellsightCta({ variant }: TellsightCtaProps) {
   if (!isTellsightDemoUrlConfigured()) return null;
+  // Single follows a tight mt-2 caption; bulk follows a ul whose rows already supply vertical rhythm.
   const margin = variant === "bulk" ? "mt-3" : "mt-4";
   return (
     <aside
