@@ -11,7 +11,7 @@ Adding a new failure mode (a new file format, a new cost guard, a new upstream e
 
 ## Decision
 
-`ExtractionErrorCode` is a TypeScript discriminated union of eight named codes:
+`ExtractionErrorCode` is a TypeScript discriminated union of nine named codes:
 
 ```ts
 type ExtractionErrorCode =
@@ -22,12 +22,15 @@ type ExtractionErrorCode =
   | "model-API-failure"
   | "rate-limited"
   | "extraction-timeout"
-  | "cost-budget-exceeded";
+  | "cost-budget-exceeded"
+  | "monthly-budget-exhausted";
 ```
+
+The ninth code, `monthly-budget-exhausted`, is also a deliberate cross-product handoff: when the free-tier monthly compute budget is gone, the `ErrorState` UI routes users to Tellsight, which runs on metered billing with no monthly ceiling. The error path doubles as a conversion event for users whose volume has outgrown the free tier.
 
 Each code is wired to three sites via `Record<ExtractionErrorCode, ...>` types:
 
-1. `STATUS_BY_CODE`: HTTP status (400, 415, 422, 429, 504, 502)
+1. `STATUS_BY_CODE`: HTTP status (413, 415, 422, 429, 502, 504)
 2. `ERROR_DESCRIPTIONS`: user-readable title + cause + next-step copy, consumed by the `ErrorState` UI component
 3. `toErrorResponse(code, opts)`: the only function that can construct an error JSON response in the route handlers
 
