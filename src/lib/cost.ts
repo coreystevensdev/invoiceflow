@@ -10,12 +10,16 @@
  * once usage comes back). Real prevention is upstream: bounded retries
  * and EXTRACTION_MAX_TOKENS in claude.ts.
  *
- * Pricing (per 1M tokens, as of 2026-04):
+ * Built-in pricing (per 1M tokens, as of 2026-04):
  *   claude-sonnet-4-6: $3 in / $15 out
  *   claude-opus-4-7:   $15 in / $75 out
  *   claude-haiku-4-5:  $1 in / $5 out
  *
- * Unknown models return null cost and the budget check fails open.
+ * Operators can extend or override the built-in pricing map by setting
+ * MODEL_PRICING_USD to a JSON object. The route handler runs a fail-loud
+ * pre-check via getModelPricing before any Claude call: a CLAUDE_MODEL
+ * value with no resolved pricing surfaces as model-API-failure rather
+ * than silently disabling the per-request and monthly cost ceilings.
  */
 
 export const CAP_MULTIPLIER = 3;
@@ -27,16 +31,101 @@ export const ABSOLUTE_CEILING_USD = 1.0;
 /** Default monthly Anthropic-spend ceiling (USD). Override via MONTHLY_BUDGET_USD. */
 export const MONTHLY_BUDGET_USD_DEFAULT = 25;
 
-interface ModelPricing {
+export interface ModelPricing {
   inputPerMillion: number;
   outputPerMillion: number;
 }
 
-const PRICING: Record<string, ModelPricing> = {
+const BUILTIN_PRICING: Record<string, ModelPricing> = {
   "claude-sonnet-4-6": { inputPerMillion: 3, outputPerMillion: 15 },
   "claude-opus-4-7": { inputPerMillion: 15, outputPerMillion: 75 },
   "claude-haiku-4-5": { inputPerMillion: 1, outputPerMillion: 5 },
 };
+
+export type ModelPricingMisconfigReason =
+  | "non-json"
+  | "non-object"
+  | "invalid-entry";
+
+interface ModelPricingMisconfig {
+  raw: string;
+  reason: ModelPricingMisconfigReason;
+  detail?: string;
+}
+
+let pricingMisconfig: ModelPricingMisconfig | null = null;
+
+function isPricingShape(value: unknown): value is ModelPricing {
+  if (value === null || typeof value !== "object") return false;
+  const candidate = value as Partial<ModelPricing>;
+  return (
+    typeof candidate.inputPerMillion === "number" &&
+    Number.isFinite(candidate.inputPerMillion) &&
+    candidate.inputPerMillion >= 0 &&
+    typeof candidate.outputPerMillion === "number" &&
+    Number.isFinite(candidate.outputPerMillion) &&
+    candidate.outputPerMillion >= 0
+  );
+}
+
+/**
+ * Reads MODEL_PRICING_USD and returns it merged on top of BUILTIN_PRICING.
+ * On any malformed input, records a one-shot diagnostic and falls back to
+ * the built-in map. Misconfig surfaces in extract-route logs the same way
+ * MONTHLY_BUDGET_USD's diagnostic does.
+ */
+function resolvePricing(): Record<string, ModelPricing> {
+  const raw = process.env.MODEL_PRICING_USD;
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    return BUILTIN_PRICING;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    pricingMisconfig ??= { raw, reason: "non-json" };
+    return BUILTIN_PRICING;
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    pricingMisconfig ??= { raw, reason: "non-object" };
+    return BUILTIN_PRICING;
+  }
+  const overrides: Record<string, ModelPricing> = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!isPricingShape(value)) {
+      pricingMisconfig ??= {
+        raw,
+        reason: "invalid-entry",
+        detail: `entry "${key}" must be { inputPerMillion: number >= 0, outputPerMillion: number >= 0 }`,
+      };
+      return BUILTIN_PRICING;
+    }
+    overrides[key] = {
+      inputPerMillion: value.inputPerMillion,
+      outputPerMillion: value.outputPerMillion,
+    };
+  }
+  return { ...BUILTIN_PRICING, ...overrides };
+}
+
+/**
+ * Returns the resolved pricing for a model, matching by prefix to tolerate
+ * Anthropic version suffixes (e.g., claude-sonnet-4-6-20250514). Returns
+ * null when no built-in or env override matches; the route handler treats
+ * null as a fail-loud pricing-misconfig signal.
+ */
+export function getModelPricing(model: string): ModelPricing | null {
+  const pricing = resolvePricing();
+  const key = Object.keys(pricing).find((prefix) => model.startsWith(prefix));
+  return key ? pricing[key] : null;
+}
+
+/** Returns the pending pricing misconfig diagnostic (if any) and clears it. */
+export function consumeModelPricingMisconfig(): ModelPricingMisconfig | null {
+  const diagnostic = pricingMisconfig;
+  pricingMisconfig = null;
+  return diagnostic;
+}
 
 export interface Usage {
   input_tokens: number;
@@ -44,9 +133,8 @@ export interface Usage {
 }
 
 export function computeCost(usage: Usage, model: string): number | null {
-  const key = Object.keys(PRICING).find((prefix) => model.startsWith(prefix));
-  if (!key) return null;
-  const pricing = PRICING[key];
+  const pricing = getModelPricing(model);
+  if (!pricing) return null;
   const input = (usage.input_tokens / 1_000_000) * pricing.inputPerMillion;
   const output = (usage.output_tokens / 1_000_000) * pricing.outputPerMillion;
   return input + output;
@@ -183,4 +271,5 @@ export function resetMonthlyStateForTests(): void {
   monthlyState.monthKey = currentMonthKey();
   monthlyState.cumulativeUsd = 0;
   pendingMisconfig = null;
+  pricingMisconfig = null;
 }

@@ -4,9 +4,11 @@ import {
   CAP_MULTIPLIER,
   MONTHLY_BUDGET_USD_DEFAULT,
   computeCost,
+  consumeModelPricingMisconfig,
   consumeMonthlyBudgetMisconfig,
   exceedsBudget,
   exceedsMonthlyBudget,
+  getModelPricing,
   getMonthlyBudgetUsd,
   getMonthlyCumulativeUsd,
   medianCost,
@@ -20,10 +22,12 @@ beforeEach(() => {
   resetHistoryForTests();
   resetMonthlyStateForTests();
   delete process.env.MONTHLY_BUDGET_USD;
+  delete process.env.MODEL_PRICING_USD;
 });
 
 afterEach(() => {
   delete process.env.MONTHLY_BUDGET_USD;
+  delete process.env.MODEL_PRICING_USD;
 });
 
 describe("computeCost", () => {
@@ -55,6 +59,101 @@ describe("computeCost", () => {
     expect(
       computeCost({ input_tokens: 0, output_tokens: 0 }, "claude-haiku-4-5"),
     ).toBe(0);
+  });
+});
+
+describe("getModelPricing", () => {
+  it("returns built-in pricing for known models", () => {
+    expect(getModelPricing("claude-sonnet-4-6")).toEqual({
+      inputPerMillion: 3,
+      outputPerMillion: 15,
+    });
+    expect(getModelPricing("claude-haiku-4-5")).toEqual({
+      inputPerMillion: 1,
+      outputPerMillion: 5,
+    });
+  });
+
+  it("matches by prefix so version suffixes resolve", () => {
+    expect(getModelPricing("claude-sonnet-4-6-20250514")).toEqual({
+      inputPerMillion: 3,
+      outputPerMillion: 15,
+    });
+  });
+
+  it("returns null for unknown models", () => {
+    expect(getModelPricing("totally-fake-model")).toBeNull();
+    expect(consumeModelPricingMisconfig()).toBeNull();
+  });
+
+  it("merges MODEL_PRICING_USD overrides on top of built-ins", () => {
+    process.env.MODEL_PRICING_USD = JSON.stringify({
+      "claude-sonnet-5-0": { inputPerMillion: 4, outputPerMillion: 20 },
+    });
+    expect(getModelPricing("claude-sonnet-5-0")).toEqual({
+      inputPerMillion: 4,
+      outputPerMillion: 20,
+    });
+    // Built-ins still resolve.
+    expect(getModelPricing("claude-haiku-4-5")).toEqual({
+      inputPerMillion: 1,
+      outputPerMillion: 5,
+    });
+    expect(consumeModelPricingMisconfig()).toBeNull();
+  });
+
+  it("lets MODEL_PRICING_USD redefine a built-in entry", () => {
+    process.env.MODEL_PRICING_USD = JSON.stringify({
+      "claude-haiku-4-5": { inputPerMillion: 0.5, outputPerMillion: 2.5 },
+    });
+    expect(getModelPricing("claude-haiku-4-5")).toEqual({
+      inputPerMillion: 0.5,
+      outputPerMillion: 2.5,
+    });
+  });
+
+  it("falls back to built-ins and records non-json misconfig", () => {
+    process.env.MODEL_PRICING_USD = "not json {";
+    expect(getModelPricing("claude-sonnet-4-6")).toEqual({
+      inputPerMillion: 3,
+      outputPerMillion: 15,
+    });
+    const diag = consumeModelPricingMisconfig();
+    expect(diag?.reason).toBe("non-json");
+    expect(diag?.raw).toBe("not json {");
+  });
+
+  it("rejects array env values as non-object", () => {
+    process.env.MODEL_PRICING_USD = JSON.stringify([
+      { inputPerMillion: 1, outputPerMillion: 1 },
+    ]);
+    getModelPricing("claude-sonnet-4-6");
+    expect(consumeModelPricingMisconfig()?.reason).toBe("non-object");
+  });
+
+  it("rejects entries missing required fields and records detail", () => {
+    process.env.MODEL_PRICING_USD = JSON.stringify({
+      "claude-sonnet-5-0": { inputPerMillion: 4 },
+    });
+    getModelPricing("claude-sonnet-4-6");
+    const diag = consumeModelPricingMisconfig();
+    expect(diag?.reason).toBe("invalid-entry");
+    expect(diag?.detail).toContain("claude-sonnet-5-0");
+  });
+
+  it("rejects negative prices as invalid-entry", () => {
+    process.env.MODEL_PRICING_USD = JSON.stringify({
+      "claude-sonnet-5-0": { inputPerMillion: -1, outputPerMillion: 1 },
+    });
+    getModelPricing("claude-sonnet-4-6");
+    expect(consumeModelPricingMisconfig()?.reason).toBe("invalid-entry");
+  });
+
+  it("clears the misconfig diagnostic after consume", () => {
+    process.env.MODEL_PRICING_USD = "garbage";
+    getModelPricing("claude-sonnet-4-6");
+    consumeModelPricingMisconfig();
+    expect(consumeModelPricingMisconfig()).toBeNull();
   });
 });
 

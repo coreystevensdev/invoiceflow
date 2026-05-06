@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   extractInvoice,
+  getExtractionModel,
   type InvoiceExtraction,
   type SupportedImageMediaType,
   type UsageSummary,
@@ -19,8 +20,10 @@ import {
 import { createLogger, type StructuredPayload } from "@/lib/log";
 import { clientIpFrom, extractLimit } from "@/lib/rate-limit";
 import {
+  consumeModelPricingMisconfig,
   consumeMonthlyBudgetMisconfig,
   exceedsMonthlyBudget,
+  getModelPricing,
   getMonthlyCumulativeUsd,
 } from "@/lib/cost";
 import {
@@ -188,6 +191,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
   if (isMonthlyExhausted) {
     return respond("monthly-budget-exhausted");
+  }
+
+  // Pricing pre-check: if the configured CLAUDE_MODEL has no pricing in
+  // BUILTIN_PRICING or the MODEL_PRICING_USD override, both the per-request
+  // anomaly cap and the monthly cumulative tracker would silently skip this
+  // call (computeCost returns null, the cost-tracking branch never runs).
+  // Surface as model-API-failure before any Claude work starts.
+  const configuredModel = getExtractionModel();
+  const pricingMisconfig = consumeModelPricingMisconfig();
+  if (pricingMisconfig) {
+    const detailSuffix = pricingMisconfig.detail
+      ? ` ${pricingMisconfig.detail}`
+      : "";
+    logger.warn({
+      route: "extract",
+      category: "model-pricing-misconfig",
+      note: `MODEL_PRICING_USD=${JSON.stringify(pricingMisconfig.raw)} (${pricingMisconfig.reason}); falling back to built-in pricing.${detailSuffix}`,
+    });
+  }
+  if (getModelPricing(configuredModel) === null) {
+    logger.error({
+      route: "extract",
+      category: "model-API-failure",
+      http_status: 502,
+      duration_ms: Date.now() - start,
+      note: `pricing not configured for model ${JSON.stringify(configuredModel)}`,
+    });
+    return respond("model-API-failure", {
+      message: `Pricing is not configured for model "${configuredModel}". Set CLAUDE_MODEL to a supported model or extend MODEL_PRICING_USD.`,
+    });
   }
 
   const formData = await request.formData().catch(() => null);
