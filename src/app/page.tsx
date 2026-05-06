@@ -23,6 +23,7 @@ import {
 import { ErrorState } from "@/components/error-state";
 import { PdfPreview } from "@/components/pdf-preview";
 import { PrivacySection } from "@/components/privacy-section";
+import { TellsightCta } from "@/components/tellsight-cta";
 
 type Status =
   | { kind: "idle" }
@@ -1194,6 +1195,7 @@ function ResultsView({
           Summary is one row per invoice (vendor, dates, totals). Line-items is
           one row per item. Both import into QuickBooks Online and Xero.
         </p>
+        <TellsightCta variant="single" />
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
@@ -1882,7 +1884,7 @@ function CustomFieldsManager({
         Custom fields{" "}
         <span className="text-zinc-500 dark:text-zinc-400">
           ({fields.length}
-          {fields.length > 0 ? ` defined` : " — add fields beyond the standard 9"}
+          {fields.length > 0 ? ` defined` : ", add fields beyond the standard 9"}
           )
         </span>
       </summary>
@@ -2207,6 +2209,7 @@ function BatchView({
           </li>
         ))}
       </ul>
+      {successes.length > 0 && !inProgress && <TellsightCta variant="bulk" />}
     </section>
   );
 }

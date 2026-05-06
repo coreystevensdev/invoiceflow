@@ -23,19 +23,25 @@ export function getSiteUrl(): string {
 
 // Placeholder until Tellsight's no-account demo deploys; isTellsightDemoUrlConfigured()
 // gates the consuming UI surfaces (CSV success CTA, monthly-budget-exhausted error CTA)
-// so the link is suppressed rather than rendered as a broken anchor.
-export const TELLSIGHT_DEMO_URL = "https://tellsight.example.com/demo";
-
+// so the link is suppressed rather than rendered as a broken anchor. Override channel
+// is the NEXT_PUBLIC_TELLSIGHT_DEMO_URL env var, inlined into the client bundle at
+// build time. Setting it only at runtime on Vercel without a rebuild diverges server
+// vs client values, so a redeploy is required after changing it.
 const TELLSIGHT_DEMO_URL_PLACEHOLDER = "https://tellsight.example.com/demo";
+
+export const TELLSIGHT_DEMO_URL =
+  process.env.NEXT_PUBLIC_TELLSIGHT_DEMO_URL ?? TELLSIGHT_DEMO_URL_PLACEHOLDER;
 
 /**
  * True only when `TELLSIGHT_DEMO_URL` has been overridden away from the
- * literal placeholder *and* parses as an HTTPS URL. Any other shape
- * placeholder substring match, `javascript:` scheme, malformed URL
- * reports false so the UI suppresses the link rather than rendering an
- * unsafe or broken anchor target. The HTTPS check matters because the
- * strict CSP does **not** block `javascript:` href on a user-clicked
- * anchor; the guard is a defense-in-depth.
+ * literal placeholder *and* parses as an HTTPS URL. The override channel
+ * is the `NEXT_PUBLIC_TELLSIGHT_DEMO_URL` env var, inlined into the
+ * client bundle at build time. Any other shape placeholder substring
+ * match, `javascript:` scheme, malformed URL reports false so the UI
+ * suppresses the link rather than rendering an unsafe or broken anchor
+ * target. The HTTPS check matters because the strict CSP does **not**
+ * block `javascript:` href on a user-clicked anchor; the guard is a
+ * defense-in-depth.
  */
 export function isTellsightDemoUrlConfigured(): boolean {
   if (TELLSIGHT_DEMO_URL === TELLSIGHT_DEMO_URL_PLACEHOLDER) return false;
