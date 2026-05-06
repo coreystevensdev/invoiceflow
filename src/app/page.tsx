@@ -82,6 +82,11 @@ export default function Home() {
     null,
   );
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  // Last attempted file, kept so the ErrorState retry button can re-run the
+  // same extraction without forcing the user to re-pick the file. This is
+  // in-memory only and lives no longer than the React component, consistent
+  // with the zero-retention posture (no disk write, no network re-emit).
+  const [lastFile, setLastFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropzoneHintId = useId();
 
@@ -111,6 +116,7 @@ export default function Home() {
         if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
         return { kind: "loading", filename: file.name };
       });
+      setLastFile(file);
       setWebhookStatus(null);
       const form = new FormData();
       form.append("pdf", file);
@@ -313,6 +319,14 @@ export default function Home() {
       console.error("[onSampleClick] fetch failed:", err);
     }
   }, [handleFile]);
+
+  // Retry the last attempted extraction. handleFile saves the File reference
+  // on every attempt (manual upload or sample), so retry covers both paths
+  // without separate sample-vs-file branching. ErrorState gates the visible
+  // button on the error code, so this only fires for transient codes.
+  const onRetry = useCallback(() => {
+    if (lastFile) handleFile(lastFile);
+  }, [lastFile, handleFile]);
 
   const onDropzoneKey = useCallback(
     (e: KeyboardEvent<HTMLLabelElement>) => {
@@ -621,6 +635,7 @@ export default function Home() {
             correlationId={status.correlation_id}
             retryAfterSeconds={status.retry_after_seconds}
             detected={status.detected}
+            onRetry={lastFile ? onRetry : undefined}
           />
         )}
 
@@ -801,6 +816,29 @@ function ResultsView({
     [edited, displayFlags],
   );
 
+  // Client-side JSON download. The full ExtractResponse already lives in the
+  // browser, so no /api/json round-trip is needed: just serialize and trigger
+  // a Blob download. Filename mirrors the source PDF/image with a .json
+  // extension swap so QuickBooks, Xero, or a custom integrator can match
+  // results back to inputs.
+  const downloadJson = useCallback(() => {
+    const payload = JSON.stringify(
+      { ...result, invoice: displayInvoice },
+      null,
+      2,
+    );
+    const blob = new Blob([payload], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const base = filename.replace(/\.[^.]+$/, "") || "invoice";
+    a.download = `${base}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [result, displayInvoice, filename]);
+
   const onTabKeyDown = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>) => {
       const order: ResultView[] = ["fields", "json"];
@@ -825,23 +863,36 @@ function ResultsView({
   );
 
   const fields = useMemo<FieldDef[]>(() => {
-    const wrap = <T extends FieldLike>(f: T) => {
-      const { bbox, text } = parseBboxFromReasoning(f.reasoning);
-      return { field: { ...f, reasoning: text }, bbox };
+    // wrap also captures the original value from `result.invoice` so the
+    // FieldRow can show an "Edited" pill once a user inline-edit diverges
+    // from what Claude returned. The original is reference-stable for the
+    // life of this ResultsView (parent passes key={pdfUrl}, so a new
+    // extraction remounts), so we don't need to memo it separately.
+    const orig = result.invoice;
+    const wrap = <T extends FieldLike>(curr: T, origValue: unknown) => {
+      const { bbox, text } = parseBboxFromReasoning(curr.reasoning);
+      return {
+        field: { ...curr, reasoning: text },
+        bbox,
+        originalValue: origValue,
+      };
     };
-    const inv_num = wrap(inv.invoice_number);
-    const vendor = wrap({
-      value: inv.vendor.name,
-      confidence: inv.vendor.confidence,
-      reasoning: inv.vendor.reasoning,
-    });
-    const bill_date = wrap(inv.bill_date);
-    const due_date = wrap(inv.due_date);
-    const po_number = wrap(inv.po_number);
-    const subtotal = wrap(inv.subtotal);
-    const tax = wrap(inv.tax);
-    const total = wrap(inv.total);
-    const currency = wrap(inv.currency);
+    const inv_num = wrap(inv.invoice_number, orig.invoice_number.value);
+    const vendor = wrap(
+      {
+        value: inv.vendor.name,
+        confidence: inv.vendor.confidence,
+        reasoning: inv.vendor.reasoning,
+      },
+      orig.vendor.name,
+    );
+    const bill_date = wrap(inv.bill_date, orig.bill_date.value);
+    const due_date = wrap(inv.due_date, orig.due_date.value);
+    const po_number = wrap(inv.po_number, orig.po_number.value);
+    const subtotal = wrap(inv.subtotal, orig.subtotal.value);
+    const tax = wrap(inv.tax, orig.tax.value);
+    const total = wrap(inv.total, orig.total.value);
+    const currency = wrap(inv.currency, orig.currency.value);
     return [
       {
         label: "Invoice #",
@@ -950,6 +1001,7 @@ function ResultsView({
         if (!ext) return [];
         const { bbox, text } = parseBboxFromReasoning(ext.reasoning);
         const isMoney = false;
+        const origExt = orig.custom_fields?.[cf.id];
         return [
           {
             label: cf.name.trim() || cf.id,
@@ -960,6 +1012,7 @@ function ResultsView({
             },
             bbox,
             money: isMoney,
+            originalValue: origExt?.value,
             onSave: (v) =>
               setEdited((prev) => ({
                 ...prev,
@@ -980,7 +1033,7 @@ function ResultsView({
         ];
       }),
     ];
-  }, [inv, customFields]);
+  }, [inv, customFields, result.invoice]);
 
   return (
     <section className="mt-8 space-y-6" aria-label="Extraction results">
@@ -1131,6 +1184,7 @@ function ResultsView({
                       label={f.label}
                       field={f.field}
                       money={f.money}
+                      originalValue={f.originalValue}
                       onSave={f.onSave}
                       onActivate={
                         bboxForField
@@ -1192,10 +1246,18 @@ function ResultsView({
           >
             Download line-items CSV
           </button>
+          <button
+            type="button"
+            onClick={downloadJson}
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          >
+            Download JSON
+          </button>
         </div>
         <p className="mt-2 text-xs text-zinc-500">
           Summary is one row per invoice (vendor, dates, totals). Line-items is
-          one row per item. Both import into QuickBooks Online and Xero.
+          one row per item. Both import into QuickBooks Online and Xero. JSON
+          gives the full extraction response for custom integrations.
         </p>
         <TellsightCta variant="single" />
       </div>
@@ -1296,6 +1358,7 @@ type FieldDef = {
   field: FieldLike;
   money?: boolean;
   bbox: Bbox | null;
+  originalValue: unknown;
   onSave: (value: string | number | null) => void;
 };
 
@@ -1334,6 +1397,7 @@ function FieldRow({
   label,
   field,
   money,
+  originalValue,
   onSave,
   onActivate,
   onDeactivate,
@@ -1341,10 +1405,17 @@ function FieldRow({
   label: string;
   field: FieldLike;
   money?: boolean;
+  originalValue?: unknown;
   onSave: (value: string | number | null) => void;
   onActivate?: () => void;
   onDeactivate?: () => void;
 }) {
+  // True when the visible value diverges from what Claude returned. Strict
+  // equality is sufficient since extraction values are always primitives or
+  // null (no objects, no arrays). This drives the "Edited" pill so users can
+  // verify their inline edits before exporting CSV / firing webhook / copying
+  // JSON.
+  const isEdited = originalValue !== undefined && field.value !== originalValue;
   const reasoningId = useId();
   const inputId = useId();
   const [escapeDismissed, setEscapeDismissed] = useState(false);
@@ -1447,8 +1518,16 @@ function FieldRow({
       }}
       onMouseLeave={() => onDeactivate?.()}
     >
-      <dt className="text-xs uppercase tracking-wide text-zinc-500">
+      <dt className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
         <label htmlFor={inputId}>{label}</label>
+        {isEdited && (
+          <span
+            className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium normal-case tracking-normal text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+            aria-label="Edited from original extraction"
+          >
+            Edited
+          </span>
+        )}
       </dt>
       {isEditing ? (
         <dd className="mt-1 text-lg font-medium">
