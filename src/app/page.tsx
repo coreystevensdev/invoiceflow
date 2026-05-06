@@ -21,6 +21,7 @@ import {
   type CustomFieldType,
 } from "@/lib/custom-fields";
 import { ErrorState } from "@/components/error-state";
+import { LoomEmbed } from "@/components/loom-embed";
 import { PdfPreview } from "@/components/pdf-preview";
 import { PrivacySection } from "@/components/privacy-section";
 import { TellsightCta } from "@/components/tellsight-cta";
@@ -605,6 +606,7 @@ export default function Home() {
 
         {status.kind === "idle" && (
           <>
+            <LoomEmbed />
             <PreviewCard />
             <CustomFieldsManager
               fields={customFields}
