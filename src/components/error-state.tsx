@@ -64,8 +64,7 @@ export function ErrorState({
                 aria-label="Try Tellsight (opens in a new tab)"
                 className="underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2"
               >
-                Try Tellsight{" "}
-                <span aria-hidden="true">→</span>
+                Try Tellsight
               </a>
             </>
           )}
