@@ -100,7 +100,7 @@ export function isTellsightDemoUrlConfigured(): boolean {
 /**
  * Stricter validator than `isTellsightDemoUrlConfigured()` because the embed
  * URL is concatenated into an iframe `src` downstream
- * (`${LOOM_EMBED_URL}?autoplay=1...`) and the CSP allows only
+ * (`${LOOM_EMBED_URL}?hideEmbedTopBar=true...`) and the CSP allows only
  * `frame-src https://www.loom.com`. Returns true only when:
  *   1. The value is not the literal placeholder.
  *   2. It parses as a URL with `https:` scheme.
@@ -109,10 +109,12 @@ export function isTellsightDemoUrlConfigured(): boolean {
  *      from leaking credentials into the iframe `src`. The port guard keeps
  *      the URL exactly aligned with the CSP `frame-src https://www.loom.com`
  *      directive, which has no port and may not match port-specified URLs.
- *   4. Pathname matches `/embed/{32-char-hex-id}` (Loom share IDs are
- *      32-character hex strings).
+ *   4. Pathname matches `/embed/{32-char-hex-id}` with an optional trailing
+ *      slash. The trailing slash tolerance accommodates pastes from alternate
+ *      Loom surfaces (browser history, link shorteners) that may emit one;
+ *      the share dialog's canonical form is slashless.
  *   5. `url.search === ""` and `url.hash === ""` so the downstream concat
- *      does not produce `??sid=foo&autoplay=1` malformed URLs.
+ *      does not produce `??sid=foo&hideEmbedTopBar=true` malformed URLs.
  * Any other shape suppresses the embed in the UI rather than rendering a
  * CSP-blocked or malformed iframe.
  */
@@ -125,7 +127,7 @@ export function isLoomEmbedConfigured(): boolean {
     if (url.username !== "" || url.password !== "") return false;
     if (url.port !== "") return false;
     if (url.search !== "" || url.hash !== "") return false;
-    return /^\/embed\/[a-f0-9]{32}$/i.test(url.pathname);
+    return /^\/embed\/[a-f0-9]{32}\/?$/i.test(url.pathname);
   } catch {
     return false;
   }
