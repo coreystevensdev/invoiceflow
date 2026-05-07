@@ -51,23 +51,50 @@ export const LOOM_EMBED_URL =
 
 /**
  * True only when `TELLSIGHT_DEMO_URL` has been overridden away from the
- * literal placeholder *and* parses as an HTTPS URL. The override channel
- * is the `NEXT_PUBLIC_TELLSIGHT_DEMO_URL` env var, inlined into the
- * client bundle at build time. Any other shape placeholder substring
- * match, `javascript:` scheme, malformed URL reports false so the UI
- * suppresses the link rather than rendering an unsafe or broken anchor
- * target. The HTTPS check matters because the strict CSP does **not**
- * block `javascript:` href on a user-clicked anchor; the guard is a
- * defense-in-depth.
+ * literal placeholder and parses as a well-formed HTTPS URL pointing at
+ * the canonical Tellsight production hostname. The override channel is
+ * the `NEXT_PUBLIC_TELLSIGHT_DEMO_URL` env var, inlined into the client
+ * bundle at build time.
+ *
+ * Returns true only when:
+ *   1. The value is not exactly the literal placeholder constant
+ *      (`https://tellsight.example.com/demo`).
+ *   2. It parses as a URL with `https:` scheme. Matters because the
+ *      strict CSP does not block `javascript:` href on a user-clicked
+ *      anchor; this is defense-in-depth.
+ *   3. Hostname is exactly `tellsight.coreystevens.dev`. An env override
+ *      pointing at any other host would render an anchor that the CSP
+ *      cannot block (the CSP does not constrain anchor `href` values),
+ *      so the JS-level allowlist prevents an accidental wrong-domain
+ *      link from shipping.
+ *   4. No userinfo (`url.username`/`url.password`). Prevents
+ *      `https://user:pass@tellsight.coreystevens.dev/...` from leaking
+ *      credentials into the rendered href.
+ *   5. No non-default port. Cosmetic alignment with the production URL
+ *      shape; an env override with `:8443` is almost always a typo.
+ *
+ * Query and hash are intentionally allowed: the URL is rendered as an
+ * anchor `href` (not concatenated into a downstream string), and utm
+ * tagging on the cross-product CTA is a real use case. This is the
+ * deliberate divergence from `isLoomEmbedConfigured()`, which rejects
+ * query/hash because the value is concatenated into an iframe `src`.
  */
-export function isTellsightDemoUrlConfigured(): boolean {
+const TELLSIGHT_DEMO_URL_IS_CONFIGURED: boolean = (() => {
   if (TELLSIGHT_DEMO_URL === TELLSIGHT_DEMO_URL_PLACEHOLDER) return false;
   try {
     const url = new URL(TELLSIGHT_DEMO_URL);
-    return url.protocol === "https:";
+    if (url.protocol !== "https:") return false;
+    if (url.hostname !== "tellsight.coreystevens.dev") return false;
+    if (url.username !== "" || url.password !== "") return false;
+    if (url.port !== "") return false;
+    return true;
   } catch {
     return false;
   }
+})();
+
+export function isTellsightDemoUrlConfigured(): boolean {
+  return TELLSIGHT_DEMO_URL_IS_CONFIGURED;
 }
 
 /**
