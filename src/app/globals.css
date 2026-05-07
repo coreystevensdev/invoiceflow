@@ -41,3 +41,39 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Print styles: paper output of the extracted invoice for accountants who
+   archive a printed copy alongside the source PDF. Hides chrome (header,
+   footer, dropzone, action buttons, webhook UI, marketing) and forces a
+   high-contrast light theme so dark-mode users don't burn through ink. */
+@media print {
+  header,
+  footer,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  h1,
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  dt,
+  dd,
+  tr {
+    page-break-inside: avoid;
+  }
+}

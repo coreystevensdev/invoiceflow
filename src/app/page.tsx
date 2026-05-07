@@ -87,6 +87,13 @@ export default function Home() {
   // in-memory only and lives no longer than the React component, consistent
   // with the zero-retention posture (no disk write, no network re-emit).
   const [lastFile, setLastFile] = useState<File | null>(null);
+  // Webhook persistence is opt-in (default off) because webhook URLs may
+  // carry secrets in path or query (`?token=...`). Saving without consent
+  // is a real privacy footgun. When the box is checked, the URL persists
+  // across sessions via localStorage; when unchecked, the saved URL is
+  // cleared. Custom fields use the same pattern but always-on (they hold
+  // user-defined config, not credentials).
+  const [rememberWebhookUrl, setRememberWebhookUrl] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropzoneHintId = useId();
 
@@ -109,6 +116,36 @@ export default function Home() {
   useEffect(() => {
     saveCustomFields(customFields);
   }, [customFields]);
+
+  // Hydrate the webhook URL + remember-flag from localStorage on mount. The
+  // hydration is keyed on the remember-flag so users who never opted in
+  // never see a stale URL on a fresh device. Same SSR-safe pattern as
+  // custom-fields hydration above.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const remembered = window.localStorage.getItem("invoiceflow:webhook-remember");
+    if (remembered !== "1") return;
+    const stored = window.localStorage.getItem("invoiceflow:webhook-url");
+    if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setWebhookUrl(stored);
+      setRememberWebhookUrl(true);
+    }
+  }, []);
+
+  // Mirror the remember-flag and URL to localStorage. When the user
+  // unchecks the box, both keys are cleared so a stale URL does not
+  // linger. Writes only fire when state changes, not on every keystroke.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (rememberWebhookUrl) {
+      window.localStorage.setItem("invoiceflow:webhook-remember", "1");
+      window.localStorage.setItem("invoiceflow:webhook-url", webhookUrl);
+    } else {
+      window.localStorage.removeItem("invoiceflow:webhook-remember");
+      window.localStorage.removeItem("invoiceflow:webhook-url");
+    }
+  }, [rememberWebhookUrl, webhookUrl]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -285,6 +322,49 @@ export default function Home() {
         block: "start",
       });
   }, [status.kind]);
+
+  // Window-level drag-and-drop. The dropzone itself already accepts drops,
+  // but a window-level listener lets the user drop a file anywhere on the
+  // page and still kick off extraction. Only fires for actual file drags
+  // (dataTransfer.types.includes("Files")) so editing text or dragging a
+  // link doesn't trip the dropzone visual. The dragleave handler resets
+  // the highlight only when the cursor leaves the window entirely
+  // (relatedTarget === null), otherwise moving between elements would
+  // flicker the dropzone state.
+  useEffect(() => {
+    const isFileDrag = (e: DragEvent) =>
+      Boolean(e.dataTransfer?.types && e.dataTransfer.types.includes("Files"));
+    const onDragEnter = (e: DragEvent) => {
+      if (!isFileDrag(e)) return;
+      setIsDragging(true);
+    };
+    const onDragOver = (e: DragEvent) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      setIsDragging(true);
+    };
+    const onDragLeave = (e: DragEvent) => {
+      if (!isFileDrag(e)) return;
+      if (e.relatedTarget === null) setIsDragging(false);
+    };
+    const onWindowDrop = (e: DragEvent) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      setIsDragging(false);
+      const files = e.dataTransfer ? Array.from(e.dataTransfer.files) : [];
+      if (files.length > 0) dispatchFiles(files);
+    };
+    window.addEventListener("dragenter", onDragEnter);
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragleave", onDragLeave);
+    window.addEventListener("drop", onWindowDrop);
+    return () => {
+      window.removeEventListener("dragenter", onDragEnter);
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragleave", onDragLeave);
+      window.removeEventListener("drop", onWindowDrop);
+    };
+  }, [dispatchFiles]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLLabelElement>) => {
@@ -504,6 +584,7 @@ export default function Home() {
         <label
           htmlFor="pdf-input"
           role="button"
+          data-print-hide
           tabIndex={dropzoneBusy ? -1 : 0}
           aria-label="Upload a PDF or image of an invoice. Press Enter or Space to open the file picker, or drop a file onto this area."
           aria-describedby={dropzoneHintId}
@@ -603,7 +684,10 @@ export default function Home() {
         </label>
 
         {(status.kind === "idle" || status.kind === "error") && (
-          <p className="mt-3 text-center text-sm text-zinc-500">
+          <p
+            className="mt-3 text-center text-sm text-zinc-500"
+            data-print-hide
+          >
             {status.kind === "error"
               ? "Or try with a known-good sample: "
               : "Don't have a PDF handy? "}
@@ -619,24 +703,32 @@ export default function Home() {
         )}
 
         {status.kind === "idle" && (
-          <>
+          <div data-print-hide>
             <LoomEmbed />
             <PreviewCard />
             <CustomFieldsManager
               fields={customFields}
               onChange={setCustomFields}
             />
-          </>
+          </div>
         )}
 
         {status.kind === "error" && (
-          <ErrorState
-            code={status.code}
-            correlationId={status.correlation_id}
-            retryAfterSeconds={status.retry_after_seconds}
-            detected={status.detected}
-            onRetry={lastFile ? onRetry : undefined}
-          />
+          <div data-print-hide>
+            <ErrorState
+              code={status.code}
+              correlationId={status.correlation_id}
+              retryAfterSeconds={status.retry_after_seconds}
+              detected={status.detected}
+              onRetry={lastFile ? onRetry : undefined}
+            />
+          </div>
+        )}
+
+        {status.kind === "loading" && (
+          <div data-print-hide>
+            <ResultsSkeleton />
+          </div>
         )}
 
         {status.kind === "success" && (
@@ -649,6 +741,8 @@ export default function Home() {
             downloadCsv={downloadCsv}
             webhookUrl={webhookUrl}
             setWebhookUrl={setWebhookUrl}
+            rememberWebhookUrl={rememberWebhookUrl}
+            setRememberWebhookUrl={setRememberWebhookUrl}
             fireWebhook={fireWebhook}
             webhookStatus={webhookStatus}
             webhookFiring={webhookFiring}
@@ -656,14 +750,18 @@ export default function Home() {
         )}
 
         {status.kind === "batch" && (
-          <BatchView
-            files={status.files}
-            inProgress={batchInProgress}
-            onReset={() => setStatus({ kind: "idle" })}
-          />
+          <div data-print-hide>
+            <BatchView
+              files={status.files}
+              inProgress={batchInProgress}
+              onReset={() => setStatus({ kind: "idle" })}
+            />
+          </div>
         )}
 
-        <PrivacySection />
+        <div data-print-hide>
+          <PrivacySection />
+        </div>
       </div>
 
       <footer className="mt-auto border-t border-zinc-200 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
@@ -736,6 +834,8 @@ interface ResultsViewProps {
   ) => void;
   webhookUrl: string;
   setWebhookUrl: (v: string) => void;
+  rememberWebhookUrl: boolean;
+  setRememberWebhookUrl: (v: boolean) => void;
   fireWebhook: (invoice: InvoiceExtraction) => void;
   webhookStatus: WebhookStatus | null;
   webhookFiring: boolean;
@@ -751,6 +851,8 @@ function ResultsView({
   downloadCsv,
   webhookUrl,
   setWebhookUrl,
+  rememberWebhookUrl,
+  setRememberWebhookUrl,
   fireWebhook,
   webhookStatus,
   webhookFiring,
@@ -1129,6 +1231,7 @@ function ResultsView({
           <div
             role="tablist"
             aria-label="Extraction view"
+            data-print-hide
             className="inline-flex rounded-lg border border-zinc-200 bg-white p-1 text-sm dark:border-zinc-800 dark:bg-zinc-900"
           >
             <button
@@ -1230,7 +1333,7 @@ function ResultsView({
         />
       )}
 
-      <div>
+      <div data-print-hide>
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
@@ -1262,7 +1365,10 @@ function ResultsView({
         <TellsightCta variant="single" />
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+      <div
+        data-print-hide
+        className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+      >
         <h2 className="text-base font-semibold">Fire webhook</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           POST the extracted invoice JSON to your URL. Useful for testing
@@ -1317,6 +1423,20 @@ function ResultsView({
             <span>{webhookFiring ? "Sending" : "Send POST"}</span>
           </button>
         </div>
+        <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+          <input
+            type="checkbox"
+            checked={rememberWebhookUrl}
+            onChange={(e) => setRememberWebhookUrl(e.target.checked)}
+            className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-950"
+          />
+          <span>
+            Remember this URL on this device.{" "}
+            <span className="text-zinc-500 dark:text-zinc-500">
+              Stored locally only, never sent anywhere; clears when unchecked.
+            </span>
+          </span>
+        </label>
         {webhookUrlError && !webhookFiring && (
           <p
             id={webhookHelpId}
@@ -1420,6 +1540,12 @@ function FieldRow({
   const inputId = useId();
   const [escapeDismissed, setEscapeDismissed] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  // Touch-only tap toggles the reasoning tooltip. Hover and keyboard focus
+  // already drive it via group-hover and group-focus-within, but on a coarse
+  // pointer (phone, tablet) there's no hover and tapping the value enters
+  // edit mode, so the tooltip would otherwise be unreachable. The dedicated
+  // toggle button below is hidden on hover-capable devices.
+  const [manuallyShown, setManuallyShown] = useState(false);
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -1462,6 +1588,7 @@ function FieldRow({
 
   const startEditing = () => {
     setDraft(draftFromField());
+    setManuallyShown(false);
     setIsEditing(true);
   };
 
@@ -1491,6 +1618,7 @@ function FieldRow({
     if (event.key === "Escape" && field.reasoning && !escapeDismissed) {
       event.stopPropagation();
       setEscapeDismissed(true);
+      setManuallyShown(false);
     }
   };
 
@@ -1501,7 +1629,9 @@ function FieldRow({
   const tooltipVisibility =
     escapeDismissed || isEditing
       ? "hidden"
-      : "hidden group-hover:block group-focus-within:block";
+      : manuallyShown
+        ? "block"
+        : "hidden group-hover:block group-focus-within:block";
 
   return (
     <div
@@ -1572,6 +1702,20 @@ function FieldRow({
             {confidenceGlyph}
           </span>
           <span className="sr-only">{confidenceWord} confidence.</span>
+          {field.reasoning && (
+            <button
+              type="button"
+              onClick={() => setManuallyShown((v) => !v)}
+              aria-expanded={manuallyShown}
+              aria-controls={reasoningId}
+              aria-label={
+                manuallyShown ? "Hide reasoning" : "Show reasoning"
+              }
+              className="hidden h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[10px] font-semibold leading-none text-zinc-600 hover:border-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-500 pointer-coarse:inline-flex"
+            >
+              i
+            </button>
+          )}
         </dd>
       )}
       {field.reasoning && (
@@ -1875,6 +2019,40 @@ const PREVIEW_FIELDS: ReadonlyArray<{ label: string; value: string }> = [
   { label: "Subtotal", value: "2,007.00" },
   { label: "Total", value: "2,167.56" },
 ];
+
+// Pulse-animated placeholder rendered while extraction is in flight, so the
+// page does not collapse to "spinner-only" between dropzone-busy and
+// success. Mirrors the real ResultsView grid (9 fields, 2 columns on sm+)
+// at fixed sizes so layout shift on first paint is minimal. motion-reduce
+// disables the pulse animation per the global accessibility floor.
+function ResultsSkeleton() {
+  return (
+    <section
+      aria-label="Extraction in progress"
+      aria-busy="true"
+      className="mt-8 space-y-6 animate-pulse motion-reduce:animate-none"
+    >
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="inline-block h-4 w-40 rounded bg-zinc-200 dark:bg-zinc-800" />
+        <span className="inline-block h-3 w-20 rounded bg-zinc-200 dark:bg-zinc-800" />
+        <span className="inline-block h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-800" />
+      </div>
+      <div className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
+        {Array.from({ length: 9 }, (_, i) => (
+          <div key={i}>
+            <div className="h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-800" />
+            <div className="mt-2 h-6 w-32 rounded bg-zinc-200 dark:bg-zinc-800" />
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <span className="inline-block h-9 w-44 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+        <span className="inline-block h-9 w-44 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+        <span className="inline-block h-9 w-32 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+      </div>
+    </section>
+  );
+}
 
 function PreviewCard() {
   return (
