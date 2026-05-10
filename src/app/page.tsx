@@ -537,27 +537,16 @@ export default function Home() {
                   className="shrink-0"
                 >
                   <rect width="40" height="40" rx="8" className="fill-indigo-950" />
-                  <rect
-                    x="11"
-                    y="7"
-                    width="18"
-                    height="26"
-                    rx="2.5"
-                    fill="none"
-                    strokeWidth="2"
-                    className="stroke-indigo-500"
-                  />
-                  <line x1="14" y1="13" x2="26" y2="13" strokeWidth="1.5" strokeLinecap="round" className="stroke-indigo-300" />
-                  <line x1="14" y1="18" x2="26" y2="18" strokeWidth="1.5" strokeLinecap="round" className="stroke-indigo-300" />
-                  <line x1="14" y1="23" x2="22" y2="23" strokeWidth="1.5" strokeLinecap="round" className="stroke-indigo-300" />
-                  <circle cx="26" cy="27" r="2.5" className="fill-indigo-400" />
+                  <rect x="11" y="10" width="18" height="3" rx="0.5" className="fill-indigo-300" />
+                  <rect x="17" y="13" width="6" height="14" className="fill-white" />
+                  <rect x="11" y="27" width="18" height="3" rx="0.5" className="fill-indigo-300" />
                 </svg>
                 <h1 className="text-5xl font-extrabold tracking-tight leading-none">
                   InvoiceFlow
                 </h1>
               </div>
               <p className="mt-3 text-[11px] font-semibold tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500">
-                Structured extraction · Zero retention
+                PDF invoices → structured JSON
               </p>
             </div>
             <div className="hidden shrink-0 text-right text-xs text-zinc-500 dark:text-zinc-400 sm:block">
@@ -671,7 +660,7 @@ export default function Home() {
                   }, sending to Claude, validating fields.`
                 : batchInProgress
                   ? `Up to 3 in parallel. Failed files don't stop the batch.`
-                  : "PDF up to 25 MB · JPG PNG GIF WebP up to 3.5 MB · Drop multiple to batch-extract."}
+                  : "PDF up to 25 MB · JPG/PNG/GIF/WebP up to 3.5 MB. Drop multiple to batch-extract."}
             </p>
           </label>
 
@@ -694,8 +683,7 @@ export default function Home() {
             </button>
             <p className="mt-auto text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
               No account required.<br />
-              No invoice data stored.<br />
-              Files are processed and discarded.
+              Nothing is stored.
             </p>
           </div>
         </div>
