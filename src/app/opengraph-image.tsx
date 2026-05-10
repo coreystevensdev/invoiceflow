@@ -41,7 +41,7 @@ export default async function Image() {
             }}
           >
             <svg width="80" height="80" viewBox="0 0 40 40">
-              <rect width="40" height="40" rx="8" fill="#0f172a" />
+              <rect width="40" height="40" rx="8" fill="#1e1b4b" />
               <rect
                 x="11"
                 y="7"
@@ -49,7 +49,7 @@ export default async function Image() {
                 height="26"
                 rx="2.5"
                 fill="none"
-                stroke="#58a6ff"
+                stroke="#6366f1"
                 strokeWidth="2.2"
               />
               <line
@@ -57,7 +57,7 @@ export default async function Image() {
                 y1="13"
                 x2="26"
                 y2="13"
-                stroke="#79c0ff"
+                stroke="#a5b4fc"
                 strokeWidth="1.6"
                 strokeLinecap="round"
               />
@@ -66,7 +66,7 @@ export default async function Image() {
                 y1="18"
                 x2="26"
                 y2="18"
-                stroke="#79c0ff"
+                stroke="#a5b4fc"
                 strokeWidth="1.6"
                 strokeLinecap="round"
               />
@@ -75,16 +75,16 @@ export default async function Image() {
                 y1="23"
                 x2="22"
                 y2="23"
-                stroke="#79c0ff"
+                stroke="#a5b4fc"
                 strokeWidth="1.6"
                 strokeLinecap="round"
               />
-              <circle cx="26" cy="27" r="3" fill="#388bfd" />
+              <circle cx="26" cy="27" r="3" fill="#818cf8" />
             </svg>
             <div
               style={{
                 fontSize: 88,
-                fontWeight: 800,
+                fontWeight: 700,
                 color: "#18181b",
                 lineHeight: 1.05,
                 letterSpacing: "-0.04em",
