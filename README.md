@@ -206,7 +206,7 @@ A few honest gaps:
 - **Scanned-PDF support routes through Claude vision, not local OCR.** When `pdf-parse` returns no text layer, the raw PDF is sent to Claude as a `document` content block. This keeps the pipeline single-vendor (no Tesseract/Textract dependency) and gets you ~5-10x the cost of a digital extraction. Handwriting accuracy depends on Claude vision's quality; some scrawled receipts will still come back with low confidence flags.
 - **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
-- **Unit tests cover the pure-logic library only.** Vitest covers `cost.ts`, `errors.ts`, `validate.ts`, `rate-limit.ts`, and `csv.ts`. No integration tests against the route handlers, no end-to-end coverage of the upload flow.
+- **Unit and integration tests cover library and route handlers.** Vitest covers `cost.ts`, `errors.ts`, `validate.ts`, `rate-limit.ts`, `csv.ts`, and the `/api/csv` and `/api/webhook` route handlers. No end-to-end coverage of the upload flow.
 
 ## Deploy
 
