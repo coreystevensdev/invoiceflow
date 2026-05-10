@@ -523,36 +523,14 @@ export default function Home() {
       id="main-content"
       className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
     >
-      <div className="mx-auto max-w-4xl px-6 py-16">
+      <div className="mx-auto max-w-4xl px-6 py-10 sm:py-16">
         <header className="mb-10 border-b border-zinc-200 pb-7 dark:border-zinc-800">
-          <div className="flex items-end justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-3">
-                <svg
-                  width="36"
-                  height="36"
-                  viewBox="0 0 40 40"
-                  fill="none"
-                  aria-hidden="true"
-                  className="shrink-0"
-                >
-                  <rect width="40" height="40" rx="8" className="fill-indigo-950" />
-                  <rect x="11" y="10" width="18" height="3" rx="0.5" className="fill-indigo-300" />
-                  <rect x="17" y="13" width="6" height="14" className="fill-white" />
-                  <rect x="11" y="27" width="18" height="3" rx="0.5" className="fill-indigo-300" />
-                </svg>
-                <h1 className="text-5xl font-extrabold tracking-tight leading-none">
-                  InvoiceFlow
-                </h1>
-              </div>
-              <p className="mt-3 text-[11px] font-semibold tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500">
-                PDF invoices → structured JSON
-              </p>
-            </div>
-            <div className="hidden shrink-0 text-right text-sm font-semibold text-zinc-800 dark:text-zinc-200 sm:block">
-              Claude Sonnet 4.6
-            </div>
-          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight leading-none sm:text-5xl">
+            InvoiceFlow
+          </h1>
+          <p className="mt-3 text-[11px] font-semibold tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500">
+            PDF invoices → structured JSON
+          </p>
         </header>
 
         <div
