@@ -524,184 +524,182 @@ export default function Home() {
       className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
     >
       <div className="mx-auto max-w-4xl px-6 py-16">
-        <header className="mb-10">
-          <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight">
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 40 40"
-              fill="none"
-              aria-hidden="true"
-              className="shrink-0"
-            >
-              <rect width="40" height="40" rx="8" className="fill-indigo-950" />
-              <rect
-                x="11"
-                y="7"
-                width="18"
-                height="26"
-                rx="2.5"
-                fill="none"
-                strokeWidth="2"
-                className="stroke-indigo-500"
-              />
-              <line
-                x1="14"
-                y1="13"
-                x2="26"
-                y2="13"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                className="stroke-indigo-300"
-              />
-              <line
-                x1="14"
-                y1="18"
-                x2="26"
-                y2="18"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                className="stroke-indigo-300"
-              />
-              <line
-                x1="14"
-                y1="23"
-                x2="22"
-                y2="23"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                className="stroke-indigo-300"
-              />
-              <circle cx="26" cy="27" r="2.5" className="fill-indigo-400" />
-            </svg>
-            InvoiceFlow
-          </h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            PDF invoices, structured by Claude. About five seconds, no login,
-            no retention.
-          </p>
+        <header className="mb-10 border-b border-zinc-200 pb-7 dark:border-zinc-800">
+          <div className="flex items-end justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-3">
+                <svg
+                  width="36"
+                  height="36"
+                  viewBox="0 0 40 40"
+                  fill="none"
+                  aria-hidden="true"
+                  className="shrink-0"
+                >
+                  <rect width="40" height="40" rx="8" className="fill-indigo-950" />
+                  <rect
+                    x="11"
+                    y="7"
+                    width="18"
+                    height="26"
+                    rx="2.5"
+                    fill="none"
+                    strokeWidth="2"
+                    className="stroke-indigo-500"
+                  />
+                  <line x1="14" y1="13" x2="26" y2="13" strokeWidth="1.5" strokeLinecap="round" className="stroke-indigo-300" />
+                  <line x1="14" y1="18" x2="26" y2="18" strokeWidth="1.5" strokeLinecap="round" className="stroke-indigo-300" />
+                  <line x1="14" y1="23" x2="22" y2="23" strokeWidth="1.5" strokeLinecap="round" className="stroke-indigo-300" />
+                  <circle cx="26" cy="27" r="2.5" className="fill-indigo-400" />
+                </svg>
+                <h1 className="text-5xl font-extrabold tracking-tight leading-none">
+                  InvoiceFlow
+                </h1>
+              </div>
+              <p className="mt-3 text-[11px] font-semibold tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500">
+                Structured extraction · Zero retention
+              </p>
+            </div>
+            <div className="hidden shrink-0 text-right text-xs text-zinc-500 dark:text-zinc-400 sm:block">
+              <span className="mb-1 block text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                Claude Sonnet 4.6
+              </span>
+              PDF → structured data<br />
+              ~5 seconds · no account
+            </div>
+          </div>
         </header>
 
-        <label
-          htmlFor="pdf-input"
-          role="button"
+        <div
           data-print-hide
-          tabIndex={dropzoneBusy ? -1 : 0}
-          aria-label="Upload a PDF or image of an invoice. Press Enter or Space to open the file picker, or drop a file onto this area."
-          aria-describedby={dropzoneHintId}
-          aria-disabled={dropzoneBusy}
-          onKeyDown={(e) => {
-            if (dropzoneBusy) return;
-            onDropzoneKey(e);
-          }}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            if (dropzoneBusy) return;
-            setIsDragging(true);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            if (dropzoneBusy) return;
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={(e) => {
-            if (dropzoneBusy) {
-              e.preventDefault();
-              return;
-            }
-            onDrop(e);
-          }}
-          onClick={(e) => {
-            if (dropzoneBusy) e.preventDefault();
-          }}
-          className={`block rounded-xl border-2 border-dashed p-12 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950 ${
-            dropzoneBusy
-              ? "cursor-wait border-zinc-300 bg-white opacity-90 dark:border-zinc-700 dark:bg-zinc-900"
-              : isDragging
-                ? "cursor-pointer border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
-                : "cursor-pointer border-zinc-300 bg-white hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500"
+          className={`grid overflow-hidden border transition-colors sm:grid-cols-[2fr_1fr] ${
+            isDragging && !dropzoneBusy
+              ? "border-indigo-500"
+              : "border-zinc-200 dark:border-zinc-800"
           }`}
         >
-          <input
-            id="pdf-input"
-            ref={inputRef}
-            type="file"
-            multiple
-            accept="application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
-            onChange={onChange}
-            className="sr-only"
-            tabIndex={-1}
+          <label
+            htmlFor="pdf-input"
+            role="button"
+            tabIndex={dropzoneBusy ? -1 : 0}
+            aria-label="Upload a PDF or image of an invoice. Press Enter or Space to open the file picker, or drop a file onto this area."
             aria-describedby={dropzoneHintId}
-          />
-          {status.kind === "loading" || batchInProgress ? (
-            <div
-              className="flex items-center justify-center gap-3 text-lg font-medium"
-              aria-live="polite"
-            >
-              <svg
-                className="h-5 w-5 animate-spin text-indigo-600 motion-reduce:animate-none dark:text-indigo-400"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeOpacity="0.25"
-                  strokeWidth="3"
-                />
-                <path
-                  d="M22 12a10 10 0 0 1-10 10"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span>
-                {status.kind === "loading"
-                  ? `Extracting ${status.filename}`
-                  : `Extracting batch (${batchSummary?.done ?? 0} of ${batchSummary?.total ?? 0})`}
-              </span>
-            </div>
-          ) : (
-            <p className="text-lg font-medium" aria-live="polite">
-              Drop one or more PDFs or images here, or click to upload
-            </p>
-          )}
-          <p id={dropzoneHintId} className="mt-2 text-sm text-zinc-500">
-            {status.kind === "loading"
-              ? `Typically 4-8 seconds. Reading the ${
-                  /\.(jpe?g|png|gif|webp)$/i.test(status.filename)
-                    ? "image"
-                    : "PDF"
-                }, sending to Claude, validating fields.`
-              : batchInProgress
-                ? `Up to 3 in parallel. Failed files don't stop the batch.`
-                : "PDF (up to 25 MB) or image (JPG, PNG, GIF, WebP, up to 3.5 MB). Drop multiple to batch-extract."}
-          </p>
-        </label>
-
-        {(status.kind === "idle" || status.kind === "error") && (
-          <p
-            className="mt-3 text-center text-sm text-zinc-500"
-            data-print-hide
+            aria-disabled={dropzoneBusy}
+            onKeyDown={(e) => {
+              if (dropzoneBusy) return;
+              onDropzoneKey(e);
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              if (dropzoneBusy) return;
+              setIsDragging(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (dropzoneBusy) return;
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              if (dropzoneBusy) {
+                e.preventDefault();
+                return;
+              }
+              onDrop(e);
+            }}
+            onClick={(e) => {
+              if (dropzoneBusy) e.preventDefault();
+            }}
+            className={`flex min-h-[200px] flex-col justify-between p-10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 ${
+              dropzoneBusy
+                ? "cursor-wait opacity-70"
+                : isDragging
+                  ? "cursor-pointer bg-indigo-50 dark:bg-indigo-950/20"
+                  : "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+            }`}
           >
-            {status.kind === "error"
-              ? "Or try with a known-good sample: "
-              : "Don't have a PDF handy? "}
+            <input
+              id="pdf-input"
+              ref={inputRef}
+              type="file"
+              multiple
+              accept="application/pdf,.pdf,image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+              onChange={onChange}
+              className="sr-only"
+              tabIndex={-1}
+              aria-describedby={dropzoneHintId}
+            />
+            {status.kind === "loading" || batchInProgress ? (
+              <div
+                className="flex items-center gap-3 text-base font-semibold"
+                aria-live="polite"
+              >
+                <svg
+                  className="h-4 w-4 animate-spin text-indigo-600 motion-reduce:animate-none dark:text-indigo-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+                  <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+                <span>
+                  {status.kind === "loading"
+                    ? `Extracting ${status.filename}`
+                    : `Extracting batch (${batchSummary?.done ?? 0} of ${batchSummary?.total ?? 0})`}
+                </span>
+              </div>
+            ) : (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+                  Upload
+                </p>
+                <p
+                  className="mt-4 text-2xl font-bold leading-snug tracking-tight text-zinc-900 dark:text-zinc-100"
+                  aria-live="polite"
+                >
+                  Drop a PDF<br />or image here
+                </p>
+              </div>
+            )}
+            <p id={dropzoneHintId} className="mt-6 text-xs text-zinc-400 dark:text-zinc-500">
+              {status.kind === "loading"
+                ? `Typically 4-8 seconds. Reading the ${
+                    /\.(jpe?g|png|gif|webp)$/i.test(status.filename)
+                      ? "image"
+                      : "PDF"
+                  }, sending to Claude, validating fields.`
+                : batchInProgress
+                  ? `Up to 3 in parallel. Failed files don't stop the batch.`
+                  : "PDF up to 25 MB · JPG PNG GIF WebP up to 3.5 MB · Drop multiple to batch-extract."}
+            </p>
+          </label>
+
+          <div className="flex flex-col gap-3 border-t border-zinc-200 bg-zinc-50 p-8 dark:border-zinc-800 dark:bg-zinc-900/50 sm:border-t-0 sm:border-l">
             <button
               type="button"
-              onClick={onSampleClick}
-              className="font-medium text-indigo-700 underline underline-offset-2 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:text-indigo-400 dark:hover:text-indigo-300"
+              disabled={dropzoneBusy}
+              onClick={() => { if (!dropzoneBusy) inputRef.current?.click(); }}
+              className="w-full bg-zinc-900 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-opacity disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
             >
-              Try with a sample invoice
+              Select file
             </button>
-            .
-          </p>
-        )}
+            <button
+              type="button"
+              disabled={dropzoneBusy}
+              onClick={() => { if (!dropzoneBusy) onSampleClick(); }}
+              className="w-full border border-zinc-300 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Use sample
+            </button>
+            <p className="mt-auto text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
+              No account required.<br />
+              No invoice data stored.<br />
+              Files are processed and discarded.
+            </p>
+          </div>
+        </div>
+
 
         {status.kind === "idle" && (
           <div data-print-hide>
@@ -1277,28 +1275,29 @@ function ResultsView({
               id={fieldsPanelId}
               aria-labelledby={fieldsTabId}
             >
-              <dl className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
+              <dl className="grid border-t border-l border-zinc-200 dark:border-zinc-800 sm:grid-cols-2">
                 {fields.map((f) => {
                   const bboxForField = useVisionBboxes
                     ? f.bbox
                     : (pdfBboxMap[f.label] ?? null);
                   return (
-                    <FieldRow
-                      key={f.label}
-                      label={f.label}
-                      field={f.field}
-                      money={f.money}
-                      originalValue={f.originalValue}
-                      onSave={f.onSave}
-                      onActivate={
-                        bboxForField
-                          ? () => setActiveBbox(bboxForField)
-                          : undefined
-                      }
-                      onDeactivate={
-                        bboxForField ? () => setActiveBbox(null) : undefined
-                      }
-                    />
+                    <div key={f.label} className="border-b border-r border-zinc-200 p-5 dark:border-zinc-800">
+                      <FieldRow
+                        label={f.label}
+                        field={f.field}
+                        money={f.money}
+                        originalValue={f.originalValue}
+                        onSave={f.onSave}
+                        onActivate={
+                          bboxForField
+                            ? () => setActiveBbox(bboxForField)
+                            : undefined
+                        }
+                        onDeactivate={
+                          bboxForField ? () => setActiveBbox(null) : undefined
+                        }
+                      />
+                    </div>
                   );
                 })}
               </dl>
@@ -1649,7 +1648,7 @@ function FieldRow({
       }}
       onMouseLeave={() => onDeactivate?.()}
     >
-      <dt className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+      <dt className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
         <label htmlFor={inputId}>{label}</label>
         {isEdited && (
           <span
@@ -1661,7 +1660,7 @@ function FieldRow({
         )}
       </dt>
       {isEditing ? (
-        <dd className="mt-1 text-lg font-medium">
+        <dd className="mt-1 font-mono text-base font-medium">
           <input
             ref={inputRef}
             id={inputId}
@@ -1681,11 +1680,11 @@ function FieldRow({
             }}
             inputMode={money ? "decimal" : "text"}
             spellCheck={false}
-            className="w-full rounded-md border border-indigo-400 bg-white px-2 py-1 text-lg font-medium text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-indigo-500 dark:bg-zinc-950 dark:text-zinc-100"
+            className="w-full rounded-md border border-indigo-400 bg-white px-2 py-1 font-mono text-base font-medium text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-indigo-500 dark:bg-zinc-950 dark:text-zinc-100"
           />
         </dd>
       ) : (
-        <dd className="mt-1 flex items-center gap-2 text-lg font-medium">
+        <dd className="mt-1 flex items-center gap-2 font-mono text-base font-medium">
           <button
             id={inputId}
             type="button"
@@ -2038,9 +2037,9 @@ function ResultsSkeleton() {
         <span className="inline-block h-3 w-20 rounded bg-zinc-200 dark:bg-zinc-800" />
         <span className="inline-block h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-800" />
       </div>
-      <div className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-2">
+      <div className="grid border-t border-l border-zinc-200 dark:border-zinc-800 sm:grid-cols-2">
         {Array.from({ length: 9 }, (_, i) => (
-          <div key={i}>
+          <div key={i} className="border-b border-r border-zinc-200 p-5 dark:border-zinc-800">
             <div className="h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-800" />
             <div className="mt-2 h-6 w-32 rounded bg-zinc-200 dark:bg-zinc-800" />
           </div>
@@ -2067,10 +2066,10 @@ function PreviewCard() {
       <dl className="mt-4 grid gap-4 sm:grid-cols-2">
         {PREVIEW_FIELDS.map((f) => (
           <div key={f.label}>
-            <dt className="text-xs uppercase tracking-wide text-zinc-500">
+            <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
               {f.label}
             </dt>
-            <dd className="mt-1 text-lg font-medium text-zinc-900 dark:text-zinc-100">
+            <dd className="mt-1 font-mono text-base font-medium text-zinc-900 dark:text-zinc-100">
               {f.value}
             </dd>
           </div>
