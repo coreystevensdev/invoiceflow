@@ -549,12 +549,8 @@ export default function Home() {
                 PDF invoices → structured JSON
               </p>
             </div>
-            <div className="hidden shrink-0 text-right text-xs text-zinc-500 dark:text-zinc-400 sm:block">
-              <span className="mb-1 block text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                Claude Sonnet 4.6
-              </span>
-              PDF → structured data<br />
-              ~5 seconds · no account
+            <div className="hidden shrink-0 text-right text-sm font-semibold text-zinc-800 dark:text-zinc-200 sm:block">
+              Claude Sonnet 4.6
             </div>
           </div>
         </header>
