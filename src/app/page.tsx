@@ -26,9 +26,39 @@ import { PdfPreview } from "@/components/pdf-preview";
 import { PrivacySection } from "@/components/privacy-section";
 import { TellsightCta } from "@/components/tellsight-cta";
 
+// Parses raw SSE text into {event, data} pairs. Each SSE message ends with
+// a blank line (\n\n). Returns complete events from the buffer and the
+// remaining incomplete fragment.
+function parseSseChunk(
+  buffer: string,
+): { events: Array<{ event: string; data: string }>; remainder: string } {
+  const events: Array<{ event: string; data: string }> = [];
+  const messages = buffer.split("\n\n");
+  // The last element is an incomplete message (or empty if buffer ends with \n\n).
+  const remainder = messages.pop() ?? "";
+  for (const message of messages) {
+    if (!message.trim()) continue;
+    let event = "message";
+    let data = "";
+    for (const line of message.split("\n")) {
+      if (line.startsWith("event: ")) event = line.slice(7).trim();
+      else if (line.startsWith("data: ")) data = line.slice(6);
+    }
+    if (data) events.push({ event, data });
+  }
+  return { events, remainder };
+}
+
 type Status =
   | { kind: "idle" }
   | { kind: "loading"; filename: string }
+  | {
+      kind: "streaming";
+      filename: string;
+      pdfUrl: string;
+      phase: string;
+      partialFields: Record<string, unknown>;
+    }
   | {
       kind: "success";
       result: ExtractResponse;
@@ -198,6 +228,126 @@ export default function Home() {
     [customFields],
   );
 
+  const handleFileStream = useCallback(
+    async (file: File) => {
+      // Create the blob URL immediately so the PDF preview renders while
+      // fields stream in, rather than waiting for extraction to complete.
+      const pdfUrl = URL.createObjectURL(file);
+      setStatus((prev) => {
+        if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
+        if (prev.kind === "streaming") URL.revokeObjectURL(prev.pdfUrl);
+        return {
+          kind: "streaming",
+          filename: file.name,
+          pdfUrl,
+          phase: "Reading PDF...",
+          partialFields: {},
+        };
+      });
+      setLastFile(file);
+      setWebhookStatus(null);
+
+      const form = new FormData();
+      form.append("pdf", file);
+      if (customFields.length > 0) form.append("custom_fields", JSON.stringify(customFields));
+
+      let res: Response;
+      try {
+        res = await fetch("/api/extract-stream", { method: "POST", body: form });
+      } catch {
+        URL.revokeObjectURL(pdfUrl);
+        setStatus({ kind: "error", code: "model-API-failure" });
+        return;
+      }
+
+      // Pre-stream errors arrive as JSON (rate limit, monthly budget, etc.).
+      if (!res.ok) {
+        URL.revokeObjectURL(pdfUrl);
+        const body: ErrorBody = await res.json().catch(() => ({}));
+        setStatus({
+          kind: "error",
+          code: body.code ?? "model-API-failure",
+          correlation_id: body.correlation_id,
+          retry_after_seconds: body.retry_after_seconds,
+        });
+        return;
+      }
+
+      if (!res.body) {
+        URL.revokeObjectURL(pdfUrl);
+        setStatus({ kind: "error", code: "model-API-failure" });
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let sseBuffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          sseBuffer += decoder.decode(value, { stream: true });
+          const { events, remainder } = parseSseChunk(sseBuffer);
+          sseBuffer = remainder;
+
+          for (const { event, data } of events) {
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(data);
+            } catch {
+              continue;
+            }
+            const p = parsed as Record<string, unknown>;
+
+            if (event === "progress") {
+              setStatus((prev) => {
+                if (prev.kind !== "streaming") return prev;
+                return {
+                  ...prev,
+                  phase:
+                    typeof p["message"] === "string" ? p["message"] : prev.phase,
+                };
+              });
+            } else if (event === "field") {
+              setStatus((prev) => {
+                if (prev.kind !== "streaming") return prev;
+                return {
+                  ...prev,
+                  partialFields: {
+                    ...prev.partialFields,
+                    [p["field"] as string]: p["value"],
+                  },
+                };
+              });
+            } else if (event === "error") {
+              URL.revokeObjectURL(pdfUrl);
+              setStatus({
+                kind: "error",
+                code: (p["code"] as ExtractionErrorCode) ?? "model-API-failure",
+                correlation_id: p["correlation_id"] as string | undefined,
+              });
+              return;
+            } else if (event === "complete") {
+              const result = p as unknown as ExtractResponse;
+              setStatus({
+                kind: "success",
+                result,
+                filename: file.name,
+                pdfUrl,
+              });
+            }
+          }
+        }
+      } catch {
+        URL.revokeObjectURL(pdfUrl);
+        setStatus({ kind: "error", code: "model-API-failure" });
+      }
+    },
+    [customFields],
+  );
+
   // Bulk-upload runner. Drains the file queue with bounded concurrency so we
   // don't saturate Anthropic's per-IP rate limits or the per-instance extract
   // quota. Each file's lifecycle (queued → loading → success/error) is
@@ -298,20 +448,21 @@ export default function Home() {
   const dispatchFiles = useCallback(
     (files: File[]) => {
       if (files.length === 0) return;
-      if (files.length === 1) handleFile(files[0]);
+      if (files.length === 1) handleFileStream(files[0]);
       else runBatch(files);
     },
-    [handleFile, runBatch],
+    [handleFileStream, runBatch],
   );
 
   useEffect(() => {
     return () => {
       if (status.kind === "success") URL.revokeObjectURL(status.pdfUrl);
+      if (status.kind === "streaming") URL.revokeObjectURL(status.pdfUrl);
     };
   }, [status]);
 
   useEffect(() => {
-    if (status.kind !== "success") return;
+    if (status.kind !== "success" && status.kind !== "streaming") return;
     const reducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
@@ -394,19 +545,19 @@ export default function Home() {
       const file = new File([blob], "sample-invoice.pdf", {
         type: "application/pdf",
       });
-      await handleFile(file);
+      await handleFileStream(file);
     } catch (err) {
       console.error("[onSampleClick] fetch failed:", err);
     }
-  }, [handleFile]);
+  }, [handleFileStream]);
 
   // Retry the last attempted extraction. handleFile saves the File reference
   // on every attempt (manual upload or sample), so retry covers both paths
   // without separate sample-vs-file branching. ErrorState gates the visible
   // button on the error code, so this only fires for transient codes.
   const onRetry = useCallback(() => {
-    if (lastFile) handleFile(lastFile);
-  }, [lastFile, handleFile]);
+    if (lastFile) handleFileStream(lastFile);
+  }, [lastFile, handleFileStream]);
 
   const onDropzoneKey = useCallback(
     (e: KeyboardEvent<HTMLLabelElement>) => {
@@ -689,6 +840,17 @@ export default function Home() {
         {status.kind === "loading" && (
           <div data-print-hide>
             <ResultsSkeleton />
+          </div>
+        )}
+
+        {status.kind === "streaming" && (
+          <div data-print-hide>
+            <StreamingResultsView
+              filename={status.filename}
+              pdfUrl={status.pdfUrl}
+              phase={status.phase}
+              partialFields={status.partialFields}
+            />
           </div>
         )}
 
@@ -2021,6 +2183,133 @@ function ResultsSkeleton() {
         <span className="inline-block h-9 w-44 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
         <span className="inline-block h-9 w-44 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
         <span className="inline-block h-9 w-32 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+      </div>
+    </section>
+  );
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  invoice_number: "Invoice #",
+  vendor: "Vendor",
+  bill_date: "Bill date",
+  due_date: "Due date",
+  po_number: "PO #",
+  subtotal: "Subtotal",
+  tax: "Tax",
+  total: "Total",
+  currency: "Currency",
+};
+
+const STREAMING_FIELDS = [
+  "invoice_number",
+  "vendor",
+  "bill_date",
+  "due_date",
+  "po_number",
+  "subtotal",
+  "tax",
+  "total",
+  "currency",
+] as const;
+
+function StreamingResultsView({
+  filename,
+  pdfUrl,
+  phase,
+  partialFields,
+}: {
+  filename: string;
+  pdfUrl: string;
+  phase: string;
+  partialFields: Record<string, unknown>;
+}) {
+  const isImage = /\.(jpe?g|png|gif|webp)$/i.test(filename);
+
+  const getFieldValue = (key: string): string | null => {
+    const raw = partialFields[key];
+    if (!raw || typeof raw !== "object") return null;
+    const obj = raw as Record<string, unknown>;
+    if (key === "vendor") {
+      return typeof obj["name"] === "string" ? obj["name"] : null;
+    }
+    const v = obj["value"];
+    if (v === null || v === undefined) return null;
+    if (typeof v === "number")
+      return v.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    return String(v);
+  };
+
+  return (
+    <section
+      className="mt-8 space-y-6"
+      aria-label="Extraction in progress"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <div
+        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500"
+        role="status"
+      >
+        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+          {filename}
+        </span>
+        <span>{phase}</span>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="min-w-0 lg:sticky lg:top-4 lg:self-start">
+          {isImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={pdfUrl}
+              alt={`Invoice: ${filename}`}
+              className="w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
+            />
+          ) : (
+            <PdfPreview
+              key={pdfUrl}
+              pdfUrl={pdfUrl}
+              filename={filename}
+              invoice={null}
+              activeBbox={null}
+              onBboxesComputed={() => {}}
+            />
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <dl className="grid border-t border-l border-zinc-200 dark:border-zinc-800 sm:grid-cols-2">
+            {STREAMING_FIELDS.map((key) => {
+              const value = getFieldValue(key);
+              const hasValue = value !== null;
+              return (
+                <div
+                  key={key}
+                  className="border-b border-r border-zinc-200 p-5 dark:border-zinc-800"
+                >
+                  <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                    {FIELD_LABELS[key] ?? key}
+                  </dt>
+                  <dd className="mt-1 font-mono text-base font-medium">
+                    {hasValue ? (
+                      <span className="transition-opacity opacity-100">
+                        {value}
+                      </span>
+                    ) : (
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-5 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800 motion-reduce:animate-none"
+                      />
+                    )}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        </div>
       </div>
     </section>
   );
