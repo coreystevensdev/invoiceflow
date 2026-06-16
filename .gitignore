@@ -67,3 +67,6 @@ public/pdf.worker.min.mjs
 
 # Eval runner raw results (per-invoice JSON; large + transient)
 eval-results/raw/*.json
+
+# Eval fixture PDFs -- synthetic are reproducible; real PDFs must never be committed
+scripts/eval/fixtures/**/*.pdf

@@ -130,7 +130,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-01-28",
     dueDate: null,
     poNumber: null,
-    subtotal: 245.60,
+    subtotal: 280.80,
     taxRate: 0.075,
     currency: "USD",
     lineItems: [
@@ -266,7 +266,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-05-15",
     dueDate: "2026-06-14",
     poNumber: "PO-3310",
-    subtotal: 127.80,
+    subtotal: 107.81,
     taxRate: 0.065,
     currency: "USD",
     lineItems: [

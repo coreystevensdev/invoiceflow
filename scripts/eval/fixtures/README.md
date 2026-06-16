@@ -48,3 +48,12 @@ Each fixture is a subdirectory named `NNN-<slug>/` containing:
 Use anonymized invoices only. Replace vendor names, addresses, and
 invoice numbers with fictional equivalents before committing. The
 `notes` field should document any anonymization.
+
+## PDF files are gitignored
+
+Invoice PDFs are not committed to git. Before running `npm run eval`:
+
+- **Synthetic fixtures**: regenerate with `npm run eval:generate`
+- **Real fixtures**: place `invoice.pdf` in each fixture directory manually (not committed)
+
+This keeps real invoice content out of the repository history.

@@ -137,6 +137,10 @@ function writeFailuresMd(results: InvoiceScore[]): void {
     `## Bottom ${failures.length} Failures`,
   ];
 
+  if (failures.length === 0) {
+    lines.push(``, `All invoices passed.`);
+  }
+
   for (const r of failures) {
     const failedFields = r.fields.filter((f) => !f.match);
     lines.push(
