@@ -1,0 +1,11 @@
+{
+  "invoice_number": "INV-2026-0042",
+  "vendor_name": "Acme Office Supplies, LLC",
+  "bill_date": "2026-04-15",
+  "due_date": "2026-05-15",
+  "po_number": null,
+  "subtotal": 2007.00,
+  "tax": 160.56,
+  "total": 2167.56,
+  "currency": "USD"
+}
