@@ -1,0 +1,11 @@
+{
+  "invoice_number": "OP-88012",
+  "vendor_name": "Office Planet LLC",
+  "bill_date": "2026-01-28",
+  "due_date": null,
+  "po_number": null,
+  "subtotal": 245.6,
+  "tax": 18.42,
+  "total": 264.02,
+  "currency": "USD"
+}

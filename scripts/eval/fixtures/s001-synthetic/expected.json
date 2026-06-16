@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CC-2026-0001",
+  "vendor_name": "CloudCore Inc.",
+  "bill_date": "2026-01-10",
+  "due_date": "2026-02-10",
+  "po_number": "PO-5500",
+  "subtotal": 3200,
+  "tax": 256,
+  "total": 3456,
+  "currency": "USD"
+}
