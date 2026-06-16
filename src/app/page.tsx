@@ -707,6 +707,7 @@ export default function Home() {
             fireWebhook={fireWebhook}
             webhookStatus={webhookStatus}
             webhookFiring={webhookFiring}
+            onReset={() => setStatus({ kind: "idle" })}
           />
         )}
 
@@ -800,6 +801,7 @@ interface ResultsViewProps {
   fireWebhook: (invoice: InvoiceExtraction) => void;
   webhookStatus: WebhookStatus | null;
   webhookFiring: boolean;
+  onReset: () => void;
 }
 
 type ResultView = "fields" | "json";
@@ -817,6 +819,7 @@ function ResultsView({
   fireWebhook,
   webhookStatus,
   webhookFiring,
+  onReset,
 }: ResultsViewProps) {
   const webhookUrlValid = useMemo(() => {
     if (!webhookUrl) return false;
@@ -1317,6 +1320,13 @@ function ResultsView({
             className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
             Download JSON
+          </button>
+          <button
+            type="button"
+            onClick={onReset}
+            className="ml-auto rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+          >
+            Upload another
           </button>
         </div>
         <p className="mt-2 text-xs text-zinc-500">
