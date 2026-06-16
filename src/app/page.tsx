@@ -467,7 +467,7 @@ export default function Home() {
       "(prefers-reduced-motion: reduce)",
     ).matches;
     document
-      .querySelector('section[aria-label="Extraction results"]')
+      .querySelector('[data-results-section]')
       ?.scrollIntoView({
         behavior: reducedMotion ? "auto" : "smooth",
         block: "start",
@@ -652,6 +652,7 @@ export default function Home() {
   // the dropzone becomes interactive again so the user can run another batch.
   const dropzoneBusy =
     status.kind === "loading" ||
+    status.kind === "streaming" ||
     (status.kind === "batch" &&
       status.files.some(
         (f) => f.kind === "queued" || f.kind === "loading",
@@ -743,7 +744,7 @@ export default function Home() {
               tabIndex={-1}
               aria-describedby={dropzoneHintId}
             />
-            {status.kind === "loading" || batchInProgress ? (
+            {status.kind === "loading" || status.kind === "streaming" || batchInProgress ? (
               <div
                 className="flex items-center gap-3 text-base font-semibold"
                 aria-live="polite"
@@ -760,7 +761,9 @@ export default function Home() {
                 <span>
                   {status.kind === "loading"
                     ? `Extracting ${status.filename}`
-                    : `Extracting batch (${batchSummary?.done ?? 0} of ${batchSummary?.total ?? 0})`}
+                    : status.kind === "streaming"
+                      ? `Extracting ${status.filename}`
+                      : `Extracting batch (${batchSummary?.done ?? 0} of ${batchSummary?.total ?? 0})`}
                 </span>
               </div>
             ) : (
@@ -783,9 +786,11 @@ export default function Home() {
                       ? "image"
                       : "PDF"
                   }, sending to Claude, validating fields.`
-                : batchInProgress
-                  ? `Up to 3 in parallel. Failed files don't stop the batch.`
-                  : "PDF up to 25 MB · JPG/PNG/GIF/WebP up to 3.5 MB. Drop multiple to batch-extract."}
+                : status.kind === "streaming"
+                  ? `Streaming results from Claude. Fields appear as they arrive.`
+                  : batchInProgress
+                    ? `Up to 3 in parallel. Failed files don't stop the batch.`
+                    : "PDF up to 25 MB · JPG/PNG/GIF/WebP up to 3.5 MB. Drop multiple to batch-extract."}
             </p>
           </label>
 
@@ -1264,7 +1269,7 @@ function ResultsView({
   }, [inv, customFields, result.invoice]);
 
   return (
-    <section className="mt-8 space-y-6" aria-label="Extraction results">
+    <section className="mt-8 space-y-6" aria-label="Extraction results" data-results-section>
       <div
         className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-zinc-500"
         role="status"
@@ -2165,6 +2170,7 @@ function ResultsSkeleton() {
       aria-label="Extraction in progress"
       aria-busy="true"
       className="mt-8 space-y-6 animate-pulse motion-reduce:animate-none"
+      data-results-section
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <span className="inline-block h-4 w-40 rounded bg-zinc-200 dark:bg-zinc-800" />
@@ -2248,6 +2254,7 @@ function StreamingResultsView({
       aria-label="Extraction in progress"
       aria-busy="true"
       aria-live="polite"
+      data-results-section
     >
       <div
         className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500"
