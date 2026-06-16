@@ -1,0 +1,11 @@
+{
+  "invoice_number": "GL-2026-5501",
+  "vendor_name": "Green Leaf Office Supplies",
+  "bill_date": "2026-05-15",
+  "due_date": "2026-06-14",
+  "po_number": "PO-3310",
+  "subtotal": 127.8,
+  "tax": 8.31,
+  "total": 136.11,
+  "currency": "USD"
+}

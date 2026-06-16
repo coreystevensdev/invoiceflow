@@ -1,0 +1,11 @@
+{
+  "invoice_number": "MTS-CA-2026-077",
+  "vendor_name": "MapleTech Solutions Inc",
+  "bill_date": "2026-05-10",
+  "due_date": "2026-06-09",
+  "po_number": "PO-CA-445",
+  "subtotal": 6800,
+  "tax": 884,
+  "total": 7684,
+  "currency": "CAD"
+}

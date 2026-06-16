@@ -1,0 +1,11 @@
+{
+  "invoice_number": "BA-UK-2026-0041",
+  "vendor_name": "Brightshore Analytics Ltd",
+  "bill_date": "2026-02-28",
+  "due_date": "2026-03-28",
+  "po_number": "PO-UK-100",
+  "subtotal": 8200,
+  "tax": 1640,
+  "total": 9840,
+  "currency": "GBP"
+}

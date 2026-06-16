@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ASS-2026-0099",
+  "vendor_name": "Apex Staffing Solutions",
+  "bill_date": "2026-06-01",
+  "due_date": "2026-06-30",
+  "po_number": "PO-6600",
+  "subtotal": 22400,
+  "tax": 1680,
+  "total": 24080,
+  "currency": "USD"
+}
