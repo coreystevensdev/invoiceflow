@@ -247,7 +247,7 @@ function buildUserContent(
       },
     ];
   }
-  // input.kind === "pdf" — scanned/image-only PDF routed through vision.
+  // input.kind === "pdf": scanned/image-only PDF routed through vision.
   return [
     {
       type: "document" as const,
