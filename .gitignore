@@ -64,3 +64,6 @@ AGENTS.md
 # Build artifact copied from node_modules by postinstall
 public/pdf.worker.min.mjs
 .env*.local
+
+# Eval runner raw results (per-invoice JSON; large + transient)
+eval-results/raw/*.json

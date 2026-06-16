@@ -9,6 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "eval": "tsx scripts/eval/runner.ts",
+    "eval:report": "tsx scripts/eval/report.ts",
+    "eval:generate": "tsx scripts/eval/generate-synthetic.ts",
     "postinstall": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
@@ -28,8 +31,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "pdf-lib": "^1.17.1",
     "playwright": "^1.59.1",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.5"
   }
