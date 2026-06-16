@@ -222,7 +222,7 @@ function buildCustomFieldsBlock(customFields: CustomField[] = []): string {
  * The custom-fields instruction block is appended to whichever text portion
  * exists in each shape.
  */
-function buildUserContent(
+export function buildUserContent(
   input: ExtractionInput,
   today: string,
   customFields: CustomField[] = [],
