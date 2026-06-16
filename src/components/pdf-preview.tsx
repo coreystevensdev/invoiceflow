@@ -10,7 +10,7 @@ type Bbox = number[];
 interface PdfPreviewProps {
   pdfUrl: string;
   filename: string;
-  invoice: InvoiceExtraction;
+  invoice: InvoiceExtraction | null;
   activeBbox: Bbox | null;
   onBboxesComputed?: (map: Record<string, Bbox>) => void;
 }
@@ -249,6 +249,11 @@ export function PdfPreview({
         n.toFixed(2),
       ];
     };
+
+    if (!invoice) {
+      onBboxesComputed({});
+      return;
+    }
 
     search("Invoice #", [invoice.invoice_number.value]);
     search("Vendor", wordFallbacks(invoice.vendor.name));
