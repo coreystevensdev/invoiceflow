@@ -177,57 +177,6 @@ export default function Home() {
     }
   }, [rememberWebhookUrl, webhookUrl]);
 
-  const handleFile = useCallback(
-    async (file: File) => {
-      setStatus((prev) => {
-        if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
-        return { kind: "loading", filename: file.name };
-      });
-      setLastFile(file);
-      setWebhookStatus(null);
-      const form = new FormData();
-      form.append("pdf", file);
-      if (customFields.length > 0) {
-        form.append("custom_fields", JSON.stringify(customFields));
-      }
-      try {
-        const res = await fetch("/api/extract", {
-          method: "POST",
-          body: form,
-        });
-        if (!res.ok) {
-          const body: ErrorBody = await res.json().catch(() => ({}));
-          setStatus({
-            kind: "error",
-            code: body.code ?? "model-API-failure",
-            correlation_id: body.correlation_id,
-            retry_after_seconds: body.retry_after_seconds,
-            detected: body.detected,
-          });
-          return;
-        }
-        const data = (await res.json()) as ExtractResponse;
-        const pdfUrl = URL.createObjectURL(file);
-        setStatus({
-          kind: "success",
-          result: data,
-          filename: file.name,
-          pdfUrl,
-        });
-      } catch (err) {
-        // Network failure (offline, DNS, CORS, function cold-start timeout)
-        // or response-body parse failure. Without this catch, the promise
-        // rejects unhandled and status stays in "loading" indefinitely. Map
-        // all such failures to model-API-failure so the same ErrorState
-        // handles them and the user gets a retry path instead of a frozen
-        // spinner.
-        console.error("[handleFile] extraction request failed:", err);
-        setStatus({ kind: "error", code: "model-API-failure" });
-      }
-    },
-    [customFields],
-  );
-
   const handleFileStream = useCallback(
     async (file: File) => {
       // Create the blob URL immediately so the PDF preview renders while
