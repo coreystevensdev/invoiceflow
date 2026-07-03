@@ -10,11 +10,13 @@
 
 # InvoiceFlow
 
-Drop a PDF or image of an invoice and get the vendor, line items, tax, total, and due date back as structured JSON. Typically under five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL. Drop multiple files at once for batch extraction with a single bulk CSV. Define custom fields (cost center, GL code, project number) on the landing page to extract domain-specific data beyond the standard nine.
+**[Try it now](https://invoiceflow-cs.vercel.app) — drop a PDF or invoice image, get structured JSON back in under 5 seconds.**
 
-PDFs run through `pdf-parse` first and Claude reads the extracted text. Scanned (image-only) PDFs fall back to Claude's `document` content blocks; uploaded images go through `image` content blocks directly. Same Zod schema, same response shape, same zero-retention posture either way.
+Uploads PDFs or images of invoices and extracts vendor, line items, tax, total, and due date as structured JSON. Each extracted field includes the source text Claude used to derive it, surfaced via keyboard-accessible tooltips. Supports batch uploads, exports to CSV (QuickBooks or Xero format), and POST-to-webhook forwarding. Define custom fields on the landing page to extract domain-specific data beyond the standard nine.
 
-There's no login or database. Files process in memory inside a single Vercel Function and disappear when the request ends.
+**Zero-retention architecture:** No login, no database, no file storage. PDFs and images process in memory inside a single Vercel Function and disappear when the request ends. This is by design—financial data handling demands privacy guarantees, not apologetic limitations.
+
+PDFs run through `pdf-parse` first; Claude reads the extracted text. Scanned (image-only) PDFs fall back to Claude's `document` content blocks; uploaded images use `image` content blocks. Same Zod schema, same response shape, same zero-retention posture either way.
 
 <p align="center">
   <img src="public/screenshots/landing-v2.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
@@ -124,6 +126,10 @@ src/
 └── proxy.ts                      Next.js 16 middleware: nonce CSP, HSTS
 ```
 
+## Signature aesthetic
+
+InvoiceFlow uses a **Ledger Paper** design system: paper-white canvas (`#FAFAF6`), ink-navy accent (`#0C2D5C`), and JetBrains Mono for all extracted values. A 28px ruled-grid background evokes a legal pad, and legal-pad yellow (`#FFF5B8`) reserves exclusively for source-highlight hover. This is not shadcn-default chrome or a gradient hero. The aesthetic is intentional and consistent across every screen.
+
 ## Design decisions worth calling out
 
 Each of these has a longer write-up as an ADR in [`docs/adr/`](docs/adr/) covering context, alternatives considered, and consequences accepted.
@@ -170,6 +176,19 @@ Alternatives considered:
 | Regex over extracted text | Breaks on every new invoice layout. Maintenance grows without bound. |
 | Fine-tuned extraction model | Needs labeled data and an ML ops loop. Out of scope for this scale. |
 | Other frontier LLMs (GPT-4 class, Gemini) | Quality is comparable. Anthropic's Zod output helper and ephemeral caching tipped the call. The model is env-swappable via `CLAUDE_MODEL`; the rest of the pipeline is vendor-neutral at the JSON-schema seam. |
+
+## What this proves
+
+This is a **finished product**, not a prototype:
+
+- **Live and maintained.** Deployed on Vercel with CI/CD. Not a static demo.
+- **Production-grade infrastructure.** Rate limiting by IP (per-instance), cost ceilings (3× rolling median + absolute guard), retry logic with exponential backoff, structured logging with correlation IDs.
+- **Thoughtful error handling.** Eight typed error codes, each with user-readable copy. No raw 5xx responses leaking to clients.
+- **Serious about privacy.** Zero-retention is not a "limitation"; it's a load-bearing architectural choice. PDFs never hit disk, logs never leak content, CSP prevents injection attacks.
+- **Real accessibility.** WCAG 2.1 AA verified. Keyboard navigation, `aria-describedby` on every field, `prefers-reduced-motion` honored, iOS Safari graceful degradation on legacy PDF.js versions.
+- **Designed, not templated.** Signature aesthetic (not shadcn defaults), hand-built error UI, click-to-highlight source regions, inline editing of extracted values.
+
+This demonstrates capability across the full stack: system design, security posture, observability, UX, testing discipline, and the ability to ship and maintain a real system under constraints.
 
 ## Cost model
 
