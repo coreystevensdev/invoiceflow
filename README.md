@@ -177,19 +177,6 @@ Alternatives considered:
 | Fine-tuned extraction model | Needs labeled data and an ML ops loop. Out of scope for this scale. |
 | Other frontier LLMs (GPT-4 class, Gemini) | Quality is comparable. Anthropic's Zod output helper and ephemeral caching tipped the call. The model is env-swappable via `CLAUDE_MODEL`; the rest of the pipeline is vendor-neutral at the JSON-schema seam. |
 
-## What this proves
-
-This is a **finished product**, not a prototype:
-
-- **Live and maintained.** Deployed on Vercel with CI/CD. Not a static demo.
-- **Production-grade infrastructure.** Rate limiting by IP (per-instance), cost ceilings (3× rolling median + absolute guard), retry logic with exponential backoff, structured logging with correlation IDs.
-- **Thoughtful error handling.** Eight typed error codes, each with user-readable copy. No raw 5xx responses leaking to clients.
-- **Serious about privacy.** Zero-retention is not a "limitation"; it's a load-bearing architectural choice. PDFs never hit disk, logs never leak content, CSP prevents injection attacks.
-- **Real accessibility.** WCAG 2.1 AA verified. Keyboard navigation, `aria-describedby` on every field, `prefers-reduced-motion` honored, iOS Safari graceful degradation on legacy PDF.js versions.
-- **Designed, not templated.** Signature aesthetic (not shadcn defaults), hand-built error UI, click-to-highlight source regions, inline editing of extracted values.
-
-This demonstrates capability across the full stack: system design, security posture, observability, UX, testing discipline, and the ability to ship and maintain a real system under constraints.
-
 ## Cost model
 
 Per-extraction cost for a typical single-page invoice (~1,500 input tokens, ~800 output tokens):
