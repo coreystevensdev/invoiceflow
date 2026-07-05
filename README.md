@@ -45,7 +45,16 @@ PDFs run through `pdf-parse` first; Claude reads the extracted text. Scanned (im
 </tr>
 </table>
 
-**Stack:** Next.js 16, React 19, TypeScript, Tailwind 4, `@anthropic-ai/sdk`, `pdf-parse`, `pdfjs-dist`, `zod`.
+| Layer | Technology | Why |
+|---|---|---|
+| Framework | Next.js 16 (App Router) | Server Components for zero-JS landing; Fluid Compute for 300s extraction timeout; `src/proxy.ts` middleware for per-request CSP nonce |
+| AI | Anthropic `claude-sonnet-4-6` | `messages.parse()` + `zodOutputFormat` validates response at the SDK boundary; ephemeral caching drops system-prompt cost 90%; reasoning string per field is native to the API |
+| Validation | Zod 4 | `Record<ExtractionErrorCode, Shape>` enforces exhaustiveness: adding a new error code that misses `STATUS_BY_CODE` or `ERROR_DESCRIPTIONS` fails to compile |
+| PDF text | pdf-parse + pdfjs-dist | pdf-parse extracts the text layer server-side; pdfjs-dist handles iOS Safari client-side preview (requires legacy canvas build + static worker) |
+| Styling | Tailwind CSS 4 | Ledger-paper design tokens in `@theme inline`; no component library; `prefers-reduced-motion` and `focus-visible` globally enforced |
+| Security | `src/proxy.ts` (Next.js 16 middleware) | Per-request nonce injected into CSP; `strict-dynamic` with no `unsafe-inline`; JSON-LD served via route rather than inline script |
+| Rate limiting | In-memory sliding window | No Redis dependency; per-Fluid-Compute-instance trade-off documented; reuses `slidingWindow()` primitive across routes |
+| Cost control | rolling-cost-cap | 3x rolling-median anomaly cap + $1 absolute ceiling; records cost even when tripped so the monthly total stays accurate |
 
 ## Run locally
 
