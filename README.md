@@ -10,7 +10,7 @@
 
 # InvoiceFlow
 
-**[Try it now](https://invoiceflow-cs.vercel.app) — drop a PDF or invoice image, get structured JSON back in under 5 seconds.**
+**[Try it now](https://invoiceflow-cs.vercel.app): drop a PDF or invoice image, get structured JSON back in under 5 seconds.**
 
 Uploads PDFs or images of invoices and extracts vendor, line items, tax, total, and due date as structured JSON. Each extracted field includes the source text Claude used to derive it, surfaced via keyboard-accessible tooltips. Supports batch uploads, exports to CSV (QuickBooks or Xero format), and POST-to-webhook forwarding. Define custom fields on the landing page to extract domain-specific data beyond the standard nine.
 
