@@ -15,9 +15,13 @@
 
 Uploads PDFs or images of invoices and extracts vendor, line items, tax, total, and due date as structured JSON. Each extracted field includes the source text Claude used to derive it, surfaced via keyboard-accessible tooltips. Supports batch uploads, exports to CSV (QuickBooks or Xero format), and POST-to-webhook forwarding. Define custom fields on the landing page to extract domain-specific data beyond the standard nine.
 
-**Zero-retention architecture:** No login, no database, no file storage. PDFs and images process in memory inside a single Vercel Function and disappear when the request ends. This is by design—financial data handling demands privacy guarantees, not apologetic limitations.
+## Problem
 
-PDFs run through `pdf-parse` first; Claude reads the extracted text. Scanned (image-only) PDFs fall back to Claude's `document` content blocks; uploaded images use `image` content blocks. Same Zod schema, same response shape, same zero-retention posture either way.
+Finance and accounting workflows that handle vendor invoices copy vendor names, line items, tax amounts, totals, and due dates into accounting software by hand. Rules-based parsers and template matchers break on new invoice layouts and require per-vendor maintenance. The core challenge is understanding what fields mean in context: distinguishing a subtotal from a grand total, or an order number from an invoice number, requires understanding document structure rather than just extracting characters.
+
+## Solution
+
+Drop any PDF or invoice image and get structured JSON back in under 5 seconds. Claude reads the document with a Zod schema enforced at the SDK boundary, extracting the nine standard fields plus any custom fields defined at runtime. Each field returns with the source text used to derive it. No login, no database, no file storage: every document processes in memory within a single Vercel Function and disappears when the request ends. PDFs run through `pdf-parse` for the text layer first; scanned PDFs and uploaded images route to Claude vision. Same Zod schema, same response shape either way.
 
 <p align="center">
   <img src="public/screenshots/landing-v2.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
