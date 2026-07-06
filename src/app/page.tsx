@@ -129,7 +129,6 @@ export default function Home() {
   // never see a stale URL on a fresh device. Same SSR-safe pattern as
   // custom-fields hydration above.
   useEffect(() => {
-    if (typeof window === "undefined") return;
     const remembered = window.localStorage.getItem("invoiceflow:webhook-remember");
     if (remembered !== "1") return;
     const stored = window.localStorage.getItem("invoiceflow:webhook-url");
@@ -144,7 +143,6 @@ export default function Home() {
   // unchecks the box, both keys are cleared so a stale URL does not
   // linger. Writes only fire when state changes, not on every keystroke.
   useEffect(() => {
-    if (typeof window === "undefined") return;
     if (rememberWebhookUrl) {
       window.localStorage.setItem("invoiceflow:webhook-remember", "1");
       window.localStorage.setItem("invoiceflow:webhook-url", webhookUrl);
@@ -154,7 +152,7 @@ export default function Home() {
     }
   }, [rememberWebhookUrl, webhookUrl]);
 
-  const handleFileStream = useCallback(
+  const streamExtraction = useCallback(
     async (file: File) => {
       // Create the blob URL immediately so the PDF preview renders while
       // fields stream in, rather than waiting for extraction to complete.
@@ -345,8 +343,7 @@ export default function Home() {
           filename: entry.filename,
           result: data,
         });
-      } catch (err) {
-        console.error(`[runBatch] ${entry.filename} failed:`, err);
+      } catch {
         updateFile(entry.id, {
           kind: "error",
           id: entry.id,
@@ -374,10 +371,10 @@ export default function Home() {
   const dispatchFiles = useCallback(
     (files: File[]) => {
       if (files.length === 0) return;
-      if (files.length === 1) handleFileStream(files[0]);
+      if (files.length === 1) streamExtraction(files[0]);
       else runBatch(files);
     },
-    [handleFileStream, runBatch],
+    [streamExtraction, runBatch],
   );
 
   useEffect(() => {
@@ -471,19 +468,19 @@ export default function Home() {
       const file = new File([blob], "sample-invoice.pdf", {
         type: "application/pdf",
       });
-      await handleFileStream(file);
-    } catch (err) {
-      console.error("[onSampleClick] fetch failed:", err);
+      await streamExtraction(file);
+    } catch {
+      // Network failure fetching the sample PDF. No status UI for this surface.
     }
-  }, [handleFileStream]);
+  }, [streamExtraction]);
 
   // Retry the last attempted extraction. handleFile saves the File reference
   // on every attempt (manual upload or sample), so retry covers both paths
   // without separate sample-vs-file branching. ErrorState gates the visible
   // button on the error code, so this only fires for transient codes.
   const onRetry = useCallback(() => {
-    if (lastFile) handleFileStream(lastFile);
-  }, [lastFile, handleFileStream]);
+    if (lastFile) streamExtraction(lastFile);
+  }, [lastFile, streamExtraction]);
 
   const onDropzoneKey = useCallback(
     (e: KeyboardEvent<HTMLLabelElement>) => {
@@ -514,11 +511,9 @@ export default function Home() {
         a.download = `invoiceflow-${format}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-      } catch (err) {
+      } catch {
         // Network failure during CSV export. No status UI exists for this
-        // surface, so log and let the user retry. Without the catch this
-        // would surface as an unhandled promise rejection.
-        console.error("[downloadCsv] export failed:", err);
+        // surface; the catch prevents an unhandled promise rejection.
       }
     },
     [],
@@ -560,8 +555,7 @@ export default function Home() {
             message: `Failed, ${data.error ?? "unknown reason"}.`,
           });
         }
-      } catch (err) {
-        console.error("[fireWebhook] request failed:", err);
+      } catch {
         setWebhookStatus({
           kind: "api-error",
           message: "Network error: could not reach the server.",
@@ -860,7 +854,7 @@ export default function Home() {
             </span>
             <span aria-hidden="true">·</span>
             <span>
-              Sister project:{" "}
+              Related project:{" "}
               <a
                 className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
                 href="https://github.com/coreystevensdev/tellsight"

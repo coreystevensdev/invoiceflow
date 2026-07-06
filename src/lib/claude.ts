@@ -194,12 +194,7 @@ export type ExtractionInput =
   | { kind: "image"; data: Buffer; mediaType: SupportedImageMediaType }
   | { kind: "pdf"; data: Buffer };
 
-/**
- * Build the custom-fields instruction block. Empty string when no fields
- * are defined so the prompt stays cache-friendly for the common case.
- * Uses each field's id (UUID) as the JSON key so user-supplied names
- * never become schema keys (avoids name-based prompt-injection vectors).
- */
+// Uses UUIDs as JSON keys so user-supplied names never become schema keys.
 function buildCustomFieldsBlock(customFields: CustomField[] = []): string {
   if (customFields.length === 0) return "";
   const lines = customFields
@@ -211,17 +206,6 @@ function buildCustomFieldsBlock(customFields: CustomField[] = []): string {
   return `\n\nAdditionally, extract these user-defined custom fields. Place them under "custom_fields" in the response, keyed exactly by the IDs below. Each value uses the same {value, confidence, reasoning} shape as the standard fields:\n${lines}`;
 }
 
-/**
- * Build the user-message content for the Claude call. Three shapes:
- *   - text input → a single string with <today> tag and <invoice_text> wrapper.
- *   - image input → [image block, text block with bbox-prefix instruction].
- *   - pdf input  → [document block (application/pdf), text block with the
- *                   same bbox-prefix instruction scoped to page 1, since
- *                   PdfPreview only renders page 1].
- *
- * The custom-fields instruction block is appended to whichever text portion
- * exists in each shape.
- */
 export function buildUserContent(
   input: ExtractionInput,
   today: string,
@@ -264,20 +248,6 @@ export function buildUserContent(
   ];
 }
 
-/**
- * Extract structured invoice data using Claude. Three input modes:
- *   - 'text': parsed PDF text (digital PDFs).
- *   - 'image': a raw image buffer (JPG/PNG/GIF/WebP via vision).
- *   - 'pdf':   a raw PDF buffer routed through Claude vision via document
- *              content blocks. Used when pdf-parse returned empty text
- *              (image-only / scanned PDFs).
- *
- * The schema, system prompt, and output shape are identical across all
- * three so downstream consumers don't branch on input type.
- *
- * Retries transient API failures up to EXTRACTION_MAX_RETRIES times.
- * Aborts after EXTRACTION_TIMEOUT_MS. Applies a per-request cost cap.
- */
 export async function extractInvoice(
   input: ExtractionInput,
   options: ExtractInvoiceOptions = {},
