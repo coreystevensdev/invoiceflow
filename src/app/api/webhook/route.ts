@@ -13,6 +13,7 @@ const RequestSchema = z.object({
   webhook_url: z.string().url(),
   invoice: InvoiceExtractionSchema,
   verbose: z.boolean().default(false),
+  idempotency_key: z.string().min(1).max(255).optional(),
 });
 
 function stripReasoning(invoice: z.infer<typeof InvoiceExtractionSchema>) {
@@ -85,14 +86,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { webhook_url, invoice, verbose } = parsed.data;
+  const { webhook_url, invoice, verbose, idempotency_key } = parsed.data;
   const payload = {
     event: "invoice.extracted",
     timestamp: new Date().toISOString(),
     correlation_id: correlationId,
+    idempotency_key: idempotency_key ?? null,
     invoice: verbose ? invoice : stripReasoning(invoice),
     confidence_summary: confidenceSummary(invoice),
   };
+
+  const outboundHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Correlation-Id": correlationId,
+  };
+  if (idempotency_key) {
+    outboundHeaders["Idempotency-Key"] = idempotency_key;
+  }
 
   let status: number;
   let responseText: string;
@@ -100,10 +110,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const res = await fetch(webhook_url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Correlation-Id": correlationId,
-      },
+      headers: outboundHeaders,
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15_000),
     });
