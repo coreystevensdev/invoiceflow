@@ -1,0 +1,11 @@
+{
+  "invoice_number": "TMB-2026-04-0321",
+  "vendor_name": "T-Mobile Business",
+  "bill_date": "2026-04-01",
+  "due_date": "2026-04-25",
+  "po_number": "PO-WIRELESS-01",
+  "subtotal": 840,
+  "tax": 0,
+  "total": 840,
+  "currency": "USD"
+}

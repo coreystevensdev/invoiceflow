@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CBRE-2026-MGMT-0018",
+  "vendor_name": "CBRE Property Mgmt Inc.",
+  "bill_date": "2026-01-31",
+  "due_date": "2026-03-02",
+  "po_number": "PO-MGMT-018",
+  "subtotal": 14500,
+  "tax": 0,
+  "total": 14500,
+  "currency": "USD"
+}

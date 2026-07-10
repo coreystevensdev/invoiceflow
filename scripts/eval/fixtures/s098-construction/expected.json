@@ -1,0 +1,11 @@
+{
+  "invoice_number": "GCL-2026-SITE-0018",
+  "vendor_name": "Granite Contracting LLC",
+  "bill_date": "2026-01-31",
+  "due_date": "2026-03-02",
+  "po_number": "PO-SITE-018",
+  "subtotal": 52000,
+  "tax": 0,
+  "total": 52000,
+  "currency": "USD"
+}

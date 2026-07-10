@@ -1,0 +1,11 @@
+{
+  "invoice_number": "KSI-2026-ADM-0441",
+  "vendor_name": "Kelly Services Inc.",
+  "bill_date": "2026-05-15",
+  "due_date": "2026-06-14",
+  "po_number": "PO-ADM-441",
+  "subtotal": 7200,
+  "tax": 0,
+  "total": 7200,
+  "currency": "USD"
+}

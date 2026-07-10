@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CVW-2026-WIN-0055",
+  "vendor_name": "Clear View Windows LLC",
+  "bill_date": "2026-03-25",
+  "due_date": "2026-04-24",
+  "po_number": "PO-WIN-055",
+  "subtotal": 22500,
+  "tax": 1350,
+  "total": 23850,
+  "currency": "USD"
+}

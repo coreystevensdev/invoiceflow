@@ -1,0 +1,11 @@
+{
+  "invoice_number": "FA-2026-AIR-0051",
+  "vendor_name": "Forward Air Inc.",
+  "bill_date": "2026-05-20",
+  "due_date": "2026-06-19",
+  "po_number": "PO-AIR-051",
+  "subtotal": 8900,
+  "tax": 0,
+  "total": 8900,
+  "currency": "USD"
+}

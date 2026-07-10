@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CPE-2026-03-41002",
+  "vendor_name": "CenterPoint Energy",
+  "bill_date": "2026-03-05",
+  "due_date": "2026-03-26",
+  "po_number": null,
+  "subtotal": 892.44,
+  "tax": 0,
+  "total": 892.44,
+  "currency": "USD"
+}

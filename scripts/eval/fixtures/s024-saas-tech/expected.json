@@ -1,0 +1,11 @@
+{
+  "invoice_number": "IL-2026-Q1-005",
+  "vendor_name": "InfraLogic Inc.",
+  "bill_date": "2026-01-15",
+  "due_date": "2026-02-14",
+  "po_number": "PO-INFRA-001",
+  "subtotal": 9600,
+  "tax": 576,
+  "total": 10176,
+  "currency": "USD"
+}

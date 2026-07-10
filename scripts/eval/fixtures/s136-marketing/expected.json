@@ -1,0 +1,11 @@
+{
+  "invoice_number": "VIM-2026-ENT-0021",
+  "vendor_name": "Vimeo Enterprise Inc.",
+  "bill_date": "2026-03-01",
+  "due_date": "2026-04-01",
+  "po_number": "PO-VIDEO-021",
+  "subtotal": 3000,
+  "tax": 0,
+  "total": 3000,
+  "currency": "USD"
+}

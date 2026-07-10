@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ISF-2026-STR-0009",
+  "vendor_name": "Ironclad Steel Fab Inc.",
+  "bill_date": "2026-02-28",
+  "due_date": "2026-03-30",
+  "po_number": "PO-STR-009",
+  "subtotal": 88000,
+  "tax": 0,
+  "total": 88000,
+  "currency": "USD"
+}

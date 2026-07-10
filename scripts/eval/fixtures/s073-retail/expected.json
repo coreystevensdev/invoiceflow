@@ -1,0 +1,11 @@
+{
+  "invoice_number": "GI-2026-WHR-0098",
+  "vendor_name": "Global Industrial LLC",
+  "bill_date": "2026-04-10",
+  "due_date": "2026-05-10",
+  "po_number": "PO-WHR-0098",
+  "subtotal": 8900,
+  "tax": 534,
+  "total": 9434,
+  "currency": "USD"
+}

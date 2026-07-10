@@ -1,0 +1,11 @@
+{
+  "invoice_number": "MLI-2026-SC-0014",
+  "vendor_name": "Menlo Logistics Inc.",
+  "bill_date": "2026-02-28",
+  "due_date": "2026-03-30",
+  "po_number": "PO-SC-014",
+  "subtotal": 22000,
+  "tax": 0,
+  "total": 22000,
+  "currency": "USD"
+}

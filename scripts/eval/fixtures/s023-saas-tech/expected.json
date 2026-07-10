@@ -1,0 +1,11 @@
+{
+  "invoice_number": "RCDN-2026-0040",
+  "vendor_name": "Relay CDN Corp.",
+  "bill_date": "2026-02-28",
+  "due_date": null,
+  "po_number": null,
+  "subtotal": 843.22,
+  "tax": 0,
+  "total": 843.22,
+  "currency": "USD"
+}

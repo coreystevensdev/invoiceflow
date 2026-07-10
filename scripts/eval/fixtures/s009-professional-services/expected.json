@@ -1,0 +1,11 @@
+{
+  "invoice_number": "AWL-2026-4421",
+  "vendor_name": "Anderson and Wells Law Group",
+  "bill_date": "2026-01-20",
+  "due_date": "2026-02-20",
+  "po_number": null,
+  "subtotal": 4350,
+  "tax": 0,
+  "total": 4350,
+  "currency": "USD"
+}

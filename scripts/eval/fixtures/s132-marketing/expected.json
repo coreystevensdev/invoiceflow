@@ -1,0 +1,11 @@
+{
+  "invoice_number": "WC-2026-DAM-0009",
+  "vendor_name": "Widen Collective Inc.",
+  "bill_date": "2026-01-01",
+  "due_date": "2026-01-31",
+  "po_number": "PO-DAM-009",
+  "subtotal": 18000,
+  "tax": 0,
+  "total": 18000,
+  "currency": "USD"
+}

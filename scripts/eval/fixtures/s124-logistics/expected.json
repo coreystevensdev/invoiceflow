@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ECHO-2026-3PL-0019",
+  "vendor_name": "Echo Logistics LLC",
+  "bill_date": "2026-01-31",
+  "due_date": "2026-03-02",
+  "po_number": "PO-3PL-019",
+  "subtotal": 12000,
+  "tax": 0,
+  "total": 12000,
+  "currency": "USD"
+}

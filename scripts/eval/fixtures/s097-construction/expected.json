@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SHVAC-2026-COMM-0122",
+  "vendor_name": "Summit HVAC Inc.",
+  "bill_date": "2026-04-15",
+  "due_date": "2026-05-15",
+  "po_number": "PO-HVAC-122",
+  "subtotal": 28500,
+  "tax": 1710,
+  "total": 30210,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "EPC-2026-COMM-0066",
+  "vendor_name": "Eagle Painting Corp.",
+  "bill_date": "2026-05-25",
+  "due_date": "2026-06-24",
+  "po_number": "PO-PAINT-066",
+  "subtotal": 11200,
+  "tax": 0,
+  "total": 11200,
+  "currency": "USD"
+}

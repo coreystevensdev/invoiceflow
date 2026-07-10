@@ -1,0 +1,11 @@
+{
+  "invoice_number": "HLP-COACH-2026-0012",
+  "vendor_name": "Heights Leadership Partners",
+  "bill_date": "2026-02-28",
+  "due_date": "2026-03-30",
+  "po_number": null,
+  "subtotal": 4500,
+  "tax": 0,
+  "total": 4500,
+  "currency": "USD"
+}

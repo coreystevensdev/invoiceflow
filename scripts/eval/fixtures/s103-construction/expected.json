@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PLG-2026-MAINT-0288",
+  "vendor_name": "ProLandscape Group LLC",
+  "bill_date": "2026-05-01",
+  "due_date": "2026-05-31",
+  "po_number": null,
+  "subtotal": 2400,
+  "tax": 0,
+  "total": 2400,
+  "currency": "USD"
+}

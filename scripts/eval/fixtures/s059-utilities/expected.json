@@ -1,0 +1,11 @@
+{
+  "invoice_number": "DUKE-2026-04-55892",
+  "vendor_name": "Duke Energy Corp.",
+  "bill_date": "2026-04-10",
+  "due_date": "2026-05-05",
+  "po_number": null,
+  "subtotal": 763.19,
+  "tax": 0,
+  "total": 763.19,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "1PW-2026-T-0088",
+  "vendor_name": "1Password Teams LLC",
+  "bill_date": "2026-06-01",
+  "due_date": "2026-06-30",
+  "po_number": null,
+  "subtotal": 456,
+  "tax": 0,
+  "total": 456,
+  "currency": "USD"
+}

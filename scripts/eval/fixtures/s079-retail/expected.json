@@ -1,0 +1,11 @@
+{
+  "invoice_number": "COST-BIZ-2026-0332",
+  "vendor_name": "Costco Wholesale Corp.",
+  "bill_date": "2026-02-05",
+  "due_date": "2026-03-07",
+  "po_number": "PO-BULK-0332",
+  "subtotal": 2190,
+  "tax": 202.58,
+  "total": 2392.58,
+  "currency": "USD"
+}

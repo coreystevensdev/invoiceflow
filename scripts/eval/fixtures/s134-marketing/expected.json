@@ -1,0 +1,11 @@
+{
+  "invoice_number": "GI-2026-LIC-0441",
+  "vendor_name": "Getty Images LLC",
+  "bill_date": "2026-05-10",
+  "due_date": "2026-06-09",
+  "po_number": "PO-LIC-441",
+  "subtotal": 2400,
+  "tax": 0,
+  "total": 2400,
+  "currency": "USD"
+}

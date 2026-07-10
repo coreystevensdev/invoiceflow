@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ODB-2026-FURN-0022",
+  "vendor_name": "Office Depot Business",
+  "bill_date": "2026-02-10",
+  "due_date": "2026-03-12",
+  "po_number": "PO-FURN-0022",
+  "subtotal": 4340,
+  "tax": 303.8,
+  "total": 4643.8,
+  "currency": "USD"
+}

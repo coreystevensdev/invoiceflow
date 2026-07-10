@@ -31,7 +31,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
-    "pdf-lib": "^1.17.1",
     "playwright": "^1.59.1",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",

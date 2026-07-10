@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SSE-2026-ENT-0033",
+  "vendor_name": "Shutterstock Enterprise",
+  "bill_date": "2026-04-01",
+  "due_date": "2026-05-01",
+  "po_number": "PO-STOCK-033",
+  "subtotal": 4200,
+  "tax": 0,
+  "total": 4200,
+  "currency": "USD"
+}

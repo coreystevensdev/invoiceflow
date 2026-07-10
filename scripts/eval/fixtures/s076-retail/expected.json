@@ -1,0 +1,11 @@
+{
+  "invoice_number": "BBY-BIZ-2026-0087",
+  "vendor_name": "Best Buy Business",
+  "bill_date": "2026-01-15",
+  "due_date": "2026-02-14",
+  "po_number": "PO-TECH-0087",
+  "subtotal": 6450,
+  "tax": 572.44,
+  "total": 7022.44,
+  "currency": "USD"
+}

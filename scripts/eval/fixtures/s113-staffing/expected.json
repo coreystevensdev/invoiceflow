@@ -1,0 +1,11 @@
+{
+  "invoice_number": "AERO-2026-ENG-0088",
+  "vendor_name": "Aerotek Staffing LLC",
+  "bill_date": "2026-04-30",
+  "due_date": "2026-05-30",
+  "po_number": "PO-ENG-088",
+  "subtotal": 26400,
+  "tax": 0,
+  "total": 26400,
+  "currency": "USD"
+}

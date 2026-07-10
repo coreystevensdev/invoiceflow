@@ -1,0 +1,11 @@
+{
+  "invoice_number": "AMD-2026-SW-0099",
+  "vendor_name": "AdvancedMD Inc.",
+  "bill_date": "2026-02-01",
+  "due_date": "2026-03-03",
+  "po_number": null,
+  "subtotal": 1488,
+  "tax": 0,
+  "total": 1488,
+  "currency": "USD"
+}

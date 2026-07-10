@@ -1,0 +1,11 @@
+{
+  "invoice_number": "KAR-2026-BILL-0044",
+  "vendor_name": "Kareo Inc.",
+  "bill_date": "2026-04-01",
+  "due_date": "2026-05-01",
+  "po_number": null,
+  "subtotal": 599,
+  "tax": 0,
+  "total": 599,
+  "currency": "USD"
+}

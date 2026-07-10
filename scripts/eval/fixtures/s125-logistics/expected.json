@@ -1,0 +1,11 @@
+{
+  "invoice_number": "FLX-2026-WH-0088",
+  "vendor_name": "Flexe Warehousing Inc.",
+  "bill_date": "2026-04-30",
+  "due_date": "2026-05-30",
+  "po_number": "PO-WH-088",
+  "subtotal": 7200,
+  "tax": 0,
+  "total": 7200,
+  "currency": "USD"
+}

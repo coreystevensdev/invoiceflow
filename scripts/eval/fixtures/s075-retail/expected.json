@@ -1,0 +1,11 @@
+{
+  "invoice_number": "BRT-2026-INK-0022",
+  "vendor_name": "Brother Int'l Corp.",
+  "bill_date": "2026-05-05",
+  "due_date": "2026-06-04",
+  "po_number": null,
+  "subtotal": 318,
+  "tax": 23.85,
+  "total": 341.85,
+  "currency": "USD"
+}

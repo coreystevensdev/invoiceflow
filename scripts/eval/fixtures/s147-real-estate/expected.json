@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SVC-2026-CLN-0441",
+  "vendor_name": "ServiceMaster Commercial Inc.",
+  "bill_date": "2026-03-31",
+  "due_date": "2026-04-30",
+  "po_number": "PO-CLN-441",
+  "subtotal": 6200,
+  "tax": 0,
+  "total": 6200,
+  "currency": "USD"
+}

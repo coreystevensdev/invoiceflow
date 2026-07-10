@@ -1,0 +1,11 @@
+{
+  "invoice_number": "GRY-2026-MGMT-0003",
+  "vendor_name": "Greystar Real Estate Partners",
+  "bill_date": "2026-03-31",
+  "due_date": "2026-04-30",
+  "po_number": "PO-PM-003",
+  "subtotal": 8400,
+  "tax": 0,
+  "total": 8400,
+  "currency": "USD"
+}

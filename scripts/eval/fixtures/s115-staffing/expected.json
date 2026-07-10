@@ -1,0 +1,11 @@
+{
+  "invoice_number": "INS-2026-HR-0041",
+  "vendor_name": "Insperity HR Solutions",
+  "bill_date": "2026-01-31",
+  "due_date": "2026-03-02",
+  "po_number": "PO-HR-041",
+  "subtotal": 14400,
+  "tax": 0,
+  "total": 14400,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "RT-2026-IT-0551",
+  "vendor_name": "Randstad Technologies LLC",
+  "bill_date": "2026-02-28",
+  "due_date": "2026-03-30",
+  "po_number": "PO-IT-0551",
+  "subtotal": 19200,
+  "tax": 0,
+  "total": 19200,
+  "currency": "USD"
+}

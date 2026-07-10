@@ -1,0 +1,11 @@
+{
+  "invoice_number": "LC-2026-Q1-03312",
+  "vendor_name": "LabCorp LLC",
+  "bill_date": "2026-01-31",
+  "due_date": "2026-03-02",
+  "po_number": "PO-LC-0331",
+  "subtotal": 2100,
+  "tax": 0,
+  "total": 2100,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "TBL-2026-REN-0055",
+  "vendor_name": "Tableau Desktop Inc.",
+  "bill_date": "2026-06-01",
+  "due_date": "2026-06-30",
+  "po_number": "PO-BI-0055",
+  "subtotal": 4200,
+  "tax": 336,
+  "total": 4536,
+  "currency": "USD"
+}

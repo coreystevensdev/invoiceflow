@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CMG-2026-RET-004",
+  "vendor_name": "Catalyst Marketing Group",
+  "bill_date": "2026-04-01",
+  "due_date": "2026-04-30",
+  "po_number": "PO-MKT-004",
+  "subtotal": 9000,
+  "tax": 0,
+  "total": 9000,
+  "currency": "USD"
+}

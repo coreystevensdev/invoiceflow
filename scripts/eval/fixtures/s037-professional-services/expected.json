@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PMC-2026-0220",
+  "vendor_name": "Pinnacle Management Consulting",
+  "bill_date": "2026-05-15",
+  "due_date": "2026-06-14",
+  "po_number": "PO-STRAT-220",
+  "subtotal": 35000,
+  "tax": 0,
+  "total": 35000,
+  "currency": "USD"
+}

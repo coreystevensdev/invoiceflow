@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SBS-2026-0133",
+  "vendor_name": "Sterling Bookkeeping Services",
+  "bill_date": "2026-01-31",
+  "due_date": "2026-02-15",
+  "po_number": null,
+  "subtotal": 1200,
+  "tax": 0,
+  "total": 1200,
+  "currency": "USD"
+}

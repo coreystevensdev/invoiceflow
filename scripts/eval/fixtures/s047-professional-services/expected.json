@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PRT-2026-0441",
+  "vendor_name": "Pacific Rim Translations Inc.",
+  "bill_date": "2026-05-05",
+  "due_date": "2026-06-04",
+  "po_number": null,
+  "subtotal": 1850,
+  "tax": 0,
+  "total": 1850,
+  "currency": "USD"
+}

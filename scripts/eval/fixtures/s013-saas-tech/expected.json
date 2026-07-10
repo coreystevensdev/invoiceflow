@@ -1,0 +1,11 @@
+{
+  "invoice_number": "DS-2026-0041",
+  "vendor_name": "DataStream Solutions LLC",
+  "bill_date": "2026-02-28",
+  "due_date": "2026-03-28",
+  "po_number": "PO-2200",
+  "subtotal": 8200,
+  "tax": 512.5,
+  "total": 8712.5,
+  "currency": "USD"
+}

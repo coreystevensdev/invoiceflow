@@ -1,0 +1,11 @@
+{
+  "invoice_number": "GWW-2026-0881-A",
+  "vendor_name": "Grainger Supply Inc.",
+  "bill_date": "2026-05-20",
+  "due_date": "2026-06-19",
+  "po_number": "PO-SAFETY-881",
+  "subtotal": 2145,
+  "tax": 128.7,
+  "total": 2273.7,
+  "currency": "USD"
+}

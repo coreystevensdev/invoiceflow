@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SBA-2026-0441-INV",
+  "vendor_name": "Staples Business Advantage",
+  "bill_date": "2026-03-01",
+  "due_date": "2026-03-31",
+  "po_number": "PO-OFFICE-0441",
+  "subtotal": 892.3,
+  "tax": 53.54,
+  "total": 945.84,
+  "currency": "USD"
+}

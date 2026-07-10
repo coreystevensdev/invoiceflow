@@ -1,0 +1,11 @@
+{
+  "invoice_number": "FERG-2026-PLB-0554",
+  "vendor_name": "Ferguson Enterprises LLC",
+  "bill_date": "2026-02-20",
+  "due_date": "2026-03-22",
+  "po_number": "PO-PLB-0554",
+  "subtotal": 4422,
+  "tax": 265.32,
+  "total": 4687.32,
+  "currency": "USD"
+}

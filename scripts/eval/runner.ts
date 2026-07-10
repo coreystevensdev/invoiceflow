@@ -42,14 +42,24 @@ async function runOne(fixture: Fixture): Promise<InvoiceScore> {
 
   try {
     let input: Parameters<typeof extractInvoice>[0];
-    try {
-      const parsed = await parsePdf(bytes);
-      input = { kind: "text", text: parsed.text };
-    } catch (err) {
-      if (err instanceof PdfParseError && err.code === "image_only") {
-        input = { kind: "pdf", data: bytes };
-      } else {
-        throw err;
+
+    // invoice.txt is written by generate-synthetic.ts for fixtures where
+    // pdf-parse can't extract text (minimal hand-crafted PDFs lack the font
+    // encoding metadata PDF.js 1.x needs). Real-world PDFs uploaded by users
+    // don't have this problem; this fallback only fires for synthetic fixtures.
+    const txtPath = fixture.pdfPath.replace(/invoice\.pdf$/, "invoice.txt");
+    if (fs.existsSync(txtPath)) {
+      input = { kind: "text", text: fs.readFileSync(txtPath, "utf-8") };
+    } else {
+      try {
+        const parsed = await parsePdf(bytes);
+        input = { kind: "text", text: parsed.text };
+      } catch (err) {
+        if (err instanceof PdfParseError && err.code === "image_only") {
+          input = { kind: "pdf", data: bytes };
+        } else {
+          throw err;
+        }
       }
     }
 

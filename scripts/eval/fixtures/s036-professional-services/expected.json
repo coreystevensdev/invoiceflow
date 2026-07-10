@@ -1,0 +1,11 @@
+{
+  "invoice_number": "HLP-2026-0031",
+  "vendor_name": "Hargrove Legal Partners LLP",
+  "bill_date": "2026-04-10",
+  "due_date": "2026-05-10",
+  "po_number": "PO-LEGAL-031",
+  "subtotal": 22500,
+  "tax": 0,
+  "total": 22500,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PHI-2026-MON-0002",
+  "vendor_name": "Philips Healthcare NA",
+  "bill_date": "2026-03-20",
+  "due_date": "2026-04-19",
+  "po_number": "PO-MON-0002",
+  "subtotal": 18500,
+  "tax": 0,
+  "total": 18500,
+  "currency": "USD"
+}

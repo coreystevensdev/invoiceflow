@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ULINE-2026-INV-0332",
+  "vendor_name": "Uline Inc.",
+  "bill_date": "2026-01-25",
+  "due_date": "2026-02-24",
+  "po_number": "PO-SHIP-0332",
+  "subtotal": 3210,
+  "tax": 0,
+  "total": 3210,
+  "currency": "USD"
+}

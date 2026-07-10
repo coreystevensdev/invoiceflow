@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SFS-2026-INST-0014",
+  "vendor_name": "Security First Systems LLC",
+  "bill_date": "2026-06-10",
+  "due_date": "2026-07-10",
+  "po_number": "PO-SEC-014",
+  "subtotal": 16800,
+  "tax": 1008,
+  "total": 17808,
+  "currency": "USD"
+}
