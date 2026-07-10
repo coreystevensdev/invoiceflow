@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://invoiceflow-cs.vercel.app"><img src="https://img.shields.io/badge/live--demo-invoiceflow--cs.vercel.app-2563eb?style=flat" alt="Live demo"></a>
   <a href="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml"><img src="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-110-brightgreen.svg" alt="110 tests">
+  <img src="https://img.shields.io/badge/tests-112-brightgreen.svg" alt="112 tests">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="MIT License">
 </p>
 
