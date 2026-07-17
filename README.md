@@ -23,6 +23,8 @@ Finance and accounting workflows that handle vendor invoices copy vendor names, 
 
 Drop any PDF or invoice image and get structured JSON back in under 5 seconds. Claude reads the document with a Zod schema enforced at the SDK boundary, extracting the nine standard fields plus any custom fields defined at runtime. Each field returns with the source text used to derive it. No login, no database, no file storage: every document processes in memory within a single Vercel Function and disappears when the request ends. PDFs run through `pdf-parse` for the text layer first; scanned PDFs and uploaded images route to Claude vision. Same Zod schema, same response shape either way.
 
+## Features
+
 <p align="center">
   <img src="public/screenshots/landing-v2.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
 </p>
@@ -50,6 +52,31 @@ Drop any PDF or invoice image and get structured JSON back in under 5 seconds. C
 </tr>
 </table>
 
+## Architecture
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Vercel Function
+    participant Anthropic API
+
+    Browser->>Vercel Function: POST PDF/image
+    Vercel Function->>Vercel Function: rate-limit by IP
+    Vercel Function->>Vercel Function: detect type from MIME + magic bytes
+    Note over Vercel Function: PDF -> pdf-parse -> text<br/>image -> base64-encode bytes
+    Vercel Function->>Anthropic API: messages.parse(sys+user)
+    Note over Anthropic API: text path: text user message<br/>image path: image content block<br/>system prompt cached either way<br/>Zod schema enforces output
+    Anthropic API-->>Vercel Function: parsed_output, usage
+    Vercel Function->>Vercel Function: deterministic flags + merge
+    Vercel Function->>Vercel Function: cost guard, 3x rolling median?
+    Vercel Function->>Vercel Function: log usage by correlation id
+    Vercel Function-->>Browser: JSON + correlation id
+```
+
+Everything inside the function is one Node.js process. No queue, no worker, no background job. Vercel's Fluid Compute reuses the instance across concurrent requests, so the in-memory cost history and rate-limit buckets persist across warm invocations (per-instance, not globally, see "Known limitations").
+
+## Tech Stack
+
 | Layer | Technology | Why |
 |---|---|---|
 | Framework | Next.js 16 (App Router) | Server Components for zero-JS landing; Fluid Compute for 300s extraction timeout; `src/proxy.ts` middleware for per-request CSP nonce |
@@ -60,17 +87,6 @@ Drop any PDF or invoice image and get structured JSON back in under 5 seconds. C
 | Security | `src/proxy.ts` (Next.js 16 middleware) | Per-request nonce injected into CSP; `strict-dynamic` with no `unsafe-inline`; JSON-LD served via route rather than inline script |
 | Rate limiting | In-memory sliding window | No Redis dependency; per-Fluid-Compute-instance trade-off documented; reuses `slidingWindow()` primitive across routes |
 | Cost control | rolling-cost-cap | 3x rolling-median anomaly cap + $1 absolute ceiling; records cost even when tripped so the monthly total stays accurate |
-
-## Run locally
-
-```bash
-cp .env.example .env.local
-# paste your Anthropic API key into .env.local
-npm install
-npm run dev
-```
-
-Open http://localhost:3000 and drop a PDF.
 
 ## Routes
 
@@ -84,31 +100,16 @@ Open http://localhost:3000 and drop a PDF.
 
 Every API response carries a `correlation_id` (UUID v4) for log lookups. Errors are typed; the discriminated union lives in `src/lib/errors.ts`.
 
-## How it works
+## Getting Started
 
-```
-Browser              Vercel Function                       Anthropic API
-  │                         │                                    │
-  │ ── POST PDF/image ───>  │                                    │
-  │                         │  rate-limit by IP                  │
-  │                         │  detect type from MIME + magic     │
-  │                         │   PDF  → pdf-parse → text          │
-  │                         │   image → base64-encode bytes      │
-  │                         │                                    │
-  │                         │ ── messages.parse(sys+user) ────>  │
-  │                         │   text path: text user message     │
-  │                         │   image path: image content block  │
-  │                         │   system prompt cached either way  │
-  │                         │   Zod schema enforces output       │
-  │                         │ <── parsed_output, usage ────────  │
-  │                         │                                    │
-  │                         │  deterministic flags + merge       │
-  │                         │  cost guard: 3× rolling median?    │
-  │                         │  log usage by correlation id       │
-  │ <── JSON + corr. id ──  │                                    │
+```bash
+cp .env.example .env.local
+# paste your Anthropic API key into .env.local
+npm install
+npm run dev
 ```
 
-Everything inside the function is one Node.js process. No queue, no worker, no background job. Vercel's Fluid Compute reuses the instance across concurrent requests, so the in-memory cost history and rate-limit buckets persist across warm invocations (per-instance, not globally, see "Known limitations").
+Open http://localhost:3000 and drop a PDF.
 
 ## File layout
 
