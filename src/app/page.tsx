@@ -609,7 +609,7 @@ export default function Home() {
           data-print-hide
           className={`grid overflow-hidden border transition-colors sm:grid-cols-[2fr_1fr] ${
             isDragging && !dropzoneBusy
-              ? "border-indigo-500"
+              ? "border-ink-navy"
               : "border-zinc-200 dark:border-zinc-800"
           }`}
         >
@@ -645,11 +645,11 @@ export default function Home() {
             onClick={(e) => {
               if (dropzoneBusy) e.preventDefault();
             }}
-            className={`flex min-h-[200px] flex-col justify-between p-10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 ${
+            className={`flex min-h-[200px] flex-col justify-between p-10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-navy ${
               dropzoneBusy
                 ? "cursor-wait opacity-70"
                 : isDragging
-                  ? "cursor-pointer bg-indigo-50 dark:bg-indigo-950/20"
+                  ? "cursor-pointer bg-ink-navy/10 dark:bg-ink-navy/20"
                   : "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
             }`}
           >
@@ -670,7 +670,7 @@ export default function Home() {
                 aria-live="polite"
               >
                 <svg
-                  className="h-4 w-4 animate-spin text-indigo-600 motion-reduce:animate-none dark:text-indigo-400"
+                  className="h-4 w-4 animate-spin text-ink-navy motion-reduce:animate-none dark:text-ink-navy-hover"
                   viewBox="0 0 24 24"
                   fill="none"
                   aria-hidden="true"
@@ -819,7 +819,7 @@ export default function Home() {
             <span>
               Powered by{" "}
               <a
-                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
                 href="https://www.anthropic.com/claude"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -830,7 +830,7 @@ export default function Home() {
             </span>
             <span aria-hidden="true">·</span>
             <a
-              className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+              className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
               href="https://github.com/coreystevensdev/invoiceflow"
               target="_blank"
               rel="noopener noreferrer"
@@ -843,7 +843,7 @@ export default function Home() {
             <span>
               By{" "}
               <a
-                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
                 href="https://github.com/coreystevensdev"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -856,7 +856,7 @@ export default function Home() {
             <span>
               Related project:{" "}
               <a
-                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
                 href="https://github.com/coreystevensdev/tellsight"
                 target="_blank"
                 rel="noopener noreferrer"

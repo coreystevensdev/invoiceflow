@@ -287,7 +287,7 @@ export function PdfPreview({
               href={pdfUrl}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-indigo-700 underline dark:text-indigo-400"
+              className="font-medium text-ink-navy underline dark:text-ink-navy-hover"
             >
               Open PDF in a new tab
             </a>
@@ -303,7 +303,7 @@ export function PdfPreview({
             href={pdfUrl}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-indigo-700 underline dark:text-indigo-400"
+            className="font-medium text-ink-navy underline dark:text-ink-navy-hover"
           >
             Open PDF in new tab
           </a>
@@ -338,7 +338,7 @@ export function PdfPreview({
       {activeBbox && rendered && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute rounded border-2 border-indigo-500 bg-indigo-500/15 shadow-[0_0_0_3px_rgba(99,102,241,0.2)] transition-all duration-150 motion-reduce:transition-none"
+          className="pointer-events-none absolute rounded border-2 border-legal-pad-border bg-legal-pad/40 shadow-[0_0_0_3px_rgba(255,245,184,0.35)] transition-all duration-150 motion-reduce:transition-none"
           style={{
             left: `${activeBbox[0] * 100}%`,
             top: `${activeBbox[1] * 100}%`,

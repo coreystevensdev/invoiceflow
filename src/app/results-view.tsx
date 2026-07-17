@@ -238,7 +238,7 @@ function FieldRow({
             }}
             inputMode={money ? "decimal" : "text"}
             spellCheck={false}
-            className="w-full rounded-md border border-indigo-400 bg-white px-2 py-1 font-mono text-base font-medium text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-indigo-500 dark:bg-zinc-950 dark:text-zinc-100"
+            className="w-full rounded-md border border-ink-navy/60 bg-white px-2 py-1 font-mono text-base font-medium text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy dark:border-ink-navy dark:bg-zinc-950 dark:text-zinc-100"
           />
         </dd>
       ) : (
@@ -247,7 +247,7 @@ function FieldRow({
             id={inputId}
             type="button"
             onClick={startEditing}
-            className="rounded text-left hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            className="rounded text-left hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
             aria-label={`${label}, ${display}. Click to edit.`}
             aria-describedby={field.reasoning ? reasoningId : undefined}
           >
@@ -269,7 +269,7 @@ function FieldRow({
               aria-label={
                 manuallyShown ? "Hide reasoning" : "Show reasoning"
               }
-              className="hidden h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[10px] font-semibold leading-none text-zinc-600 hover:border-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-500 pointer-coarse:inline-flex"
+              className="hidden h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[10px] font-semibold leading-none text-zinc-600 hover:border-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-500 pointer-coarse:inline-flex"
             >
               i
             </button>
@@ -412,7 +412,7 @@ function EditableCell({
           }}
           spellCheck={false}
           aria-label={ariaLabel}
-          className={`w-full rounded-md border border-indigo-400 bg-white px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-indigo-500 dark:bg-zinc-950 dark:text-zinc-100 ${
+          className={`w-full rounded-md border border-ink-navy/60 bg-white px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy dark:border-ink-navy dark:bg-zinc-950 dark:text-zinc-100 ${
             kind === "text" ? "text-left" : "text-right tabular-nums"
           }`}
         />
@@ -421,7 +421,7 @@ function EditableCell({
           type="button"
           onClick={startEditing}
           aria-label={`${ariaLabel}, ${display}. Click to edit.`}
-          className={`rounded text-inherit hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
+          className={`rounded text-inherit hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 ${
             kind === "text" ? "text-left" : "tabular-nums"
           }`}
         >
@@ -541,7 +541,7 @@ function JsonPanel({
             type="button"
             onClick={onCopy}
             aria-label="Copy JSON to clipboard"
-            className="rounded-md border border-zinc-700 px-2 py-1 font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="rounded-md border border-zinc-700 px-2 py-1 font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy"
           >
             {copied ? "Copied" : "Copy"}
           </button>
@@ -854,7 +854,7 @@ export function ResultsView({
                   setEdited(result.invoice);
                   setActiveBbox(null);
                 }}
-                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
               >
                 Reset
               </button>
@@ -891,7 +891,7 @@ export function ResultsView({
               {activeBbox && (
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute rounded border-2 border-indigo-500 bg-indigo-500/15 shadow-[0_0_0_3px_rgba(99,102,241,0.2)] transition-all duration-150 motion-reduce:transition-none"
+                  className="pointer-events-none absolute rounded border-2 border-legal-pad-border bg-legal-pad/40 shadow-[0_0_0_3px_rgba(255,245,184,0.35)] transition-all duration-150 motion-reduce:transition-none"
                   style={{
                     left: `${activeBbox[0] * 100}%`,
                     top: `${activeBbox[1] * 100}%`,
@@ -929,7 +929,7 @@ export function ResultsView({
               tabIndex={view === "fields" ? 0 : -1}
               onClick={() => setView("fields")}
               onKeyDown={onTabKeyDown}
-              className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+              className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy ${
                 view === "fields"
                   ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                   : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -946,7 +946,7 @@ export function ResultsView({
               tabIndex={view === "json" ? 0 : -1}
               onClick={() => setView("json")}
               onKeyDown={onTabKeyDown}
-              className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+              className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy ${
                 view === "json"
                   ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                   : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
@@ -1025,28 +1025,28 @@ export function ResultsView({
           <button
             type="button"
             onClick={() => downloadCsv("summary", displayInvoice)}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             Download summary CSV
           </button>
           <button
             type="button"
             onClick={() => downloadCsv("line_items", displayInvoice)}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
             Download line-items CSV
           </button>
           <button
             type="button"
             onClick={downloadJson}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
             Download JSON
           </button>
           <button
             type="button"
             onClick={onReset}
-            className="ml-auto rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+            className="ml-auto rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
           >
             Upload another
           </button>
@@ -1083,13 +1083,13 @@ export function ResultsView({
             placeholder="https://api.example.com/webhooks/invoiceflow"
             aria-invalid={webhookUrlError ? true : undefined}
             aria-describedby={webhookUrlError ? webhookHelpId : undefined}
-            className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-950"
+            className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy dark:border-zinc-700 dark:bg-zinc-950"
           />
           <button
             type="button"
             onClick={() => fireWebhook(displayInvoice)}
             disabled={!webhookUrlValid || webhookFiring}
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-2 rounded-lg bg-ink-navy px-4 py-2 text-sm font-medium text-white hover:bg-ink-navy-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           >
             {webhookFiring && (
               <svg
@@ -1122,7 +1122,7 @@ export function ResultsView({
             type="checkbox"
             checked={rememberWebhookUrl}
             onChange={(e) => setRememberWebhookUrl(e.target.checked)}
-            className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className="h-4 w-4 rounded border-zinc-300 text-ink-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-950"
           />
           <span>
             Remember this URL on this device.{" "}
