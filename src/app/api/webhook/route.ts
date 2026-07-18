@@ -5,6 +5,7 @@ import { confidenceSummary } from "@/lib/validate";
 import { toErrorResponse } from "@/lib/errors";
 import { createLogger } from "@/lib/log";
 import { clientIpFrom, inquiryLimit } from "@/lib/rate-limit";
+import { assertPublicHttpUrl } from "@/lib/ssrf-guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -87,6 +88,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const { webhook_url, invoice, verbose, idempotency_key } = parsed.data;
+
+  try {
+    await assertPublicHttpUrl(webhook_url);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn({
+      route: "webhook",
+      category: "webhook-url-blocked",
+      http_status: 400,
+      duration_ms: Date.now() - start,
+    });
+    return NextResponse.json(
+      {
+        error: message,
+        code: "webhook-url-blocked",
+        correlation_id: correlationId,
+      },
+      {
+        status: 400,
+        headers: { "X-Correlation-Id": correlationId },
+      },
+    );
+  }
+
   const payload = {
     event: "invoice.extracted",
     timestamp: new Date().toISOString(),
@@ -113,6 +138,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       headers: outboundHeaders,
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15_000),
+      redirect: "manual",
     });
     status = res.status;
     responseText = await res.text().catch(() => "");
