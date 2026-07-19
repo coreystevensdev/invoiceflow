@@ -6,6 +6,7 @@ import {
 } from "@/lib/claude";
 import { extractInvoiceStream } from "@/lib/claude-stream";
 import { parsePdf, PdfParseError } from "@/lib/pdf";
+import { MAX_IMAGE_BYTES, MAX_PDF_BYTES } from "@/lib/limits";
 import { confidenceSummary, deterministicFlags, mergeFlags } from "@/lib/validate";
 import { toErrorResponse, type ExtractionErrorCode } from "@/lib/errors";
 import { createLogger } from "@/lib/log";
@@ -21,12 +22,6 @@ import { CustomFieldsArraySchema, type CustomField } from "@/lib/custom-fields";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
-
-const MAX_PDF_BYTES = 25 * 1024 * 1024;
-// Anthropic vision's per-image limit is 5 MB after base64 encoding. Base64
-// inflates raw bytes by ~1.33x, so the equivalent raw cap is ~3.75 MB. Use
-// 3.5 MB to leave a small buffer for JSON payload overhead.
-const MAX_IMAGE_BYTES = Math.floor(3.5 * 1024 * 1024);
 
 const IMAGE_MIME_TYPES: Record<string, SupportedImageMediaType> = {
   "image/jpeg": "image/jpeg",

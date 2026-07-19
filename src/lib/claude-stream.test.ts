@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { PartialJsonFieldParser } from "./claude-stream";
+import {
+  PartialJsonFieldParser,
+  STREAMING_FIELD_KEYS,
+  STREAMING_SCHEMA_CONSTRAINT,
+} from "./claude-stream";
+import { InvoiceExtractionSchema } from "./claude";
 
 describe("PartialJsonFieldParser", () => {
   it("emits a field once its value object closes", () => {
@@ -58,5 +63,23 @@ describe("PartialJsonFieldParser", () => {
     expect(results).toHaveLength(1);
     expect(results[0].field).toBe("line_items");
     expect(Array.isArray(results[0].value)).toBe(true);
+  });
+});
+
+describe("STREAMING_SCHEMA_CONSTRAINT", () => {
+  it("stays in sync with InvoiceExtractionSchema's top-level fields", () => {
+    const zodKeys = Object.keys(InvoiceExtractionSchema.shape).sort();
+    expect(zodKeys).toEqual([...STREAMING_FIELD_KEYS].sort());
+    for (const key of zodKeys) {
+      expect(STREAMING_SCHEMA_CONSTRAINT).toContain(`"${key}"`);
+    }
+  });
+
+  it("embeds a JSON Schema block that parses and matches the current schema shape", () => {
+    const jsonStart = STREAMING_SCHEMA_CONSTRAINT.indexOf("{");
+    const embedded = JSON.parse(STREAMING_SCHEMA_CONSTRAINT.slice(jsonStart));
+    expect(embedded.required.sort()).toEqual(
+      Object.keys(InvoiceExtractionSchema.shape).sort(),
+    );
   });
 });

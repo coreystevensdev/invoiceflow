@@ -108,6 +108,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let responseText: string;
   const fetchStart = Date.now();
   try {
+    // Deliberate data-egress point: this forwards the extracted invoice to
+    // whatever URL the caller supplies. That's the feature (send my
+    // extraction results to my own endpoint), but it means the app's
+    // zero-retention claim only covers the request lifecycle up to this
+    // call. Once a webhook is configured, invoice content leaves this
+    // process and this app has no control over what the destination does
+    // with it.
     const res = await fetch(webhook_url, {
       method: "POST",
       headers: outboundHeaders,

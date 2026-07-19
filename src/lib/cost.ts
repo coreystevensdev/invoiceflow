@@ -3,8 +3,13 @@
  * spend ceiling for Anthropic API usage.
  *
  * Both checks are in-memory per Fluid Compute instance, not globally
- * shared. Acceptable for an anomaly detector and a soft monthly cap;
- * not appropriate as a hard global quota. Move to Redis if that changes.
+ * shared: each warm instance tracks its own rolling median and its own
+ * monthly total. A $25 MONTHLY_BUDGET_USD cap does not mean $25/month
+ * total spend, it means $25/month *per warm instance*. With N instances
+ * warm concurrently, actual spend can reach N times the configured cap
+ * before any single instance's counter trips. Acceptable for an anomaly
+ * detector and a soft monthly cap on a demo-tier tool; not a hard global
+ * quota. Move to Redis/Upstash if that guarantee is ever required.
  *
  * The per-request cap runs after the Claude call (cost is only known
  * once usage comes back). Real prevention is upstream: bounded retries

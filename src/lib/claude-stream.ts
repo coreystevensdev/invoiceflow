@@ -9,6 +9,7 @@
  */
 
 import Anthropic, { APIError } from "@anthropic-ai/sdk";
+import { z } from "zod";
 import {
   InvoiceExtractionSchema,
   EXTRACTION_SYSTEM_PROMPT,
@@ -29,25 +30,13 @@ import {
 } from "./cost";
 import type { Logger } from "./log";
 
-const STREAMING_SCHEMA_CONSTRAINT = `EXACT OUTPUT FORMAT - no variations allowed:
-{
-  "invoice_number": {"value": "string or null", "confidence": "high|medium|low", "reasoning": "string"},
-  "vendor": {"name": "string or null", "address": "string or null", "confidence": "high|medium|low", "reasoning": "string"},
-  "bill_date": {"value": "ISO date string or null", "confidence": "high|medium|low", "reasoning": "string"},
-  "due_date": {"value": "ISO date string or null", "confidence": "high|medium|low", "reasoning": "string"},
-  "po_number": {"value": "string or null", "confidence": "high|medium|low", "reasoning": "string"},
-  "subtotal": {"value": 0.00, "confidence": "high|medium|low", "reasoning": "string"},
-  "tax": {"value": 0.00, "confidence": "high|medium|low", "reasoning": "string"},
-  "total": {"value": 0.00, "confidence": "high|medium|low", "reasoning": "string"},
-  "currency": {"value": "ISO 4217 string or null", "confidence": "high|medium|low", "reasoning": "string"},
-  "line_items": [{"description": "string or null", "quantity": 0, "unit_price": 0.00, "amount": 0.00}],
-  "flags": [{"severity": "info|warning|error", "message": "string"}]
-}
-CRITICAL constraints:
-- vendor.name and vendor.address are plain strings, not nested objects with value/confidence/reasoning
-- tax.value is a single number (the tax amount), not a nested rate/amount object
-- line_items use plain primitive values, not nested objects
-- flags contain only severity and message fields`;
+// Derived from InvoiceExtractionSchema via z.toJSONSchema (zod v4 built-in,
+// no separate schema-to-JSON-Schema dependency needed) so the streaming
+// path can't drift from the Zod schema that drives the non-streaming path's
+// zodOutputFormat. The streaming path can't consume the Zod schema directly
+// since output_config/zodOutputFormat has no SSE equivalent.
+export const STREAMING_SCHEMA_CONSTRAINT = `EXACT OUTPUT FORMAT - no variations allowed. Respond with JSON matching this JSON Schema exactly:
+${JSON.stringify(z.toJSONSchema(InvoiceExtractionSchema), null, 2)}`;
 
 // Top-level keys the InvoiceExtractionSchema expects, in the order Claude
 // typically generates them. Used by the partial-JSON parser to know which
