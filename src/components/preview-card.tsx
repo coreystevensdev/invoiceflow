@@ -11,24 +11,24 @@ export function PreviewCard() {
   return (
     <section
       aria-label="Example extraction output"
-      className="mt-8 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+      className="mt-8 border border-rule-warm p-6"
     >
-      <p className="text-xs uppercase tracking-wide text-zinc-500">
+      <p className="font-mono text-xs uppercase tracking-[0.18em] text-ink-navy">
         What comes back
       </p>
       <dl className="mt-4 grid gap-4 sm:grid-cols-2">
         {PREVIEW_FIELDS.map((f) => (
           <div key={f.label}>
-            <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+            <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/50">
               {f.label}
             </dt>
-            <dd className="mt-1 font-mono text-base font-medium text-zinc-900 dark:text-zinc-100">
+            <dd className="mt-1 font-mono text-base font-medium text-foreground">
               {f.value}
             </dd>
           </div>
         ))}
       </dl>
-      <p className="mt-5 text-xs text-zinc-500">
+      <p className="mt-5 text-xs text-foreground/50">
         Plus line items, currency, confidence flags, and reasoning per field.
       </p>
     </section>

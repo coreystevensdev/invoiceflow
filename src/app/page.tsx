@@ -591,26 +591,22 @@ export default function Home() {
       : null;
 
   return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
-    >
+    <main id="main-content" className="min-h-screen">
       <div className="mx-auto max-w-4xl px-6 py-10 sm:py-16">
-        <header className="mb-10 border-b border-zinc-200 pb-7 dark:border-zinc-800">
+        <header className="animate-field-reveal mb-10 border-b border-rule-warm pb-7 motion-reduce:animate-none">
           <h1 className="text-4xl font-extrabold tracking-tight leading-none sm:text-5xl">
             InvoiceFlow
           </h1>
-          <p className="mt-3 text-[11px] font-semibold tracking-[0.2em] uppercase text-zinc-400 dark:text-zinc-500">
+          <p className="mt-3 font-mono text-[11px] font-semibold tracking-[0.2em] uppercase text-foreground/50">
             PDF invoices → structured JSON
           </p>
         </header>
 
         <div
           data-print-hide
-          className={`grid overflow-hidden border transition-colors sm:grid-cols-[2fr_1fr] ${
-            isDragging && !dropzoneBusy
-              ? "border-ink-navy"
-              : "border-zinc-200 dark:border-zinc-800"
+          style={{ animationDelay: "60ms" }}
+          className={`animate-field-reveal grid overflow-hidden border transition-colors motion-reduce:animate-none sm:grid-cols-[2fr_1fr] ${
+            isDragging && !dropzoneBusy ? "border-ink-navy" : "border-rule-warm"
           }`}
         >
           <label
@@ -649,8 +645,8 @@ export default function Home() {
               dropzoneBusy
                 ? "cursor-wait opacity-70"
                 : isDragging
-                  ? "cursor-pointer bg-ink-navy/10 dark:bg-ink-navy/20"
-                  : "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/40"
+                  ? "cursor-pointer bg-ink-navy/10"
+                  : "cursor-pointer hover:bg-ink-navy/[0.03]"
             }`}
           >
             <input
@@ -688,18 +684,18 @@ export default function Home() {
               </div>
             ) : (
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/50">
                   Upload
                 </p>
                 <p
-                  className="mt-4 text-2xl font-bold leading-snug tracking-tight text-zinc-900 dark:text-zinc-100"
+                  className="mt-4 text-2xl font-bold leading-snug tracking-tight text-foreground"
                   aria-live="polite"
                 >
                   Drop a PDF<br />or image here
                 </p>
               </div>
             )}
-            <p id={dropzoneHintId} className="mt-6 text-xs text-zinc-400 dark:text-zinc-500">
+            <p id={dropzoneHintId} className="mt-6 text-xs text-foreground/50">
               {status.kind === "loading"
                 ? `Typically 4-8 seconds. Reading the ${
                     /\.(jpe?g|png|gif|webp)$/i.test(status.filename)
@@ -714,12 +710,12 @@ export default function Home() {
             </p>
           </label>
 
-          <div className="flex flex-col gap-3 border-t border-zinc-200 bg-zinc-50 p-8 dark:border-zinc-800 dark:bg-zinc-900/50 sm:border-t-0 sm:border-l">
+          <div className="flex flex-col gap-3 border-t border-dashed border-rule-warm p-8 sm:border-t-0 sm:border-l">
             <button
               type="button"
               disabled={dropzoneBusy}
               onClick={() => { if (!dropzoneBusy) inputRef.current?.click(); }}
-              className="w-full bg-zinc-900 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition-opacity disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+              className="w-full bg-ink-navy px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-background transition-opacity disabled:opacity-40"
             >
               Select file
             </button>
@@ -727,20 +723,23 @@ export default function Home() {
               type="button"
               disabled={dropzoneBusy}
               onClick={() => { if (!dropzoneBusy) onSampleClick(); }}
-              className="w-full border border-zinc-300 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="w-full border border-ink-navy px-4 py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-navy transition-colors hover:bg-ink-navy/[0.06] disabled:opacity-40"
             >
               Use sample
             </button>
-            <p className="mt-auto text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
+            <p className="mt-auto text-[11px] leading-relaxed text-foreground/50">
               No account required.<br />
               Nothing is stored.
             </p>
           </div>
         </div>
 
-
         {status.kind === "idle" && (
-          <div data-print-hide>
+          <div
+            data-print-hide
+            style={{ animationDelay: "120ms" }}
+            className="animate-field-reveal motion-reduce:animate-none"
+          >
             <LoomEmbed />
             <PreviewCard />
             <CustomFieldsManager
@@ -813,13 +812,13 @@ export default function Home() {
         </div>
       </div>
 
-      <footer className="mt-auto border-t border-zinc-200 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
+      <footer className="mt-auto border-t border-rule-warm py-6 text-center text-sm text-foreground/60">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-y-2 px-6">
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
             <span>
               Powered by{" "}
               <a
-                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                className="underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded"
                 href="https://www.anthropic.com/claude"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -830,7 +829,7 @@ export default function Home() {
             </span>
             <span aria-hidden="true">·</span>
             <a
-              className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+              className="underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded"
               href="https://github.com/coreystevensdev/invoiceflow"
               target="_blank"
               rel="noopener noreferrer"
@@ -843,7 +842,7 @@ export default function Home() {
             <span>
               By{" "}
               <a
-                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                className="underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded"
                 href="https://github.com/coreystevensdev"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -856,7 +855,7 @@ export default function Home() {
             <span>
               Related project:{" "}
               <a
-                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                className="underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded"
                 href="https://github.com/coreystevensdev/tellsight"
                 target="_blank"
                 rel="noopener noreferrer"
