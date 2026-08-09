@@ -39,22 +39,22 @@ export function ResultsSkeleton() {
       data-results-section
     >
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span className="inline-block h-4 w-40 rounded bg-zinc-200 dark:bg-zinc-800" />
-        <span className="inline-block h-3 w-20 rounded bg-zinc-200 dark:bg-zinc-800" />
-        <span className="inline-block h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-800" />
+        <span className="inline-block h-4 w-40 rounded bg-ink-navy/10" />
+        <span className="inline-block h-3 w-20 rounded bg-ink-navy/10" />
+        <span className="inline-block h-3 w-16 rounded bg-ink-navy/10" />
       </div>
-      <div className="grid border-t border-l border-zinc-200 dark:border-zinc-800 sm:grid-cols-2">
+      <div className="grid border-t border-l border-rule-warm sm:grid-cols-2">
         {Array.from({ length: 9 }, (_, i) => (
-          <div key={i} className="border-b border-r border-zinc-200 p-5 dark:border-zinc-800">
-            <div className="h-3 w-16 rounded bg-zinc-200 dark:bg-zinc-800" />
-            <div className="mt-2 h-6 w-32 rounded bg-zinc-200 dark:bg-zinc-800" />
+          <div key={i} className="border-b border-r border-rule-warm p-5">
+            <div className="h-3 w-16 rounded bg-ink-navy/10" />
+            <div className="mt-2 h-6 w-32 rounded bg-ink-navy/10" />
           </div>
         ))}
       </div>
       <div className="flex flex-wrap gap-3">
-        <span className="inline-block h-9 w-44 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
-        <span className="inline-block h-9 w-44 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
-        <span className="inline-block h-9 w-32 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+        <span className="inline-block h-9 w-44 rounded-lg bg-ink-navy/10" />
+        <span className="inline-block h-9 w-44 rounded-lg bg-ink-navy/10" />
+        <span className="inline-block h-9 w-32 rounded-lg bg-ink-navy/10" />
       </div>
     </section>
   );
@@ -101,10 +101,10 @@ export function StreamingResultsView({
       data-results-section
     >
       <div
-        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500"
+        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-foreground/60"
         role="status"
       >
-        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+        <span className="font-medium text-foreground">
           {filename}
         </span>
         <span>{phase}</span>
@@ -117,7 +117,7 @@ export function StreamingResultsView({
             <img
               src={pdfUrl}
               alt={`Invoice: ${filename}`}
-              className="w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
+              className="w-full border border-rule-warm bg-background"
             />
           ) : (
             <PdfPreview
@@ -132,27 +132,27 @@ export function StreamingResultsView({
         </div>
 
         <div className="min-w-0">
-          <dl className="grid border-t border-l border-zinc-200 dark:border-zinc-800 sm:grid-cols-2">
+          <dl className="grid border-t border-l border-rule-warm sm:grid-cols-2">
             {STREAMING_FIELDS.map((key) => {
               const value = getFieldValue(key);
               const hasValue = value !== null;
               return (
                 <div
                   key={key}
-                  className="border-b border-r border-zinc-200 p-5 dark:border-zinc-800"
+                  className="border-b border-r border-rule-warm p-5"
                 >
-                  <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                  <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/50">
                     {FIELD_LABELS[key] ?? key}
                   </dt>
                   <dd className="mt-1 font-mono text-base font-medium">
                     {hasValue ? (
-                      <span className="transition-opacity opacity-100">
+                      <span className="animate-field-reveal motion-reduce:animate-none">
                         {value}
                       </span>
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="inline-block h-5 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800 motion-reduce:animate-none"
+                        className="inline-block h-5 w-24 animate-pulse rounded bg-ink-navy/10 motion-reduce:animate-none"
                       />
                     )}
                   </dd>
