@@ -45,7 +45,7 @@ function BatchRowIcon({ kind }: { kind: BatchFile["kind"] }) {
         className="inline-flex h-6 w-6 shrink-0 items-center justify-center"
       >
         <svg
-          className="h-4 w-4 animate-spin text-indigo-600 motion-reduce:animate-none dark:text-indigo-400"
+          className="h-4 w-4 animate-spin text-ink-navy motion-reduce:animate-none dark:text-ink-navy-hover"
           viewBox="0 0 24 24"
           fill="none"
           aria-hidden="true"
@@ -71,7 +71,7 @@ function BatchRowIcon({ kind }: { kind: BatchFile["kind"] }) {
   return (
     <span
       aria-label="Queued"
-      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-300 text-xs text-zinc-500 dark:border-zinc-700"
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-rule-warm text-xs text-foreground/50"
     >
       ⋯
     </span>
@@ -136,7 +136,7 @@ export function BatchView({ files, inProgress, onReset }: BatchViewProps) {
     <section aria-label="Batch extraction results" className="mt-8 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm">
-          <span className="font-medium text-zinc-900 dark:text-zinc-100">
+          <span className="font-medium text-foreground">
             Batch:
           </span>{" "}
           <span className="text-green-700 dark:text-green-400">
@@ -153,7 +153,7 @@ export function BatchView({ files, inProgress, onReset }: BatchViewProps) {
           {pending > 0 && (
             <>
               {", "}
-              <span className="text-zinc-600 dark:text-zinc-400">
+              <span className="text-foreground/60">
                 {pending} in progress
               </span>
             </>
@@ -164,7 +164,7 @@ export function BatchView({ files, inProgress, onReset }: BatchViewProps) {
           {anyCostKnown && (
             <>
               {" · "}
-              <span className="text-zinc-600 dark:text-zinc-400">
+              <span className="text-foreground/60">
                 ${totalCostUsd.toFixed(3)} total
               </span>
             </>
@@ -175,7 +175,7 @@ export function BatchView({ files, inProgress, onReset }: BatchViewProps) {
             type="button"
             onClick={() => downloadBulkCsv("summary")}
             disabled={successes.length === 0}
-            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="bg-ink-navy px-3 py-1.5 text-sm font-medium text-background hover:bg-ink-navy-hover disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           >
             Download summary CSV
           </button>
@@ -183,32 +183,32 @@ export function BatchView({ files, inProgress, onReset }: BatchViewProps) {
             type="button"
             onClick={() => downloadBulkCsv("line_items")}
             disabled={successes.length === 0}
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+            className="border border-rule-warm px-3 py-1.5 text-sm font-medium hover:bg-ink-navy/[0.04] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           >
             Download line-items CSV
           </button>
           <button
             type="button"
             onClick={onReset}
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+            className="border border-rule-warm px-3 py-1.5 text-sm font-medium hover:bg-ink-navy/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           >
             Reset
           </button>
         </div>
       </div>
 
-      <ul className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <ul className="overflow-hidden border border-rule-warm">
         {files.map((f) => (
           <li
             key={f.id}
-            className="flex flex-wrap items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-0 dark:border-zinc-800"
+            className="flex flex-wrap items-center gap-3 border-b border-rule-warm/60 px-4 py-3 last:border-0"
           >
             <BatchRowIcon kind={f.kind} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              <div className="truncate text-sm font-medium text-foreground">
                 {f.filename}
               </div>
-              <div className="text-xs text-zinc-500">
+              <div className="text-xs text-foreground/50">
                 {f.kind === "success" ? (
                   <>
                     {f.result.invoice.vendor.name ?? "Unknown vendor"}

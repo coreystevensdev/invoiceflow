@@ -81,7 +81,7 @@ export function ErrorState({
     <div
       role="alert"
       aria-live="assertive"
-      className="mt-6 rounded-lg border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+      className="mt-6 border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
     >
       <p className="flex items-center gap-2 text-base font-medium">
         <span aria-hidden="true" className="text-lg leading-none">
@@ -121,7 +121,7 @@ export function ErrorState({
             type="button"
             onClick={onRetry}
             disabled={!retryReady}
-            className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-900 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:border-red-800 dark:bg-red-950/60 dark:text-red-100 dark:hover:bg-red-900/40 dark:focus-visible:ring-offset-red-950"
+            className="inline-flex items-center gap-2 border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-900 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-red-800 dark:bg-red-950/60 dark:text-red-100 dark:hover:bg-red-900/40 dark:focus-visible:ring-offset-red-950"
             aria-label={
               retryReady
                 ? "Retry extraction with the same file"
