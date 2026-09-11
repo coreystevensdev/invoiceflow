@@ -10,9 +10,14 @@ const nextConfig: NextConfig = {
   // polyfill DOMMatrix in Node. Tracing does not follow that optional native
   // require, so the function deploys without it and the import throws
   // "DOMMatrix is not defined" at request time. The build is green either way.
+  //
+  // The glob has to cover all of @napi-rs, not just canvas: the loader is in
+  // @napi-rs/canvas and the binding is a sibling optional package chosen per
+  // platform (@napi-rs/canvas-linux-x64-gnu on the builder). Tracing only the
+  // loader swaps "Cannot find module" for "Failed to load native binding".
   outputFileTracingIncludes: {
-    "/api/extract": ["./node_modules/@napi-rs/canvas/**"],
-    "/api/extract-stream": ["./node_modules/@napi-rs/canvas/**"],
+    "/api/extract": ["./node_modules/@napi-rs/**"],
+    "/api/extract-stream": ["./node_modules/@napi-rs/**"],
   },
   turbopack: {
     root: fileURLToPath(new URL(".", import.meta.url)),
