@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SSC-2026-114",
+  "vendor_name": "Summit Security Consulting",
+  "bill_date": "2026-06-15",
+  "due_date": "2026-07-15",
+  "po_number": "PO-7780",
+  "subtotal": 18750,
+  "tax": 0,
+  "total": 18750,
+  "currency": "USD"
+}

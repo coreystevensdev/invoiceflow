@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SN-BIZ-2026-0220",
+  "vendor_name": "SpeedNet Business ISP",
+  "bill_date": "2026-04-01",
+  "due_date": null,
+  "po_number": null,
+  "subtotal": 349.99,
+  "tax": 0,
+  "total": 349.99,
+  "currency": "USD"
+}

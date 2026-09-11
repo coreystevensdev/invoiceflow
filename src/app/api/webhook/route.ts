@@ -5,6 +5,7 @@ import { confidenceSummary } from "@/lib/validate";
 import { toErrorResponse } from "@/lib/errors";
 import { createLogger } from "@/lib/log";
 import { clientIpFrom, inquiryLimit } from "@/lib/rate-limit";
+import { assertPublicHttpUrl, webhookDispatcher } from "@/lib/ssrf-guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,6 +14,7 @@ const RequestSchema = z.object({
   webhook_url: z.string().url(),
   invoice: InvoiceExtractionSchema,
   verbose: z.boolean().default(false),
+  idempotency_key: z.string().min(1).max(255).optional(),
 });
 
 function stripReasoning(invoice: z.infer<typeof InvoiceExtractionSchema>) {
@@ -85,27 +87,67 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { webhook_url, invoice, verbose } = parsed.data;
+  const { webhook_url, invoice, verbose, idempotency_key } = parsed.data;
+
+  try {
+    await assertPublicHttpUrl(webhook_url);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn({
+      route: "webhook",
+      category: "webhook-url-blocked",
+      http_status: 400,
+      duration_ms: Date.now() - start,
+    });
+    return NextResponse.json(
+      {
+        error: message,
+        code: "webhook-url-blocked",
+        correlation_id: correlationId,
+      },
+      {
+        status: 400,
+        headers: { "X-Correlation-Id": correlationId },
+      },
+    );
+  }
+
   const payload = {
     event: "invoice.extracted",
     timestamp: new Date().toISOString(),
     correlation_id: correlationId,
+    idempotency_key: idempotency_key ?? null,
     invoice: verbose ? invoice : stripReasoning(invoice),
     confidence_summary: confidenceSummary(invoice),
   };
+
+  const outboundHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Correlation-Id": correlationId,
+  };
+  if (idempotency_key) {
+    outboundHeaders["Idempotency-Key"] = idempotency_key;
+  }
 
   let status: number;
   let responseText: string;
   const fetchStart = Date.now();
   try {
+    // Deliberate data-egress point: this forwards the extracted invoice to
+    // whatever URL the caller supplies. That's the feature (send my
+    // extraction results to my own endpoint), but it means the app's
+    // zero-retention claim only covers the request lifecycle up to this
+    // call. Once a webhook is configured, invoice content leaves this
+    // process and this app has no control over what the destination does
+    // with it.
     const res = await fetch(webhook_url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Correlation-Id": correlationId,
-      },
+      headers: outboundHeaders,
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15_000),
+      redirect: "manual",
+      // @ts-expect-error -- dispatcher is an undici/Node fetch extension, not in the DOM lib fetch types
+      dispatcher: webhookDispatcher,
     });
     status = res.status;
     responseText = await res.text().catch(() => "");

@@ -10,7 +10,7 @@ type Bbox = number[];
 interface PdfPreviewProps {
   pdfUrl: string;
   filename: string;
-  invoice: InvoiceExtraction;
+  invoice: InvoiceExtraction | null;
   activeBbox: Bbox | null;
   onBboxesComputed?: (map: Record<string, Bbox>) => void;
 }
@@ -250,6 +250,11 @@ export function PdfPreview({
       ];
     };
 
+    if (!invoice) {
+      onBboxesComputed({});
+      return;
+    }
+
     search("Invoice #", [invoice.invoice_number.value]);
     search("Vendor", wordFallbacks(invoice.vendor.name));
     search("Bill date", dateVariants(invoice.bill_date.value));
@@ -265,31 +270,31 @@ export function PdfPreview({
 
   if (error) {
     return (
-      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800">
+      <div className="border border-rule-warm bg-background">
         <object
           data={pdfUrl}
           type="application/pdf"
           aria-label={`Original PDF: ${filename}`}
-          className="block h-[600px] w-full rounded-t-xl"
+          className="block h-[600px] w-full"
         >
           {/* iOS Safari often refuses to render blob: PDFs inside <object>
               or <iframe>. The link below is the guaranteed-works fallback,
               opening the PDF in a new tab where Safari's full-screen viewer
               handles it natively. */}
-          <p className="p-4 text-sm text-zinc-700 dark:text-zinc-300">
+          <p className="p-4 text-sm text-foreground/80">
             Inline PDF preview unavailable on this browser.{" "}
             <a
               href={pdfUrl}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-indigo-700 underline dark:text-indigo-400"
+              className="font-medium text-ink-navy underline dark:text-ink-navy-hover"
             >
               Open PDF in a new tab
             </a>
             .
           </p>
         </object>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-rule-warm px-3 py-2 text-xs text-foreground/60">
           <span>
             Native PDF preview, source-region highlight unavailable on this
             browser.
@@ -298,14 +303,14 @@ export function PdfPreview({
             href={pdfUrl}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-indigo-700 underline dark:text-indigo-400"
+            className="font-medium text-ink-navy underline dark:text-ink-navy-hover"
           >
             Open PDF in new tab
           </a>
         </div>
-        <details className="border-t border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+        <details className="border-t border-rule-warm px-3 py-2 text-xs text-foreground/60">
           <summary className="cursor-pointer select-none">Diagnostic</summary>
-          <pre className="mt-2 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-snug text-zinc-500 dark:text-zinc-500">
+          <pre className="mt-2 overflow-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-snug text-foreground/50">
             build: {PDF_PREVIEW_BUILD}
             {"\n"}
             error: {error.name}: {error.message}
@@ -323,17 +328,17 @@ export function PdfPreview({
         ref={canvasRef}
         aria-label={`Original PDF: ${filename}`}
         role="img"
-        className="w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
+        className="w-full border border-rule-warm bg-background"
       />
       {!rendered && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-zinc-500">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-foreground/50">
           Rendering PDF…
         </div>
       )}
       {activeBbox && rendered && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute rounded border-2 border-indigo-500 bg-indigo-500/15 shadow-[0_0_0_3px_rgba(99,102,241,0.2)] transition-all duration-150 motion-reduce:transition-none"
+          className="pointer-events-none absolute rounded border-2 border-legal-pad-border bg-legal-pad/40 shadow-[0_0_0_3px_rgba(255,245,184,0.35)] transition-all duration-150 motion-reduce:transition-none"
           style={{
             left: `${activeBbox[0] * 100}%`,
             top: `${activeBbox[1] * 100}%`,

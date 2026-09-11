@@ -1,0 +1,11 @@
+{
+  "invoice_number": "NFP-2026-TEST-0018",
+  "vendor_name": "National Fire Protection LLC",
+  "bill_date": "2026-06-15",
+  "due_date": "2026-07-15",
+  "po_number": "PO-FIRE-018",
+  "subtotal": 3800,
+  "tax": 0,
+  "total": 3800,
+  "currency": "USD"
+}

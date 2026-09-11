@@ -1,0 +1,11 @@
+{
+  "invoice_number": "IND-2026-HW-0221",
+  "vendor_name": "Insight Direct Inc.",
+  "bill_date": "2026-04-20",
+  "due_date": "2026-05-20",
+  "po_number": "PO-HW-0221",
+  "subtotal": 3780,
+  "tax": 226.8,
+  "total": 4006.8,
+  "currency": "USD"
+}

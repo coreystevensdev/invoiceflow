@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CER-2026-02-0089",
+  "vendor_name": "Clean Earth Recycling",
+  "bill_date": "2026-02-01",
+  "due_date": "2026-02-28",
+  "po_number": null,
+  "subtotal": 148,
+  "tax": 0,
+  "total": 148,
+  "currency": "USD"
+}

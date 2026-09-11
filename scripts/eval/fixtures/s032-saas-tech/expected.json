@@ -1,0 +1,11 @@
+{
+  "invoice_number": "FIG-2026-ORG-0012",
+  "vendor_name": "Figma Inc.",
+  "bill_date": "2026-01-20",
+  "due_date": "2026-02-19",
+  "po_number": "PO-DESIGN-01",
+  "subtotal": 3600,
+  "tax": 0,
+  "total": 3600,
+  "currency": "USD"
+}

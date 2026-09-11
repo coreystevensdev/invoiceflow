@@ -1,0 +1,11 @@
+{
+  "invoice_number": "AW-2026-02-99341",
+  "vendor_name": "American Water LLC",
+  "bill_date": "2026-02-20",
+  "due_date": "2026-03-14",
+  "po_number": null,
+  "subtotal": 221.33,
+  "tax": 0,
+  "total": 221.33,
+  "currency": "USD"
+}

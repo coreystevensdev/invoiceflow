@@ -1,0 +1,11 @@
+{
+  "invoice_number": "FFL-2026-3390",
+  "vendor_name": "FastFleet Logistics",
+  "bill_date": "2026-03-20",
+  "due_date": "2026-04-19",
+  "po_number": null,
+  "subtotal": 5630,
+  "tax": 0,
+  "total": 5630,
+  "currency": "USD"
+}

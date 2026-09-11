@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CH-2026-SURG-0119",
+  "vendor_name": "Cardinal Health Inc.",
+  "bill_date": "2026-05-01",
+  "due_date": "2026-05-31",
+  "po_number": "PO-SURG-119",
+  "subtotal": 14500,
+  "tax": 0,
+  "total": 14500,
+  "currency": "USD"
+}

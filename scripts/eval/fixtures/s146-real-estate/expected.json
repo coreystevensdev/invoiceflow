@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ORK-2026-ANN-0033",
+  "vendor_name": "Orkin Commercial LLC",
+  "bill_date": "2026-01-10",
+  "due_date": "2026-02-09",
+  "po_number": "PO-PEST-033",
+  "subtotal": 3600,
+  "tax": 0,
+  "total": 3600,
+  "currency": "USD"
+}

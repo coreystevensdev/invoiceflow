@@ -1,0 +1,11 @@
+{
+  "invoice_number": "BCG-2026-0312",
+  "vendor_name": "Bright Consulting Group",
+  "bill_date": "2026-05-01",
+  "due_date": "2026-05-31",
+  "po_number": "PO-9900",
+  "subtotal": 12500,
+  "tax": 0,
+  "total": 12500,
+  "currency": "USD"
+}

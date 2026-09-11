@@ -1,0 +1,11 @@
+{
+  "invoice_number": "RDS-042",
+  "vendor_name": "Rivera Design Studio",
+  "bill_date": "2026-03-31",
+  "due_date": null,
+  "po_number": null,
+  "subtotal": 3750,
+  "tax": 0,
+  "total": 3750,
+  "currency": "USD"
+}

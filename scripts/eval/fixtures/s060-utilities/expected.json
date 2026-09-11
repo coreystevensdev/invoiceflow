@@ -1,0 +1,11 @@
+{
+  "invoice_number": "VZB-2026-03-10042",
+  "vendor_name": "Verizon Business Lines",
+  "bill_date": "2026-03-15",
+  "due_date": "2026-04-08",
+  "po_number": "PO-TELECOM-VZ",
+  "subtotal": 1188,
+  "tax": 0,
+  "total": 1188,
+  "currency": "USD"
+}

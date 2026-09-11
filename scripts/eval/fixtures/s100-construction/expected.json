@@ -1,0 +1,11 @@
+{
+  "invoice_number": "MCW-2026-POUR-0033",
+  "vendor_name": "Midwest Concrete Works LLC",
+  "bill_date": "2026-05-10",
+  "due_date": "2026-06-09",
+  "po_number": "PO-CONC-033",
+  "subtotal": 19500,
+  "tax": 0,
+  "total": 19500,
+  "currency": "USD"
+}

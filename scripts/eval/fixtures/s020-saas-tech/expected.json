@@ -1,0 +1,11 @@
+{
+  "invoice_number": "VCS-2026-0312",
+  "vendor_name": "Veritas Cloud Services LLC",
+  "bill_date": "2026-01-01",
+  "due_date": "2026-01-31",
+  "po_number": "PO-8800",
+  "subtotal": 12000,
+  "tax": 0,
+  "total": 12000,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ATT-BUS-2026-03-5501",
+  "vendor_name": "AT&T Business Services",
+  "bill_date": "2026-03-20",
+  "due_date": "2026-04-14",
+  "po_number": "PO-TELECOM-01",
+  "subtotal": 524,
+  "tax": 0,
+  "total": 524,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "HDS-2026-FAC-0119",
+  "vendor_name": "HD Supply Corp.",
+  "bill_date": "2026-03-15",
+  "due_date": "2026-04-14",
+  "po_number": "PO-FAC-0119",
+  "subtotal": 1688.75,
+  "tax": 101.33,
+  "total": 1790.08,
+  "currency": "USD"
+}

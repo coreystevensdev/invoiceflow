@@ -1,0 +1,11 @@
+{
+  "invoice_number": "GWW-2026-IND-0211",
+  "vendor_name": "W.W. Grainger Inc.",
+  "bill_date": "2026-06-01",
+  "due_date": "2026-07-01",
+  "po_number": "PO-IND-0211",
+  "subtotal": 5670,
+  "tax": 340.2,
+  "total": 6010.2,
+  "currency": "USD"
+}

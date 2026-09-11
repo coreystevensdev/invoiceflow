@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ENV-2026-TMPL-0099",
+  "vendor_name": "Envato Market LLC",
+  "bill_date": "2026-02-20",
+  "due_date": null,
+  "po_number": null,
+  "subtotal": 340,
+  "tax": 0,
+  "total": 340,
+  "currency": "USD"
+}

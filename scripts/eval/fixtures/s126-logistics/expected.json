@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SCL-2026-FFMT-0041",
+  "vendor_name": "Saddle Creek Logistics",
+  "bill_date": "2026-03-31",
+  "due_date": "2026-04-30",
+  "po_number": "PO-FFMT-041",
+  "subtotal": 18500,
+  "tax": 0,
+  "total": 18500,
+  "currency": "USD"
+}

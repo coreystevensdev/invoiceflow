@@ -1,0 +1,11 @@
+{
+  "invoice_number": "IPD-20260215",
+  "vendor_name": "Industrial Parts Depot",
+  "bill_date": "2026-02-15",
+  "due_date": "2026-03-17",
+  "po_number": "PO-1144",
+  "subtotal": 634.5,
+  "tax": 38.07,
+  "total": 672.57,
+  "currency": "USD"
+}

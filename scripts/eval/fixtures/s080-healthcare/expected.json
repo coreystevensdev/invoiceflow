@@ -1,0 +1,11 @@
+{
+  "invoice_number": "MDL-2026-SUP-0441",
+  "vendor_name": "Medline Industries Inc.",
+  "bill_date": "2026-03-01",
+  "due_date": "2026-03-31",
+  "po_number": "PO-MED-SUP-441",
+  "subtotal": 3418,
+  "tax": 0,
+  "total": 3418,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PNG-2026-01-33091",
+  "vendor_name": "Peoples Natural Gas Co.",
+  "bill_date": "2026-01-15",
+  "due_date": "2026-02-08",
+  "po_number": null,
+  "subtotal": 677.15,
+  "tax": 0,
+  "total": 677.15,
+  "currency": "USD"
+}

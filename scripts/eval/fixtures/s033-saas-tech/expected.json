@@ -1,0 +1,11 @@
+{
+  "invoice_number": "OKTA-2026-0334",
+  "vendor_name": "Okta Inc.",
+  "bill_date": "2026-05-01",
+  "due_date": "2026-05-31",
+  "po_number": "PO-IAM-0334",
+  "subtotal": 18000,
+  "tax": 0,
+  "total": 18000,
+  "currency": "USD"
+}

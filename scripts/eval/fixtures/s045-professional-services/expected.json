@@ -1,0 +1,11 @@
+{
+  "invoice_number": "STS-2026-0290",
+  "vendor_name": "Summit Training Solutions",
+  "bill_date": "2026-03-10",
+  "due_date": "2026-04-09",
+  "po_number": "PO-TRAIN-290",
+  "subtotal": 14000,
+  "tax": 0,
+  "total": 14000,
+  "currency": "USD"
+}

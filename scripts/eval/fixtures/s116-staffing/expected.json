@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ADP-TS-2026-02-0019",
+  "vendor_name": "ADP TotalSource LLC",
+  "bill_date": "2026-02-01",
+  "due_date": "2026-03-03",
+  "po_number": "PO-PYRL-019",
+  "subtotal": 3200,
+  "tax": 0,
+  "total": 3200,
+  "currency": "USD"
+}

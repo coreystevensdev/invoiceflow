@@ -1,0 +1,11 @@
+{
+  "invoice_number": "JLL-2026-FAC-0041",
+  "vendor_name": "Jones Lang LaSalle Inc.",
+  "bill_date": "2026-02-28",
+  "due_date": "2026-03-30",
+  "po_number": "PO-FAC-041",
+  "subtotal": 22000,
+  "tax": 0,
+  "total": 22000,
+  "currency": "USD"
+}

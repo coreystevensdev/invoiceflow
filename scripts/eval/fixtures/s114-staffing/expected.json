@@ -1,0 +1,11 @@
+{
+  "invoice_number": "MPG-2026-WH-0312",
+  "vendor_name": "ManpowerGroup Inc.",
+  "bill_date": "2026-03-15",
+  "due_date": "2026-04-14",
+  "po_number": "PO-WH-312",
+  "subtotal": 8640,
+  "tax": 0,
+  "total": 8640,
+  "currency": "USD"
+}

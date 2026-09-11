@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CDW-2026-SRV-0014",
+  "vendor_name": "CDW Direct LLC",
+  "bill_date": "2026-03-05",
+  "due_date": "2026-04-04",
+  "po_number": "PO-SRV-0014",
+  "subtotal": 14200,
+  "tax": 1171.5,
+  "total": 15371.5,
+  "currency": "USD"
+}

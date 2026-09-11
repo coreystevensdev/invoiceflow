@@ -1,0 +1,11 @@
+{
+  "invoice_number": "TSR-2026-ROOF-0077",
+  "vendor_name": "Tri-State Roofing Inc.",
+  "bill_date": "2026-04-20",
+  "due_date": "2026-05-20",
+  "po_number": "PO-ROOF-077",
+  "subtotal": 34000,
+  "tax": 0,
+  "total": 34000,
+  "currency": "USD"
+}

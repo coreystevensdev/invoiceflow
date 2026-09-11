@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ARC-2026-BLD-0018",
+  "vendor_name": "American Red Cross",
+  "bill_date": "2026-02-10",
+  "due_date": "2026-03-12",
+  "po_number": "PO-BLD-018",
+  "subtotal": 7200,
+  "tax": 0,
+  "total": 7200,
+  "currency": "USD"
+}

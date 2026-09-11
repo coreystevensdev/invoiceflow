@@ -1,0 +1,11 @@
+{
+  "invoice_number": "BRC-2026-PF-0005",
+  "vendor_name": "Brightcove Inc.",
+  "bill_date": "2026-06-01",
+  "due_date": "2026-07-01",
+  "po_number": "PO-PF-005",
+  "subtotal": 8400,
+  "tax": 0,
+  "total": 8400,
+  "currency": "USD"
+}

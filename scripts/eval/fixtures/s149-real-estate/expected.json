@@ -1,0 +1,11 @@
+{
+  "invoice_number": "AHS-2026-WAR-0009",
+  "vendor_name": "American Home Shield Corp.",
+  "bill_date": "2026-02-01",
+  "due_date": "2026-03-03",
+  "po_number": "PO-WAR-009",
+  "subtotal": 2400,
+  "tax": 0,
+  "total": 2400,
+  "currency": "USD"
+}

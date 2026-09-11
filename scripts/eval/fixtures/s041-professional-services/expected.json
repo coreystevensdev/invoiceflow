@@ -1,0 +1,11 @@
+{
+  "invoice_number": "BES-2026-0009",
+  "vendor_name": "Blackwell Executive Search",
+  "bill_date": "2026-05-20",
+  "due_date": "2026-06-19",
+  "po_number": "PO-HR-009",
+  "subtotal": 28000,
+  "tax": 0,
+  "total": 28000,
+  "currency": "USD"
+}

@@ -176,6 +176,50 @@ describe("POST /api/webhook outbound delivery", () => {
     expect(sent.invoice.line_items[0].reasoning).toBe("row 1 of line items");
   });
 
+  it("forwards a supplied idempotency_key as an Idempotency-Key header and a stable payload field", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response("ok", { status: 200, headers: {} }),
+    );
+
+    const response = await POST(
+      buildRequest({
+        webhook_url: "https://example.com/hook",
+        invoice: fixtureInvoice(),
+        idempotency_key: "client-key-abc123",
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["Idempotency-Key"]).toBe("client-key-abc123");
+
+    const sent = JSON.parse(String((init as RequestInit).body));
+    expect(sent.idempotency_key).toBe("client-key-abc123");
+  });
+
+  it("omits the Idempotency-Key header when no idempotency_key is supplied", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response("ok", { status: 200, headers: {} }),
+    );
+
+    await POST(
+      buildRequest({
+        webhook_url: "https://example.com/hook",
+        invoice: fixtureInvoice(),
+      }),
+    );
+
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const headers = (init as RequestInit).headers as Record<string, string>;
+    expect(headers["Idempotency-Key"]).toBeUndefined();
+
+    const sent = JSON.parse(String((init as RequestInit).body));
+    expect(sent.idempotency_key).toBeNull();
+  });
+
   it("forwards the upstream status code and a 500-char preview of the response body", async () => {
     const longBody = "x".repeat(800);
     fetchSpy.mockResolvedValueOnce(

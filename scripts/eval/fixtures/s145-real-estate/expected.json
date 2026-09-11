@@ -1,0 +1,11 @@
+{
+  "invoice_number": "BVL-2026-GRND-0199",
+  "vendor_name": "BrightView Landscapes Inc.",
+  "bill_date": "2026-04-30",
+  "due_date": "2026-05-30",
+  "po_number": "PO-GRND-199",
+  "subtotal": 4800,
+  "tax": 0,
+  "total": 4800,
+  "currency": "USD"
+}

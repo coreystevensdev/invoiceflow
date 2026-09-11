@@ -1,0 +1,11 @@
+{
+  "invoice_number": "COL-2026-ADV-0009",
+  "vendor_name": "Colliers International LLC",
+  "bill_date": "2026-04-15",
+  "due_date": "2026-05-15",
+  "po_number": null,
+  "subtotal": 45000,
+  "tax": 0,
+  "total": 45000,
+  "currency": "USD"
+}

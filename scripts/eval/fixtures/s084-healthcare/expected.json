@@ -1,0 +1,11 @@
+{
+  "invoice_number": "STR-2026-ORTH-0041",
+  "vendor_name": "Stryker Corp.",
+  "bill_date": "2026-01-10",
+  "due_date": "2026-02-09",
+  "po_number": "PO-ORTH-041",
+  "subtotal": 42000,
+  "tax": 0,
+  "total": 42000,
+  "currency": "USD"
+}

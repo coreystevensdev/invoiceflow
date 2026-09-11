@@ -1,0 +1,11 @@
+{
+  "invoice_number": "RH-2026-ACCT-0203",
+  "vendor_name": "Robert Half Staffing Inc.",
+  "bill_date": "2026-03-31",
+  "due_date": "2026-04-30",
+  "po_number": "PO-ACCT-203",
+  "subtotal": 11200,
+  "tax": 0,
+  "total": 11200,
+  "currency": "USD"
+}

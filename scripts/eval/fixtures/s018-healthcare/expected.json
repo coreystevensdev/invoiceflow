@@ -1,0 +1,11 @@
+{
+  "invoice_number": "MED-2026-0077",
+  "vendor_name": "MedEquip Direct Inc.",
+  "bill_date": "2026-05-10",
+  "due_date": "2026-06-09",
+  "po_number": "PO-MED-445",
+  "subtotal": 6800,
+  "tax": 0,
+  "total": 6800,
+  "currency": "USD"
+}

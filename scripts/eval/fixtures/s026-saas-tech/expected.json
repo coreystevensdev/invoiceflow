@@ -1,0 +1,11 @@
+{
+  "invoice_number": "DB-2026-ENT-0021",
+  "vendor_name": "DataBricks SE Inc.",
+  "bill_date": "2026-05-01",
+  "due_date": "2026-05-31",
+  "po_number": "PO-DB-ENT",
+  "subtotal": 28500,
+  "tax": 0,
+  "total": 28500,
+  "currency": "USD"
+}

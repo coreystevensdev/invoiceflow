@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PLE-2026-MAINT-0019",
+  "vendor_name": "PowerLift Elevators Inc.",
+  "bill_date": "2026-02-01",
+  "due_date": "2026-03-03",
+  "po_number": "PO-ELEV-019",
+  "subtotal": 4200,
+  "tax": 0,
+  "total": 4200,
+  "currency": "USD"
+}

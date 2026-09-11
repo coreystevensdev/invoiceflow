@@ -1,0 +1,11 @@
+{
+  "invoice_number": "QUILL-2026-0561",
+  "vendor_name": "Quill Corp.",
+  "bill_date": "2026-03-20",
+  "due_date": "2026-04-19",
+  "po_number": "PO-PAPER-0561",
+  "subtotal": 641.6,
+  "tax": 41.7,
+  "total": 683.3,
+  "currency": "USD"
+}

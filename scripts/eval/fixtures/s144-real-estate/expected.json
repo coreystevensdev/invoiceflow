@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CW-2026-APP-0022",
+  "vendor_name": "Cushman and Wakefield Inc.",
+  "bill_date": "2026-05-01",
+  "due_date": "2026-05-31",
+  "po_number": "PO-APP-022",
+  "subtotal": 8500,
+  "tax": 0,
+  "total": 8500,
+  "currency": "USD"
+}

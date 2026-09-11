@@ -1,0 +1,11 @@
+{
+  "invoice_number": "JBH-2026-TL-0221",
+  "vendor_name": "JB Hunt Transport Inc.",
+  "bill_date": "2026-04-05",
+  "due_date": "2026-05-05",
+  "po_number": "PO-TL-221",
+  "subtotal": 6400,
+  "tax": 0,
+  "total": 6400,
+  "currency": "USD"
+}

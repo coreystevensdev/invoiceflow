@@ -1,0 +1,11 @@
+{
+  "invoice_number": "MIC-2026-0377",
+  "vendor_name": "Meridian IT Consulting LLC",
+  "bill_date": "2026-02-15",
+  "due_date": "2026-03-17",
+  "po_number": "PO-IT-0377",
+  "subtotal": 6800,
+  "tax": 0,
+  "total": 6800,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "EVRS-2026-01-80019",
+  "vendor_name": "Eversource Energy",
+  "bill_date": "2026-01-20",
+  "due_date": "2026-02-11",
+  "po_number": null,
+  "subtotal": 1104.22,
+  "tax": 0,
+  "total": 1104.22,
+  "currency": "USD"
+}

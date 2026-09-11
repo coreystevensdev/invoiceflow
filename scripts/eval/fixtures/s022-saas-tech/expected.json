@@ -1,0 +1,11 @@
+{
+  "invoice_number": "SSP-2026-03-001",
+  "vendor_name": "Sentinel Security Platform",
+  "bill_date": "2026-03-01",
+  "due_date": "2026-03-31",
+  "po_number": "PO-SEC-100",
+  "subtotal": 6750,
+  "tax": 489.37,
+  "total": 7239.37,
+  "currency": "USD"
+}

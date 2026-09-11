@@ -1,0 +1,11 @@
+{
+  "invoice_number": "TRI-2026-PEO-0012",
+  "vendor_name": "TriNet HR Platform Inc.",
+  "bill_date": "2026-05-31",
+  "due_date": "2026-06-30",
+  "po_number": "PO-PEO-012",
+  "subtotal": 21600,
+  "tax": 0,
+  "total": 21600,
+  "currency": "USD"
+}

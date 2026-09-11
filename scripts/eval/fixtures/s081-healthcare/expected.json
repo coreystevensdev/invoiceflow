@@ -1,0 +1,11 @@
+{
+  "invoice_number": "MCK-2026-RX-0088",
+  "vendor_name": "McKesson Corp.",
+  "bill_date": "2026-02-15",
+  "due_date": "2026-03-17",
+  "po_number": "PO-RX-0088",
+  "subtotal": 9840,
+  "tax": 0,
+  "total": 9840,
+  "currency": "USD"
+}

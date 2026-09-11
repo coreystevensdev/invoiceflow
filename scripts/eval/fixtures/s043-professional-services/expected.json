@@ -1,0 +1,11 @@
+{
+  "invoice_number": "TFA-2026-0051",
+  "vendor_name": "Thornton Financial Advisors",
+  "bill_date": "2026-06-30",
+  "due_date": "2026-07-30",
+  "po_number": null,
+  "subtotal": 5000,
+  "tax": 0,
+  "total": 5000,
+  "currency": "USD"
+}

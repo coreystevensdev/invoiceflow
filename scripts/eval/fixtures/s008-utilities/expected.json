@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PGE-2026-03-88201",
+  "vendor_name": "Pacific Gas and Electric",
+  "bill_date": "2026-03-10",
+  "due_date": "2026-04-01",
+  "po_number": null,
+  "subtotal": 312.44,
+  "tax": 0,
+  "total": 312.44,
+  "currency": "USD"
+}

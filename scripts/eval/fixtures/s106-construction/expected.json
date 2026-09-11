@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ABM-2026-CLN-0198",
+  "vendor_name": "ABM Janitorial Services",
+  "bill_date": "2026-04-30",
+  "due_date": "2026-05-30",
+  "po_number": "PO-CLN-198",
+  "subtotal": 8400,
+  "tax": 0,
+  "total": 8400,
+  "currency": "USD"
+}

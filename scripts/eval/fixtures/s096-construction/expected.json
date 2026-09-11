@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PEC-2026-INST-0444",
+  "vendor_name": "Premier Electrical Co.",
+  "bill_date": "2026-03-01",
+  "due_date": "2026-04-01",
+  "po_number": "PO-ELEC-444",
+  "subtotal": 14200,
+  "tax": 994,
+  "total": 15194,
+  "currency": "USD"
+}

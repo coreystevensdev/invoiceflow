@@ -1,0 +1,11 @@
+{
+  "invoice_number": "VPB-2026-PRINT-0221",
+  "vendor_name": "Vistaprint Business LLC",
+  "bill_date": "2026-02-10",
+  "due_date": "2026-03-12",
+  "po_number": "PO-PRINT-221",
+  "subtotal": 1244,
+  "tax": 74.64,
+  "total": 1318.64,
+  "currency": "USD"
+}

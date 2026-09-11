@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CER-2026-HRIS-0033",
+  "vendor_name": "Ceridian HCM Inc.",
+  "bill_date": "2026-01-01",
+  "due_date": "2026-01-31",
+  "po_number": "PO-HRIS-033",
+  "subtotal": 4800,
+  "tax": 0,
+  "total": 4800,
+  "currency": "USD"
+}

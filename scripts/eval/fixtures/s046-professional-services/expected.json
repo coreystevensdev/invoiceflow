@@ -1,0 +1,11 @@
+{
+  "invoice_number": "CCC-2026-0017",
+  "vendor_name": "Cross Creek Compliance LLC",
+  "bill_date": "2026-01-15",
+  "due_date": "2026-02-14",
+  "po_number": "PO-COMP-017",
+  "subtotal": 8500,
+  "tax": 0,
+  "total": 8500,
+  "currency": "USD"
+}

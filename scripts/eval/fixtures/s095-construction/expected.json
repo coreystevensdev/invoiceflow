@@ -1,0 +1,11 @@
+{
+  "invoice_number": "APS-2026-COMM-0301",
+  "vendor_name": "Apex Plumbing Services Inc.",
+  "bill_date": "2026-02-20",
+  "due_date": "2026-03-22",
+  "po_number": "PO-PLB-301",
+  "subtotal": 6840,
+  "tax": 410.4,
+  "total": 7250.4,
+  "currency": "USD"
+}

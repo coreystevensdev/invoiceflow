@@ -1,0 +1,11 @@
+{
+  "invoice_number": "COY-2026-SPOT-0088",
+  "vendor_name": "Coyote Logistics LLC",
+  "bill_date": "2026-03-10",
+  "due_date": "2026-04-09",
+  "po_number": null,
+  "subtotal": 3200,
+  "tax": 0,
+  "total": 3200,
+  "currency": "USD"
+}

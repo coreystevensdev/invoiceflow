@@ -1,0 +1,11 @@
+{
+  "invoice_number": "FAD-2026-BGC-0099",
+  "vendor_name": "First Advantage Corp.",
+  "bill_date": "2026-04-01",
+  "due_date": "2026-05-01",
+  "po_number": null,
+  "subtotal": 1845,
+  "tax": 0,
+  "total": 1845,
+  "currency": "USD"
+}

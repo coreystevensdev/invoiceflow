@@ -5,16 +5,25 @@
 <p align="center">
   <a href="https://invoiceflow-cs.vercel.app"><img src="https://img.shields.io/badge/live--demo-invoiceflow--cs.vercel.app-2563eb?style=flat" alt="Live demo"></a>
   <a href="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml"><img src="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/tests-130-brightgreen.svg" alt="130 tests">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="MIT License">
 </p>
 
 # InvoiceFlow
 
-Drop a PDF or image of an invoice and get the vendor, line items, tax, total, and due date back as structured JSON. Typically under five seconds. Each field includes the source content Claude used to extract it, surfaced through a hover or focus tooltip. Export to CSV (QuickBooks or Xero schema) or POST the result to a webhook URL. Drop multiple files at once for batch extraction with a single bulk CSV. Define custom fields (cost center, GL code, project number) on the landing page to extract domain-specific data beyond the standard nine.
+**[Try it now](https://invoiceflow-cs.vercel.app): drop a PDF or invoice image, get structured JSON back in under 5 seconds.**
 
-PDFs run through `pdf-parse` first and Claude reads the extracted text. Scanned (image-only) PDFs fall back to Claude's `document` content blocks; uploaded images go through `image` content blocks directly. Same Zod schema, same response shape, same zero-retention posture either way.
+Uploads PDFs or images of invoices and extracts vendor, line items, tax, total, and due date as structured JSON. Each extracted field includes the source text Claude used to derive it, surfaced via keyboard-accessible tooltips. Supports batch uploads, exports to CSV (QuickBooks or Xero format), and POST-to-webhook forwarding. Define custom fields on the landing page to extract domain-specific data beyond the standard nine.
 
-There's no login or database. Files process in memory inside a single Vercel Function and disappear when the request ends.
+## Problem
+
+Finance and accounting workflows that handle vendor invoices copy vendor names, line items, tax amounts, totals, and due dates into accounting software by hand. Rules-based parsers and template matchers break on new invoice layouts and require per-vendor maintenance. The core challenge is understanding what fields mean in context: distinguishing a subtotal from a grand total, or an order number from an invoice number, requires understanding document structure rather than just extracting characters.
+
+## Solution
+
+Drop any PDF or invoice image and get structured JSON back in under 5 seconds. Claude reads the document with a Zod schema enforced at the SDK boundary, extracting the nine standard fields plus any custom fields defined at runtime. Each field returns with the source text used to derive it. No login, no database, no file storage: every document processes in memory within a single Vercel Function and disappears when the request ends. PDFs run through `pdf-parse` for the text layer first; scanned PDFs and uploaded images route to Claude vision. Same Zod schema, same response shape either way.
+
+## Features
 
 <p align="center">
   <img src="public/screenshots/landing-v2.png" alt="InvoiceFlow landing page with dropzone for PDF upload" width="100%">
@@ -43,18 +52,41 @@ There's no login or database. Files process in memory inside a single Vercel Fun
 </tr>
 </table>
 
-**Stack:** Next.js 16, React 19, TypeScript, Tailwind 4, `@anthropic-ai/sdk`, `pdf-parse`, `pdfjs-dist`, `zod`.
+## Architecture
 
-## Run locally
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Vercel Function
+    participant Anthropic API
 
-```bash
-cp .env.example .env.local
-# paste your Anthropic API key into .env.local
-npm install
-npm run dev
+    Browser->>Vercel Function: POST PDF/image
+    Vercel Function->>Vercel Function: rate-limit by IP
+    Vercel Function->>Vercel Function: detect type from MIME + magic bytes
+    Note over Vercel Function: PDF -> pdf-parse -> text<br/>image -> base64-encode bytes
+    Vercel Function->>Anthropic API: messages.parse(sys+user)
+    Note over Anthropic API: text path: text user message<br/>image path: image content block<br/>system prompt cached either way<br/>Zod schema enforces output
+    Anthropic API-->>Vercel Function: parsed_output, usage
+    Vercel Function->>Vercel Function: deterministic flags + merge
+    Vercel Function->>Vercel Function: cost guard, 3x rolling median?
+    Vercel Function->>Vercel Function: log usage by correlation id
+    Vercel Function-->>Browser: JSON + correlation id
 ```
 
-Open http://localhost:3000 and drop a PDF.
+Everything inside the function is one Node.js process. No queue, no worker, no background job. Vercel's Fluid Compute reuses the instance across concurrent requests, so the in-memory cost history and rate-limit buckets persist across warm invocations (per-instance, not globally, see "Known limitations").
+
+## Tech Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Framework | Next.js 16 (App Router) | Server Components for zero-JS landing; Fluid Compute for 300s extraction timeout; `src/proxy.ts` middleware for per-request CSP nonce |
+| AI | Anthropic `claude-sonnet-4-6` | `messages.parse()` + `zodOutputFormat` validates response at the SDK boundary; ephemeral caching drops system-prompt cost 90%; reasoning string per field is native to the API |
+| Validation | Zod 4 | `Record<ExtractionErrorCode, Shape>` enforces exhaustiveness: adding a new error code that misses `STATUS_BY_CODE` or `ERROR_DESCRIPTIONS` fails to compile |
+| PDF text | pdf-parse + pdfjs-dist | pdf-parse extracts the text layer server-side; pdfjs-dist handles iOS Safari client-side preview (requires legacy canvas build + static worker) |
+| Styling | Tailwind CSS 4 | Ledger-paper design tokens in `@theme inline`; no component library; `prefers-reduced-motion` and `focus-visible` globally enforced |
+| Security | `src/proxy.ts` (Next.js 16 middleware) | Per-request nonce injected into CSP; `strict-dynamic` with no `unsafe-inline`; JSON-LD served via route rather than inline script |
+| Rate limiting | In-memory sliding window | No Redis dependency; per-Fluid-Compute-instance trade-off documented; reuses `slidingWindow()` primitive across routes |
+| Cost control | rolling-cost-cap | 3x rolling-median anomaly cap + $1 absolute ceiling; records cost even when tripped so the monthly total stays accurate |
 
 ## Routes
 
@@ -68,31 +100,16 @@ Open http://localhost:3000 and drop a PDF.
 
 Every API response carries a `correlation_id` (UUID v4) for log lookups. Errors are typed; the discriminated union lives in `src/lib/errors.ts`.
 
-## How it works
+## Getting Started
 
-```
-Browser              Vercel Function                       Anthropic API
-  │                         │                                    │
-  │ ── POST PDF/image ───>  │                                    │
-  │                         │  rate-limit by IP                  │
-  │                         │  detect type from MIME + magic     │
-  │                         │   PDF  → pdf-parse → text          │
-  │                         │   image → base64-encode bytes      │
-  │                         │                                    │
-  │                         │ ── messages.parse(sys+user) ────>  │
-  │                         │   text path: text user message     │
-  │                         │   image path: image content block  │
-  │                         │   system prompt cached either way  │
-  │                         │   Zod schema enforces output       │
-  │                         │ <── parsed_output, usage ────────  │
-  │                         │                                    │
-  │                         │  deterministic flags + merge       │
-  │                         │  cost guard: 3× rolling median?    │
-  │                         │  log usage by correlation id       │
-  │ <── JSON + corr. id ──  │                                    │
+```bash
+cp .env.example .env.local
+# paste your Anthropic API key into .env.local
+npm install
+npm run dev
 ```
 
-Everything inside the function is one Node.js process. No queue, no worker, no background job. Vercel's Fluid Compute reuses the instance across concurrent requests, so the in-memory cost history and rate-limit buckets persist across warm invocations (per-instance, not globally, see "Known limitations").
+Open http://localhost:3000 and drop a PDF.
 
 ## File layout
 
@@ -123,6 +140,10 @@ src/
 │   └── site.ts                   Canonical URL helper
 └── proxy.ts                      Next.js 16 middleware: nonce CSP, HSTS
 ```
+
+## Signature aesthetic
+
+InvoiceFlow uses a **Ledger Paper** design system: paper-white canvas (`#FAFAF6`), ink-navy accent (`#0C2D5C`), and JetBrains Mono for all extracted values. A 28px ruled-grid background evokes a legal pad, and legal-pad yellow (`#FFF5B8`) reserves exclusively for source-highlight hover. This is not shadcn-default chrome or a gradient hero. The aesthetic is intentional and consistent across every screen.
 
 ## Design decisions worth calling out
 
@@ -217,7 +238,7 @@ npx vercel --prod   # production
 
 Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-sonnet-4-6`), `SITE_URL`, `MONTHLY_BUDGET_USD` (default 25). See `.env.example`. The 25 MB PDF size cap and 3.5 MB image cap are set in code at `src/app/api/extract/route.ts`.
 
-## Sister project
+## Related project
 
 [**Tellsight**](https://github.com/coreystevensdev/tellsight) applies the same Claude + privacy-first approach to interpreting business data rather than extracting it. The two compose: InvoiceFlow turns PDF invoices into CSVs; Tellsight reads CSVs and explains what's in them.
 

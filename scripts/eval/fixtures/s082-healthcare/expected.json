@@ -1,0 +1,11 @@
+{
+  "invoice_number": "HSI-DENT-2026-0331",
+  "vendor_name": "Henry Schein Inc.",
+  "bill_date": "2026-04-01",
+  "due_date": "2026-05-01",
+  "po_number": "PO-DENT-331",
+  "subtotal": 2245,
+  "tax": 0,
+  "total": 2245,
+  "currency": "USD"
+}

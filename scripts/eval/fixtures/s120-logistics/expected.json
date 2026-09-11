@@ -1,0 +1,11 @@
+{
+  "invoice_number": "XPO-2026-LTL-0441",
+  "vendor_name": "XPO Logistics Inc.",
+  "bill_date": "2026-02-15",
+  "due_date": "2026-03-17",
+  "po_number": "PO-LTL-441",
+  "subtotal": 4880,
+  "tax": 0,
+  "total": 4880,
+  "currency": "USD"
+}

@@ -1,0 +1,11 @@
+{
+  "invoice_number": "WM-2026-Q2-44021",
+  "vendor_name": "Waste Management Inc.",
+  "bill_date": "2026-04-01",
+  "due_date": "2026-04-21",
+  "po_number": null,
+  "subtotal": 585,
+  "tax": 0,
+  "total": 585,
+  "currency": "USD"
+}

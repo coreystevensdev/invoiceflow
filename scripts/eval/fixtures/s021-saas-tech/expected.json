@@ -1,0 +1,11 @@
+{
+  "invoice_number": "DOH-2026-0099",
+  "vendor_name": "DevOps Hub Inc.",
+  "bill_date": "2026-02-01",
+  "due_date": "2026-03-03",
+  "po_number": null,
+  "subtotal": 1188,
+  "tax": 0,
+  "total": 1188,
+  "currency": "USD"
+}

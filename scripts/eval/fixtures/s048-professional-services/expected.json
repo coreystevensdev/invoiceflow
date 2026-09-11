@@ -1,0 +1,11 @@
+{
+  "invoice_number": "GAG-2026-0066",
+  "vendor_name": "Greenfield Analytics Group",
+  "bill_date": "2026-06-01",
+  "due_date": "2026-07-01",
+  "po_number": "PO-RESEARCH-066",
+  "subtotal": 16000,
+  "tax": 0,
+  "total": 16000,
+  "currency": "USD"
+}

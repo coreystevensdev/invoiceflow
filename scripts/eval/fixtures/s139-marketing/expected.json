@@ -1,0 +1,11 @@
+{
+  "invoice_number": "HST-2026-TEAM-0119",
+  "vendor_name": "Hootsuite Inc.",
+  "bill_date": "2026-05-01",
+  "due_date": "2026-05-31",
+  "po_number": "PO-SOCIAL-119",
+  "subtotal": 1188,
+  "tax": 0,
+  "total": 1188,
+  "currency": "USD"
+}

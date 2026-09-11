@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PCS-2026-042",
+  "vendor_name": "Pixel and Code Studio",
+  "bill_date": "2026-03-15",
+  "due_date": "2026-04-14",
+  "po_number": "PO-7001",
+  "subtotal": 8500,
+  "tax": 722.5,
+  "total": 9222.5,
+  "currency": "USD"
+}

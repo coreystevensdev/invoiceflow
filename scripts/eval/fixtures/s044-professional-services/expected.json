@@ -1,0 +1,11 @@
+{
+  "invoice_number": "ACS-2026-W-018",
+  "vendor_name": "Archer Content Studio",
+  "bill_date": "2026-04-15",
+  "due_date": null,
+  "po_number": "PO-CONTENT-018",
+  "subtotal": 2800,
+  "tax": 0,
+  "total": 2800,
+  "currency": "USD"
+}

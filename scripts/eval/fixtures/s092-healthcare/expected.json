@@ -1,0 +1,11 @@
+{
+  "invoice_number": "PTD-2026-EQUIP-0007",
+  "vendor_name": "Patterson Dental LLC",
+  "bill_date": "2026-06-01",
+  "due_date": "2026-07-01",
+  "po_number": "PO-DEQUIP-007",
+  "subtotal": 22000,
+  "tax": 0,
+  "total": 22000,
+  "currency": "USD"
+}

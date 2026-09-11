@@ -1,0 +1,11 @@
+{
+  "invoice_number": "BRL-2026-DX-0041",
+  "vendor_name": "BioReference Labs Inc.",
+  "bill_date": "2026-05-15",
+  "due_date": "2026-06-14",
+  "po_number": null,
+  "subtotal": 1560,
+  "tax": 0,
+  "total": 1560,
+  "currency": "USD"
+}
