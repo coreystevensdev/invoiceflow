@@ -42,10 +42,10 @@ export function LoomEmbed() {
   return (
     <section
       aria-label="Demo video"
-      className="mt-8 rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900"
+      className="mt-8 border border-rule-warm p-2"
     >
       <div ref={containerRef} className="motion-reduce:hidden">
-        <div className="aspect-video overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+        <div className="aspect-video overflow-hidden bg-ink-navy/5">
           {shouldMount ? (
             // Sandbox tokens accept the HTML-spec trade-off: allow-same-origin
             // + allow-scripts effectively disables sandboxing for the Loom
@@ -74,7 +74,7 @@ export function LoomEmbed() {
             iframe `onerror` does not fire on embedded 404 pages (they reach
             the embedder as 200 OK), so the only reliable recourse is a
             visible click-out. */}
-        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
+        <p className="mt-2 text-xs text-foreground/50">
           Trouble loading?{" "}
           <a
             href={shareUrl}

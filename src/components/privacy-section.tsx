@@ -4,24 +4,21 @@ export function PrivacySection() {
   return (
     <section
       aria-labelledby="privacy-heading"
-      className="mt-10 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+      className="mt-10 border border-rule-warm p-5"
     >
-      <h2
-        id="privacy-heading"
-        className="text-base font-semibold text-zinc-900 dark:text-zinc-100"
-      >
+      <h2 id="privacy-heading" className="text-base font-semibold text-foreground">
         Zero retention
       </h2>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-1 text-sm text-foreground/70">
         No database, no PDF persistence, no log line containing invoice
         content. The promise lives in the code, not a policy.
       </p>
 
-      <details className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <summary className="cursor-pointer select-none font-medium text-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:text-zinc-200">
+      <details className="mt-3 border border-rule-warm p-3 text-sm">
+        <summary className="cursor-pointer select-none font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded">
           How it&apos;s enforced
         </summary>
-        <div className="mt-3 space-y-2 text-zinc-700 dark:text-zinc-400">
+        <div className="mt-3 space-y-2 text-foreground/70">
           <p>
             The structured logger in{" "}
             <a
@@ -29,32 +26,32 @@ export function PrivacySection() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="src/lib/log.ts on GitHub (opens in a new tab)"
-              className="font-mono text-xs underline underline-offset-2 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-indigo-400"
+              className="font-mono text-xs underline underline-offset-2 hover:text-ink-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded"
             >
               src/lib/log.ts
             </a>{" "}
             allows only this set of fields:{" "}
-            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+            <code className="bg-ink-navy/10 px-1 py-0.5 text-[0.7rem] font-mono">
               correlation_id
             </code>
             ,{" "}
-            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+            <code className="bg-ink-navy/10 px-1 py-0.5 text-[0.7rem] font-mono">
               pdf_size_bytes
             </code>
             ,{" "}
-            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+            <code className="bg-ink-navy/10 px-1 py-0.5 text-[0.7rem] font-mono">
               pdf_num_pages
             </code>
             ,{" "}
-            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+            <code className="bg-ink-navy/10 px-1 py-0.5 text-[0.7rem] font-mono">
               error_code
             </code>
             ,{" "}
-            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+            <code className="bg-ink-navy/10 px-1 py-0.5 text-[0.7rem] font-mono">
               cost_usd
             </code>
             ,{" "}
-            <code className="rounded bg-zinc-200 px-1 py-0.5 text-[0.7rem] font-mono dark:bg-zinc-800">
+            <code className="bg-ink-navy/10 px-1 py-0.5 text-[0.7rem] font-mono">
               retry_count
             </code>
             . Anything else is a compile-time type error.
@@ -66,7 +63,7 @@ export function PrivacySection() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="src/app/api/webhook/route.ts on GitHub (opens in a new tab)"
-              className="font-mono text-xs underline underline-offset-2 hover:text-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded dark:hover:text-indigo-400"
+              className="font-mono text-xs underline underline-offset-2 hover:text-ink-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded"
             >
               src/app/api/webhook/route.ts
             </a>{" "}

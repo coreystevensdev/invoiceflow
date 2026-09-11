@@ -206,7 +206,7 @@ function FieldRow({
       }}
       onMouseLeave={() => onDeactivate?.()}
     >
-      <dt className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+      <dt className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/50">
         <label htmlFor={inputId}>{label}</label>
         {isEdited && (
           <span
@@ -238,7 +238,7 @@ function FieldRow({
             }}
             inputMode={money ? "decimal" : "text"}
             spellCheck={false}
-            className="w-full rounded-md border border-ink-navy/60 bg-white px-2 py-1 font-mono text-base font-medium text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy dark:border-ink-navy dark:bg-zinc-950 dark:text-zinc-100"
+            className="w-full border border-ink-navy/60 bg-background px-2 py-1 font-mono text-base font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy"
           />
         </dd>
       ) : (
@@ -269,7 +269,7 @@ function FieldRow({
               aria-label={
                 manuallyShown ? "Hide reasoning" : "Show reasoning"
               }
-              className="hidden h-5 w-5 items-center justify-center rounded-full border border-zinc-300 text-[10px] font-semibold leading-none text-zinc-600 hover:border-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-500 pointer-coarse:inline-flex"
+              className="hidden h-5 w-5 items-center justify-center rounded-full border border-rule-warm text-[10px] font-semibold leading-none text-foreground/60 hover:border-ink-navy/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 pointer-coarse:inline-flex"
             >
               i
             </button>
@@ -280,7 +280,7 @@ function FieldRow({
         <div
           id={reasoningId}
           role="tooltip"
-          className={`pointer-events-none absolute inset-x-0 top-full z-10 mt-1 rounded-lg bg-zinc-900 p-3 text-xs text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900 ${tooltipVisibility}`}
+          className={`pointer-events-none absolute inset-x-0 top-full z-10 mt-1 border border-ink-navy bg-ink-navy p-3 text-xs text-background shadow-lg ${tooltipVisibility}`}
         >
           {field.reasoning}
         </div>
@@ -412,7 +412,7 @@ function EditableCell({
           }}
           spellCheck={false}
           aria-label={ariaLabel}
-          className={`w-full rounded-md border border-ink-navy/60 bg-white px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy dark:border-ink-navy dark:bg-zinc-950 dark:text-zinc-100 ${
+          className={`w-full border border-ink-navy/60 bg-background px-2 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy ${
             kind === "text" ? "text-left" : "text-right tabular-nums"
           }`}
         />
@@ -444,12 +444,12 @@ function LineItemsTable({
   ) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="overflow-x-auto border border-rule-warm">
       <table className="w-full text-sm sm:min-w-[28rem]">
         <caption className="sr-only">
           Extracted line items. Click any cell to edit.
         </caption>
-        <thead className="border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+        <thead className="border-b border-rule-warm text-left font-mono text-xs uppercase tracking-[0.14em] text-foreground/50">
           <tr>
             <th scope="col" className="px-4 py-3">Description</th>
             <th scope="col" className="px-4 py-3 text-right">Qty</th>
@@ -461,7 +461,7 @@ function LineItemsTable({
           {items.map((li, i) => (
             <tr
               key={i}
-              className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
+              className="border-b border-rule-warm/60 last:border-0"
             >
               <EditableCell
                 value={li.description ?? null}
@@ -525,10 +525,10 @@ function JsonPanel({
       role="tabpanel"
       id={panelId}
       aria-labelledby={tabId}
-      className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-950 dark:border-zinc-800"
+      className="overflow-hidden border border-rule-warm bg-[#1c1a16] dark:bg-[#0e0d0a]"
     >
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2 text-xs">
-        <span className="font-mono text-zinc-400">api/extract response</span>
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-2 text-xs">
+        <span className="font-mono text-white/50">api/extract response</span>
         <div className="flex items-center gap-2">
           {/* Visually-hidden live region announces success without changing
               the button's accessible name (stays stable as "Copy JSON to
@@ -541,13 +541,13 @@ function JsonPanel({
             type="button"
             onClick={onCopy}
             aria-label="Copy JSON to clipboard"
-            className="rounded-md border border-zinc-700 px-2 py-1 font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy"
+            className="border border-white/20 px-2 py-1 font-medium text-white/80 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy-hover"
           >
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
       </div>
-      <pre className="max-h-[820px] overflow-auto p-4 text-xs leading-relaxed text-zinc-100">
+      <pre className="max-h-[820px] overflow-auto p-4 text-xs leading-relaxed text-white/90">
         <code>{json}</code>
       </pre>
     </div>
@@ -826,12 +826,12 @@ export function ResultsView({
   return (
     <section className="mt-8 space-y-6" aria-label="Extraction results" data-results-section>
       <div
-        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-zinc-500"
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-foreground/60"
         role="status"
         aria-live="polite"
       >
         <span>
-          <span className="font-medium text-zinc-700 dark:text-zinc-300">
+          <span className="font-medium text-foreground">
             {filename}
           </span>
           {", "}
@@ -854,7 +854,7 @@ export function ResultsView({
                   setEdited(result.invoice);
                   setActiveBbox(null);
                 }}
-                className="underline underline-offset-2 hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded dark:hover:text-zinc-300"
+                className="underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 rounded"
               >
                 Reset
               </button>
@@ -886,7 +886,7 @@ export function ResultsView({
               <img
                 src={pdfUrl}
                 alt={`Original invoice: ${filename}`}
-                className="w-full rounded-xl border border-zinc-200 bg-white dark:border-zinc-800"
+                className="w-full border border-rule-warm bg-background"
               />
               {activeBbox && (
                 <div
@@ -918,7 +918,7 @@ export function ResultsView({
             role="tablist"
             aria-label="Extraction view"
             data-print-hide
-            className="inline-flex rounded-lg border border-zinc-200 bg-white p-1 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+            className="inline-flex border border-rule-warm p-1 text-sm"
           >
             <button
               type="button"
@@ -929,10 +929,10 @@ export function ResultsView({
               tabIndex={view === "fields" ? 0 : -1}
               onClick={() => setView("fields")}
               onKeyDown={onTabKeyDown}
-              className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy ${
+              className={`px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy ${
                 view === "fields"
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  ? "bg-ink-navy text-background"
+                  : "text-foreground/60 hover:text-foreground"
               }`}
             >
               Fields
@@ -946,10 +946,10 @@ export function ResultsView({
               tabIndex={view === "json" ? 0 : -1}
               onClick={() => setView("json")}
               onKeyDown={onTabKeyDown}
-              className={`rounded-md px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy ${
+              className={`px-3 py-1.5 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy ${
                 view === "json"
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                  ? "bg-ink-navy text-background"
+                  : "text-foreground/60 hover:text-foreground"
               }`}
             >
               JSON
@@ -962,13 +962,17 @@ export function ResultsView({
               id={fieldsPanelId}
               aria-labelledby={fieldsTabId}
             >
-              <dl className="grid border-t border-l border-zinc-200 dark:border-zinc-800 sm:grid-cols-2">
-                {fields.map((f) => {
+              <dl className="grid border-t border-l border-rule-warm sm:grid-cols-2">
+                {fields.map((f, i) => {
                   const bboxForField = useVisionBboxes
                     ? f.bbox
                     : (pdfBboxMap[f.label] ?? null);
                   return (
-                    <div key={f.label} className="border-b border-r border-zinc-200 p-5 dark:border-zinc-800">
+                    <div
+                      key={f.label}
+                      className="animate-field-reveal border-b border-r border-rule-warm p-5 motion-reduce:animate-none"
+                      style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
+                    >
                       <FieldRow
                         label={f.label}
                         field={f.field}
@@ -1025,33 +1029,33 @@ export function ResultsView({
           <button
             type="button"
             onClick={() => downloadCsv("summary", displayInvoice)}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="bg-ink-navy px-4 py-2 text-sm font-medium text-background hover:bg-ink-navy-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           >
             Download summary CSV
           </button>
           <button
             type="button"
             onClick={() => downloadCsv("line_items", displayInvoice)}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+            className="border border-rule-warm px-4 py-2 text-sm font-medium hover:bg-ink-navy/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           >
             Download line-items CSV
           </button>
           <button
             type="button"
             onClick={downloadJson}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+            className="border border-rule-warm px-4 py-2 text-sm font-medium hover:bg-ink-navy/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           >
             Download JSON
           </button>
           <button
             type="button"
             onClick={onReset}
-            className="ml-auto rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+            className="ml-auto border border-rule-warm px-4 py-2 text-sm font-medium text-foreground/60 hover:bg-ink-navy/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           >
             Upload another
           </button>
         </div>
-        <p className="mt-2 text-xs text-zinc-500">
+        <p className="mt-2 text-xs text-foreground/50">
           Summary is one row per invoice (vendor, dates, totals). Line-items is
           one row per item. Both import into QuickBooks Online and Xero. JSON
           gives the full extraction response for custom integrations.
@@ -1061,10 +1065,10 @@ export function ResultsView({
 
       <div
         data-print-hide
-        className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+        className="border border-rule-warm p-6"
       >
         <h2 className="text-base font-semibold">Fire webhook</h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-1 text-sm text-foreground/70">
           POST the extracted invoice JSON to your URL. Useful for testing
           downstream integrations.
         </p>
@@ -1083,7 +1087,7 @@ export function ResultsView({
             placeholder="https://api.example.com/webhooks/invoiceflow"
             aria-invalid={webhookUrlError ? true : undefined}
             aria-describedby={webhookUrlError ? webhookHelpId : undefined}
-            className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy dark:border-zinc-700 dark:bg-zinc-950"
+            className="flex-1 border border-rule-warm bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy"
           />
           <button
             type="button"
@@ -1117,16 +1121,16 @@ export function ResultsView({
             <span>{webhookFiring ? "Sending" : "Send POST"}</span>
           </button>
         </div>
-        <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+        <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-foreground/70">
           <input
             type="checkbox"
             checked={rememberWebhookUrl}
             onChange={(e) => setRememberWebhookUrl(e.target.checked)}
-            className="h-4 w-4 rounded border-zinc-300 text-ink-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-950"
+            className="h-4 w-4 rounded border-rule-warm bg-background text-ink-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-navy focus-visible:ring-offset-2"
           />
           <span>
             Remember this URL on this device.{" "}
-            <span className="text-zinc-500 dark:text-zinc-500">
+            <span className="text-foreground/50">
               Stored locally only, never sent anywhere; clears when unchecked.
             </span>
           </span>

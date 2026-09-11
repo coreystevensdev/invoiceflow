@@ -41,6 +41,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Playwright MCP session artifacts (screenshots, traces; local-only)
+.playwright-mcp/
+
 # claude code skills (tool-generated, regenerable)
 .claude/
 
