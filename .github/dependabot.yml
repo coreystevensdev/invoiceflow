@@ -16,6 +16,16 @@ updates:
     versioning-strategy: "increase"
     labels:
       - "dependencies"
+    ignore:
+      # pdf-parse 2.x is a different library wearing the same name: no default
+      # export, a class API, and pdfjs-dist plus a native @napi-rs/canvas
+      # underneath, which takes node_modules from 29MB to 80MB. This runs in a
+      # Vercel function and uses exactly one call, none of what 2.x adds. The
+      # 1.x line is still maintained (1.1.4 shipped after 2.4.5) and carries no
+      # known advisories, so there is nothing to move toward. Revisit if 1.x
+      # gets an advisory or stops being published.
+      - dependency-name: "pdf-parse"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
