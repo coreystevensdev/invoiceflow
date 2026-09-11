@@ -31,14 +31,17 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: README test count matches what vitest runs
+      - name: README test count matches what vitest collects
         run: |
-          n=$(npm test 2>&1 | grep -oE 'Tests +[0-9]+ passed' | grep -oE '[0-9]+' | tail -1)
-          [ -n "$n" ] || { echo "could not parse a count out of vitest"; exit 1; }
+          # `vitest list` collects without running, and unlike the run summary it
+          # carries no ANSI colour for the count to hide behind. Parsing the summary
+          # worked locally and found nothing in CI, where colour stays on.
+          n=$(npx vitest list | grep -c ' > ')
+          [ "$n" -gt 0 ] || { echo "vitest listed no tests"; exit 1; }
           fail=0
           grep -q "badge/tests-$n-brightgreen" README.md || { echo "badge does not say $n"; fail=1; }
           grep -q 'alt="'"$n"' tests"' README.md || { echo "badge alt text does not say $n"; fail=1; }
-          [ "$fail" = 0 ] || { echo "vitest runs $n. Update both spots in README.md."; exit 1; }
+          [ "$fail" = 0 ] || { echo "vitest collects $n. Update both spots in README.md."; exit 1; }
           echo "README agrees with vitest: $n"
 
       - name: Build (includes typecheck)
