@@ -1,4 +1,4 @@
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 export interface PdfTextResult {
   text: string;
@@ -41,17 +41,20 @@ export async function parsePdf(bytes: Buffer): Promise<PdfTextResult> {
     );
   }
 
+  // v2 owns a pdfjs worker, so it has to be torn down on every path. Leaking
+  // one keeps the serverless invocation alive until it times out.
+  const parser = new PDFParse({ data: bytes });
   try {
-    const result = await pdfParse(bytes);
+    const result = await parser.getText();
     const text = result.text;
     if (!text || text.trim().length === 0) {
       throw new PdfParseError(
         "This PDF contains no extractable text. It may be an image-only scan, try OCR first, or use a PDF with selectable text.",
         "image_only",
-        { size: bytes.length, num_pages: result.numpages },
+        { size: bytes.length, num_pages: result.total },
       );
     }
-    return { text, num_pages: result.numpages };
+    return { text, num_pages: result.total };
   } catch (err) {
     if (err instanceof PdfParseError) throw err;
     const message = err instanceof Error ? err.message : String(err);
@@ -60,6 +63,10 @@ export async function parsePdf(bytes: Buffer): Promise<PdfTextResult> {
       "parse_failed",
       { size: bytes.length, underlying: message },
     );
+  } finally {
+    // A parser that never loaded throws again here; that must not replace the
+    // real failure the caller is about to see.
+    await parser.destroy().catch(() => {});
   }
 }
 
