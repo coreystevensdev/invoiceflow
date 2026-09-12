@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { parsePdf, PdfParseError } from "./pdf";
 
 async function codeOf(bytes: Buffer): Promise<string> {
@@ -37,5 +37,39 @@ describe("parsePdf header sniff", () => {
     const bytes = Buffer.from("%PDF-1.4\n%garbage, not a real xref table\n%%EOF");
     const code = await codeOf(bytes);
     expect(code).not.toBe("not_a_pdf");
+  });
+});
+
+
+// The real failures these strings come from: a deployment that traced neither
+// the pdfjs worker nor the native canvas binding, which built and deployed green
+// and then answered every upload with a 500. Before this, all three arrived as
+// parse_failed and surfaced as corrupt-PDF, telling the user to re-save a file
+// that was never the problem.
+describe("parser unavailable vs corrupt file", () => {
+  const header = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]);
+
+  async function codeForThrow(message: string): Promise<string> {
+    const { PDFParse } = await import("pdf-parse");
+    const spy = vi
+      .spyOn(PDFParse.prototype, "getText")
+      .mockRejectedValue(new Error(message));
+    try {
+      return await codeOf(header);
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
+  it.each([
+    "Setting up fake worker failed: \"Cannot find module '/var/task/.../pdf.worker.mjs'\"",
+    "Cannot load \"@napi-rs/canvas\" package: Error: Failed to load native binding",
+    "DOMMatrix is not defined",
+  ])("reports a loader failure as parser_unavailable: %s", async (message) => {
+    expect(await codeForThrow(message)).toBe("parser_unavailable");
+  });
+
+  it("still reports a genuinely bad document as parse_failed", async () => {
+    expect(await codeForThrow("Invalid PDF structure.")).toBe("parse_failed");
   });
 });

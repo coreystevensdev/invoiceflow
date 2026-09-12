@@ -22,16 +22,23 @@ const ICON_BY_CODE: Record<ExtractionErrorCode, string> = {
   "extraction-timeout": "⏱",
   "cost-budget-exceeded": "⚠",
   "monthly-budget-exhausted": "⚠",
+  "pdf-reader-unavailable": "⚠",
 };
 
 // Transient codes where retrying the same file is meaningful. Permanent codes
 // (corrupt-PDF, non-PDF, not-an-invoice, oversized-PDF, cost-budget-exceeded,
 // monthly-budget-exhausted) need a different file or operator action; offering
 // retry would just produce the same error again.
+// A Set, so the compiler cannot make anyone revisit this when a code is added.
+// Check it by hand: the question is whether re-sending the same bytes could
+// succeed later.
 const RETRYABLE_CODES: ReadonlySet<ExtractionErrorCode> = new Set([
   "model-API-failure",
   "rate-limited",
   "extraction-timeout",
+  // The file was never the problem, so the same upload works once the reader
+  // loads again.
+  "pdf-reader-unavailable",
 ]);
 
 const MONTHLY_BUDGET_NEXT_STEP_NO_LINK =
