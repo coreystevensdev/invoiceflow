@@ -20,7 +20,8 @@ export type ExtractionErrorCode =
   | "rate-limited"
   | "extraction-timeout"
   | "cost-budget-exceeded"
-  | "monthly-budget-exhausted";
+  | "monthly-budget-exhausted"
+  | "pdf-reader-unavailable";
 
 export interface ErrorDescription {
   title: string;
@@ -36,6 +37,13 @@ export const ERROR_DESCRIPTIONS: Record<ExtractionErrorCode, ErrorDescription> =
         "The file doesn't look like a valid PDF. It may be truncated, password-protected, or saved in an unusual variant.",
       nextStep:
         "Open it in your PDF viewer, re-save as a standard PDF, and try again.",
+    },
+    "pdf-reader-unavailable": {
+      title: "We couldn't start the PDF reader",
+      message:
+        "Your file is fine. Something on our side failed to load, so nothing could read it. This is not a problem with the document you uploaded.",
+      nextStep:
+        "Try again in a few minutes. If it keeps happening, the correlation ID below identifies this exact request.",
     },
     "oversized-PDF": {
       title: "That file is too large",
@@ -105,6 +113,8 @@ export const STATUS_BY_CODE: Record<ExtractionErrorCode, number> = {
   "extraction-timeout": 504,
   "cost-budget-exceeded": 429,
   "monthly-budget-exhausted": 429,
+  // 503, not 422. The upload was valid; this end of it was not.
+  "pdf-reader-unavailable": 503,
 };
 
 export function describeError(code: ExtractionErrorCode): ErrorDescription {

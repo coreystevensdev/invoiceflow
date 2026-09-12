@@ -130,6 +130,8 @@ function mapPdfError(code: PdfParseErrorCode): ExtractionErrorCode {
       return "not-an-invoice";
     case "parse_failed":
       return "corrupt-PDF";
+    case "parser_unavailable":
+      return "pdf-reader-unavailable";
   }
 }
 

@@ -16,6 +16,26 @@ function hasPdfHeader(bytes: Buffer): boolean {
   return PDF_HEADER_BYTES.every((expected, i) => bytes[i] === expected);
 }
 
+// pdfjs resolves its worker file and its native canvas binding at run time, not
+// through imports, so a deployment that failed to trace either throws from the
+// parser with a perfectly good PDF in hand. Every string here was produced by a
+// real deployment of this app that built and deployed green.
+const PARSER_UNAVAILABLE_SIGNS = [
+  "cannot find module",
+  "err_module_not_found",
+  "failed to load native binding",
+  "setting up fake worker failed",
+  "dommatrix is not defined",
+];
+
+// Separating this from parse_failed is the whole point: both used to surface as
+// corrupt-PDF, which tells someone to re-save a file that was never the problem
+// and hides an outage behind a 422 nobody investigates.
+function isParserUnavailable(message: string): boolean {
+  const m = message.toLowerCase();
+  return PARSER_UNAVAILABLE_SIGNS.some((sign) => m.includes(sign));
+}
+
 /**
  * Parse raw PDF bytes into text. Throws PdfParseError with a typed code so
  * the route handler can map each failure mode to a typed user-facing
@@ -58,6 +78,13 @@ export async function parsePdf(bytes: Buffer): Promise<PdfTextResult> {
   } catch (err) {
     if (err instanceof PdfParseError) throw err;
     const message = err instanceof Error ? err.message : String(err);
+    if (isParserUnavailable(message)) {
+      throw new PdfParseError(
+        `The PDF reader could not start: ${message}`,
+        "parser_unavailable",
+        { size: bytes.length, underlying: message },
+      );
+    }
     throw new PdfParseError(
       `Unable to parse PDF: ${message}. Common causes: password-protected, corrupted, or an unsupported PDF variant.`,
       "parse_failed",
@@ -74,7 +101,8 @@ export type PdfParseErrorCode =
   | "empty_file"
   | "not_a_pdf"
   | "image_only"
-  | "parse_failed";
+  | "parse_failed"
+  | "parser_unavailable";
 
 export class PdfParseError extends Error {
   readonly code: PdfParseErrorCode;
