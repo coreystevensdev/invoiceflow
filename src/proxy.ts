@@ -36,7 +36,13 @@ export function proxy(request: NextRequest) {
     `connect-src 'self' blob:${isDev ? " ws: http://localhost:*" : ""}`,
     `media-src 'self' https://cdn.loom.com https://www.loom.com`,
     `frame-src 'self' blob: https://www.loom.com`,
-    `object-src 'none'`,
+    // blob: so the PDF preview's fallback <object> can render a PDF the page
+    // itself created from the user's own file. Not a general relaxation: a blob
+    // URL only resolves inside the document that made it, so this cannot load
+    // plugin content from anywhere else. The alternative was dropping the inline
+    // fallback entirely, which costs the inline view on the browsers it exists
+    // for (older iOS Safari, where the canvas path fails).
+    `object-src 'self' blob:`,
     `base-uri 'self'`,
     `form-action 'self'`,
     `frame-ancestors 'none'`,
