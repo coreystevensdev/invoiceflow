@@ -28,6 +28,9 @@ export interface StructuredPayload {
   monthly_cost_usd?: number;
   budget_cap_usd?: number;
   rate_limit_remaining?: number;
+  // A character count, not the text. Lets the unparseable-output branch say how
+  // much the model produced without putting any of it in a log line.
+  output_length?: number;
   route?: string;
   note?: string;
 }
