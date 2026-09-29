@@ -962,8 +962,8 @@ export function ResultsView({
               id={fieldsPanelId}
               aria-labelledby={fieldsTabId}
             >
-              <dl className="grid border-t border-l border-rule-warm sm:grid-cols-2">
-                {fields.map((f, i) => {
+              <dl className="stagger-reveal grid border-t border-l border-rule-warm sm:grid-cols-2">
+                {fields.map((f) => {
                   const bboxForField = useVisionBboxes
                     ? f.bbox
                     : (pdfBboxMap[f.label] ?? null);
@@ -971,7 +971,6 @@ export function ResultsView({
                     <div
                       key={f.label}
                       className="animate-field-reveal border-b border-r border-rule-warm p-5 motion-reduce:animate-none"
-                      style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
                     >
                       <FieldRow
                         label={f.label}
