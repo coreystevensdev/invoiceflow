@@ -623,8 +623,7 @@ export default function Home() {
 
         <div
           data-print-hide
-          style={{ animationDelay: "60ms" }}
-          className={`animate-field-reveal grid overflow-hidden border transition-colors motion-reduce:animate-none sm:grid-cols-[2fr_1fr] ${
+          className={`animate-field-reveal [animation-delay:60ms] grid overflow-hidden border transition-colors motion-reduce:animate-none sm:grid-cols-[2fr_1fr] ${
             isDragging && !dropzoneBusy ? "border-ink-navy" : "border-rule-warm"
           }`}
         >
@@ -756,8 +755,7 @@ export default function Home() {
         {status.kind === "idle" && (
           <div
             data-print-hide
-            style={{ animationDelay: "120ms" }}
-            className="animate-field-reveal motion-reduce:animate-none"
+            className="animate-field-reveal [animation-delay:120ms] motion-reduce:animate-none"
           >
             <LoomEmbed />
             <PreviewCard />
