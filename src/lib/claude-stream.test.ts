@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  extractJsonObject,
   PartialJsonFieldParser,
   STREAMING_FIELD_KEYS,
   STREAMING_SCHEMA_CONSTRAINT,
@@ -81,5 +82,60 @@ describe("STREAMING_SCHEMA_CONSTRAINT", () => {
     expect(embedded.required.sort()).toEqual(
       Object.keys(InvoiceExtractionSchema.shape).sort(),
     );
+  });
+});
+
+// The streaming path cannot use output_config/zodOutputFormat, so unlike
+// extractInvoice() nothing at the API level guarantees the response is bare JSON.
+// It asks for JSON in the prompt and then parses whatever arrives. A fenced or
+// prose-wrapped reply still streams every field, because PartialJsonFieldParser
+// scans for keys rather than parsing the document, and then fails at the end on
+// JSON.parse. That surfaced as a generic model-API-failure with all the fields
+// already delivered, which is exactly as confusing as it sounds.
+describe("extractJsonObject", () => {
+  const obj = `{"invoice_number": {"value": "INV-001", "confidence": "high", "reasoning": "top"}}`;
+
+  it("parses a bare JSON object unchanged", () => {
+    expect(extractJsonObject(obj)).toEqual(JSON.parse(obj));
+  });
+
+  it("parses a ```json fenced object", () => {
+    expect(extractJsonObject("```json\n" + obj + "\n```")).toEqual(JSON.parse(obj));
+  });
+
+  it("parses an unlabelled fenced object", () => {
+    expect(extractJsonObject("```\n" + obj + "\n```")).toEqual(JSON.parse(obj));
+  });
+
+  it("parses through a preamble", () => {
+    expect(extractJsonObject("Here is the extraction:\n\n" + obj)).toEqual(JSON.parse(obj));
+  });
+
+  it("parses despite trailing prose", () => {
+    expect(extractJsonObject(obj + "\n\nLet me know if you need anything else.")).toEqual(
+      JSON.parse(obj),
+    );
+  });
+
+  it("is not fooled by braces inside string values", () => {
+    const tricky = `{"invoice_number": {"value": "A}B{C", "confidence": "high", "reasoning": "has braces"}}`;
+    expect(extractJsonObject("```json\n" + tricky + "\n```")).toEqual(JSON.parse(tricky));
+  });
+
+  // Reaches the brace walk specifically: no fence to extract, and trailing prose
+  // so the direct parse fails first. The brace must be UNBALANCED: a value like
+  // "A}B{C" cancels out in the depth count, so a mutation removing the walk's
+  // string handling stayed green against it and proved nothing.
+  it("walks past an unbalanced brace inside a string value", () => {
+    const tricky = `{"invoice_number": {"value": "A}B", "confidence": "high", "reasoning": "one stray brace"}}`;
+    expect(extractJsonObject(tricky + "\n\nHope that helps.")).toEqual(JSON.parse(tricky));
+  });
+
+  it("returns null when there is no object at all, rather than throwing", () => {
+    expect(extractJsonObject("I cannot read this invoice.")).toBeNull();
+  });
+
+  it("returns null on a genuinely truncated object", () => {
+    expect(extractJsonObject(`{"invoice_number": {"value": "INV-0`)).toBeNull();
   });
 });

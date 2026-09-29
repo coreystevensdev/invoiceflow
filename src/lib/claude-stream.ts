@@ -41,6 +41,79 @@ ${JSON.stringify(z.toJSONSchema(InvoiceExtractionSchema), null, 2)}`;
 // Top-level keys the InvoiceExtractionSchema expects, in the order Claude
 // typically generates them. Used by the partial-JSON parser to know which
 // keys to watch for.
+/**
+ * Pull the JSON object out of a model response that may not be bare JSON.
+ *
+ * extractInvoice() does not need this: messages.parse() with output_config has
+ * the API enforce the shape. Streaming has no equivalent, so this path asks for
+ * JSON in the prompt and takes what arrives, and a prompt is a request rather
+ * than a guarantee. A fenced or prose-wrapped reply still streams every field,
+ * because PartialJsonFieldParser scans for keys instead of parsing the document,
+ * and then failed here on a bare JSON.parse with all the fields already sent.
+ *
+ * Returns null rather than throwing so the caller distinguishes "no object in
+ * this response" from an exception it has to classify.
+ */
+export function extractJsonObject(raw: string): unknown {
+  const attempt = (text: string): unknown => {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      // A bare number or string is valid JSON but never a valid extraction, and
+      // accepting one would push a useless value into schema validation.
+      return typeof parsed === "object" && parsed !== null ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const direct = attempt(raw.trim());
+  if (direct !== undefined) return direct;
+
+  const fenced = raw.match(/```(?:json)?\s*\n?([\s\S]*?)```/i);
+  if (fenced) {
+    const inner = attempt(fenced[1].trim());
+    if (inner !== undefined) return inner;
+  }
+
+  // Last resort: walk from the first brace to its match. Depth counting has to
+  // ignore braces inside strings, or a value like "A}B{C" closes the object early.
+  const start = raw.indexOf("{");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        const candidate = attempt(raw.slice(start, i + 1));
+        return candidate === undefined ? null : candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
 export const STREAMING_FIELD_KEYS = [
   "invoice_number",
   "vendor",
@@ -255,14 +328,21 @@ export async function* extractInvoiceStream(
       }
 
       // Stream complete: validate the accumulated JSON with Zod.
-      let rawParsed: unknown;
-      try {
-        rawParsed = JSON.parse(accumulated);
-      } catch {
+      const rawParsed = extractJsonObject(accumulated);
+      if (rawParsed === null) {
+        // A length and nothing else. This branch used to fail with every field
+        // already delivered and nothing recorded about why, so it needed some
+        // signal, but the body is customer invoice content and StructuredPayload
+        // exists to keep that out of logs. The size alone separates "model wrote
+        // prose instead of JSON" from "model returned almost nothing".
+        logger?.warn({
+          category: "stream-unparseable-output",
+          output_length: accumulated.length,
+        });
         yield {
           type: "error",
           code: "model-API-failure",
-          message: "Claude returned non-JSON output.",
+          message: "Claude returned no parseable JSON object.",
         };
         return;
       }
