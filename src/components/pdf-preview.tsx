@@ -51,9 +51,10 @@ interface RenderError {
  *      Runs every time the user edits a field value, but does no I/O.
  *
  * If the canvas pipeline fails (typically on older iOS Safari versions that
- * pdfjs-dist v5 doesn't fully support), the component falls back to the
- * browser's native PDF viewer in an <iframe>. The bbox highlight overlay is
- * canvas-only, so the fallback view loses it; the source PDF is still shown.
+ * pdfjs-dist v5 doesn't fully support), the component offers a link that opens
+ * the PDF in a new tab. It used to embed an <object>, which object-src 'none'
+ * blocks outright, so that path only ever produced a CSP violation. The bbox
+ * highlight overlay is canvas-only either way.
  *
  * Trade-offs (documented in the README): adds ~1.2MB pdf.worker plus a
  * ~600KB main-thread chunk on first PDF view; matches by case-insensitive
@@ -271,29 +272,29 @@ export function PdfPreview({
   if (error) {
     return (
       <div className="border border-rule-warm bg-background">
-        <object
-          data={pdfUrl}
-          type="application/pdf"
+        {/* No <object data={pdfUrl}> here. proxy.ts sends object-src 'none', so
+            the browser blocks it as plugin data every time and logs a CSP
+            violation; it never rendered. The link was already described in this
+            file as the guaranteed-works fallback, and on iOS Safari (the browser
+            this path exists for) it is the one that actually works, since Safari
+            frequently refuses blob: PDFs inside <object> anyway. Restoring the
+            inline view means adding blob: to object-src, which is a deliberate
+            trade rather than an oversight. */}
+        <p
           aria-label={`Original PDF: ${filename}`}
-          className="block h-[600px] w-full"
+          className="p-4 text-sm text-foreground/80"
         >
-          {/* iOS Safari often refuses to render blob: PDFs inside <object>
-              or <iframe>. The link below is the guaranteed-works fallback,
-              opening the PDF in a new tab where Safari's full-screen viewer
-              handles it natively. */}
-          <p className="p-4 text-sm text-foreground/80">
-            Inline PDF preview unavailable on this browser.{" "}
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-ink-navy underline dark:text-ink-navy-hover"
-            >
-              Open PDF in a new tab
-            </a>
-            .
-          </p>
-        </object>
+          Inline PDF preview unavailable on this browser.{" "}
+          <a
+            href={pdfUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-ink-navy underline dark:text-ink-navy-hover"
+          >
+            Open PDF in a new tab
+          </a>
+          .
+        </p>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-rule-warm px-3 py-2 text-xs text-foreground/60">
           <span>
             Native PDF preview, source-region highlight unavailable on this
