@@ -8,8 +8,16 @@
  * when traffic grows.
  *
  * Extraction of client IP: prefer `x-forwarded-for` first hop, then
- * `x-real-ip`, then the connection address. Edge platforms set at least
- * one of these.
+ * `x-real-ip`, then the connection address.
+ *
+ * Taking the FIRST hop is only safe because Vercel overwrites this header and
+ * does not forward external ones, so a caller cannot prepend an address to buy
+ * itself a fresh bucket. That guarantee is the platform's, not this code's: on a
+ * host that appends instead of overwriting, the first hop is attacker-controlled
+ * and every limit here becomes bypassable per request. Verified against
+ * production 2026-09-29, where three spoofed X-Forwarded-For values all stayed
+ * 429 after the limit was reached. Read the host's documented behaviour before
+ * moving this off Vercel.
  *
  * Memory safety: stale buckets (all timestamps older than the widest
  * window) are pruned opportunistically on every `check()` call, bounded

@@ -20,6 +20,13 @@ function hasPdfHeader(bytes: Buffer): boolean {
 // through imports, so a deployment that failed to trace either throws from the
 // parser with a perfectly good PDF in hand. Every string here was produced by a
 // real deployment of this app that built and deployed green.
+//
+// Note the version split, which is easy to misread: this path runs on the
+// pdfjs-dist that pdf-parse pins as a nested dependency (5.4.296), not on the
+// hoisted one in package.json. The hoisted version serves the browser preview in
+// pdf-preview.tsx and the worker the postinstall copies into public/. Bumping the
+// top-level pdfjs therefore does not change extraction at all, and the two can sit
+// on different majors without conflicting because they run in different processes.
 const PARSER_UNAVAILABLE_SIGNS = [
   "cannot find module",
   "err_module_not_found",

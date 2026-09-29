@@ -33,11 +33,16 @@ jobs:
 
       - name: README test count matches what vitest collects
         run: |
-          # `vitest list` collects without running, and unlike the run summary it
-          # carries no ANSI colour for the count to hide behind. Parsing the summary
-          # worked locally and found nothing in CI, where colour stays on.
-          n=$(npx vitest list | grep -c ' > ')
-          [ "$n" -gt 0 ] || { echo "vitest listed no tests"; exit 1; }
+          # The JSON reporter, not `vitest list`. list was chosen because the run
+          # summary carries ANSI colour the count hides behind, which is true, but it
+          # counts collected entries rather than executed tests. Under vitest 5 an
+          # it.each is listed once as its unexpanded "%s" template instead of once per
+          # case, so the three loader-failure cases in pdf.test.ts became one entry and
+          # the count read 132 while the suite still ran 134. JSON has no colour to
+          # strip and numTotalTests is what actually executed.
+          npx vitest run --reporter=json --outputFile=/tmp/vitest-results.json >/dev/null 2>&1 || true
+          n=$(node -p "require('/tmp/vitest-results.json').numTotalTests")
+          [ "$n" -gt 0 ] || { echo "vitest ran no tests"; exit 1; }
           fail=0
           grep -q "badge/tests-$n-brightgreen" README.md || { echo "badge does not say $n"; fail=1; }
           grep -q 'alt="'"$n"' tests"' README.md || { echo "badge alt text does not say $n"; fail=1; }
