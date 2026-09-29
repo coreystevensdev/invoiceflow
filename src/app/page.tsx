@@ -152,14 +152,33 @@ export default function Home() {
     }
   }, [rememberWebhookUrl, webhookUrl]);
 
+  // One owner for the preview blob's lifetime. It used to be revoked from a
+  // setStatus updater and from an effect cleanup keyed on [status], and both
+  // fired while PdfPreview was still fetching it.
+  const activePdfUrlRef = useRef<string | null>(null);
+  const revokeActivePdfUrl = useCallback(() => {
+    if (activePdfUrlRef.current) {
+      URL.revokeObjectURL(activePdfUrlRef.current);
+      activePdfUrlRef.current = null;
+    }
+  }, []);
+
   const streamExtraction = useCallback(
     async (file: File) => {
       // Create the blob URL immediately so the PDF preview renders while
       // fields stream in, rather than waiting for extraction to complete.
       const pdfUrl = URL.createObjectURL(file);
-      setStatus((prev) => {
-        if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
-        if (prev.kind === "streaming") URL.revokeObjectURL(prev.pdfUrl);
+
+      // Revoke the previous URL here, not inside the setStatus updater. React
+      // treats updaters as pure and may run one more than once; a second run
+      // sees the state this call just set, whose pdfUrl is the NEW one, and
+      // revokes the blob PdfPreview is in the middle of fetching. That showed up
+      // as "[PdfPreview] render failed: TypeError: Failed to fetch" with the
+      // extraction itself succeeding.
+      revokeActivePdfUrl();
+      activePdfUrlRef.current = pdfUrl;
+
+      setStatus(() => {
         return {
           kind: "streaming",
           filename: file.name,
@@ -179,14 +198,14 @@ export default function Home() {
       try {
         res = await fetch("/api/extract-stream", { method: "POST", body: form });
       } catch {
-        URL.revokeObjectURL(pdfUrl);
+        revokeActivePdfUrl();
         setStatus({ kind: "error", code: "model-API-failure" });
         return;
       }
 
       // Pre-stream errors arrive as JSON (rate limit, monthly budget, etc.).
       if (!res.ok) {
-        URL.revokeObjectURL(pdfUrl);
+        revokeActivePdfUrl();
         const body: ErrorBody = await res.json().catch(() => ({}));
         setStatus({
           kind: "error",
@@ -198,7 +217,7 @@ export default function Home() {
       }
 
       if (!res.body) {
-        URL.revokeObjectURL(pdfUrl);
+        revokeActivePdfUrl();
         setStatus({ kind: "error", code: "model-API-failure" });
         return;
       }
@@ -246,7 +265,7 @@ export default function Home() {
                 };
               });
             } else if (event === "error") {
-              URL.revokeObjectURL(pdfUrl);
+              revokeActivePdfUrl();
               setStatus({
                 kind: "error",
                 code: (p["code"] as ExtractionErrorCode) ?? "model-API-failure",
@@ -265,11 +284,11 @@ export default function Home() {
           }
         }
       } catch {
-        URL.revokeObjectURL(pdfUrl);
+        revokeActivePdfUrl();
         setStatus({ kind: "error", code: "model-API-failure" });
       }
     },
-    [customFields],
+    [customFields, revokeActivePdfUrl],
   );
 
   // Bulk-upload runner. Drains the file queue with bounded concurrency so we
@@ -286,10 +305,8 @@ export default function Home() {
       filename: f.name,
       size: f.size,
     }));
-    setStatus((prev) => {
-      if (prev.kind === "success") URL.revokeObjectURL(prev.pdfUrl);
-      return { kind: "batch", files: initial };
-    });
+    revokeActivePdfUrl();
+    setStatus({ kind: "batch", files: initial });
     setWebhookStatus(null);
 
     const updateFile = (id: string, next: BatchFile) => {
@@ -363,7 +380,7 @@ export default function Home() {
     await Promise.all(
       Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker),
     );
-  }, [customFields]);
+  }, [customFields, revokeActivePdfUrl]);
 
   // Route file selection: 1 file → rich single-file flow with inline edits,
   // PDF preview, JSON view, webhook test. >1 → batch flow with summary
@@ -377,12 +394,14 @@ export default function Home() {
     [streamExtraction, runBatch],
   );
 
+  // Unmount only. Keyed on [status] this cleanup re-ran on every status change,
+  // and streaming sets status once per field event, so the blob was revoked
+  // moments after the first field arrived and the preview's fetch died with it.
   useEffect(() => {
     return () => {
-      if (status.kind === "success") URL.revokeObjectURL(status.pdfUrl);
-      if (status.kind === "streaming") URL.revokeObjectURL(status.pdfUrl);
+      revokeActivePdfUrl();
     };
-  }, [status]);
+  }, [revokeActivePdfUrl]);
 
   useEffect(() => {
     if (status.kind !== "success" && status.kind !== "streaming") return;
