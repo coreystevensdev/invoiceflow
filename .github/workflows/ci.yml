@@ -25,6 +25,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: PDF worker was actually copied
+        run: |
+          # copy-pdf-worker.mjs exits 0 when it cannot find the worker, on purpose,
+          # so a failed copy never breaks someone's install. Nothing else in this job
+          # reads the result: public/ is served as-is rather than bundled, so lint,
+          # test and build all pass with the file absent and the only symptom is the
+          # live preview failing to render. A pdfjs path change would ship exactly
+          # that way, in the repo whose whole product is reading PDFs.
+          src=node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs
+          dest=public/pdf.worker.min.mjs
+          [ -f "$src" ] || { echo "pdfjs no longer ships $src. Point scripts/copy-pdf-worker.mjs at the new path."; exit 1; }
+          [ -f "$dest" ] || { echo "$dest is missing, so the postinstall copy did not run."; exit 1; }
+          cmp -s "$src" "$dest" || { echo "$dest does not match $src, so it is a stale copy from an earlier pdfjs."; exit 1; }
+          echo "worker copied: $(wc -c < "$dest") bytes"
+
       - name: Lint
         run: npm run lint
 
