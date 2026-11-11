@@ -228,28 +228,23 @@ are generated, never hand-edited.
 
 | Metric | Value |
 |---|---|
-| Invoice pass rate | 98.0% (147/150) |
-| Field accuracy | 99.8% (1347/1350) |
+| Invoice pass rate | 99.3% (149/150) |
+| Field accuracy | 99.9% (1349/1350) |
 
-Eight of the nine scored fields are perfect. `subtotal` is 98.0% and carries every failure,
-and all three are the same corpus defect rather than an extraction one: `generate-synthetic.ts`
-can emit an invoice whose printed subtotal disagrees with its own line items, the ground truth
-holds the printed figure, and the model returns the arithmetic. s073 prints 8900.00 where its
-items sum to 7620.
+Eight of the nine scored fields are perfect. The single failure is `subtotal` on one fixture,
+and it is a corpus defect rather than an extraction one: `generate-synthetic.ts` can emit an
+invoice whose printed subtotal disagrees with its own line items, the ground truth holds the
+printed figure, and the model returns the arithmetic. s074 prints 641.60 where its two items
+sum to 593.60, and the printed figure is the one consistent with the printed tax and total.
 
-Read that 99.8% as one run rather than a fixed point. Those three fixtures flip between pass
-and fail across runs of an identical configuration, so `temperature: 0` does not make
-extraction deterministic on an ambiguous document, and a rerun lands at 147 or 148 depending
-on which of them it reads instead of computes. The corpus costs about $1.40 to run, roughly a
-cent an invoice.
+Two sibling fixtures used to fail the same way and no longer do, which is what critical rule 9
+in `EXTRACTION_SYSTEM_PROMPT` is for: report the figure the document prints, never one you
+calculate. Paired against the previous prompt across all 1,350 field comparisons, it fixed two
+and broke none. s074 still resists in every run and is unexplained. The corpus costs about
+$1.40 to run, roughly a cent an invoice.
 
 The run does not happen in CI. It costs money and calls a live API, so it is a release-time
 check rather than a per-commit one.
-
-These figures predate critical rule 9 in `EXTRACTION_SYSTEM_PROMPT`, which tells the model to
-report a printed figure rather than a computed one. That rule is validated on 100 of the 150
-fixtures, where it fixed one of the three failures and broke nothing, and the remaining 50 are
-unmeasured. The table is due a re-run.
 
 ## Known limitations
 
