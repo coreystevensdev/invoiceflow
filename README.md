@@ -246,6 +246,11 @@ cent an invoice.
 The run does not happen in CI. It costs money and calls a live API, so it is a release-time
 check rather than a per-commit one.
 
+These figures predate critical rule 9 in `EXTRACTION_SYSTEM_PROMPT`, which tells the model to
+report a printed figure rather than a computed one. That rule is validated on 100 of the 150
+fixtures, where it fixed one of the three failures and broke nothing, and the remaining 50 are
+unmeasured. The table is due a re-run.
+
 ## Known limitations
 
 A few honest gaps:

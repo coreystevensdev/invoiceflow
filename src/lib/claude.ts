@@ -114,6 +114,7 @@ CRITICAL RULES:
 6. All monetary values must be numeric (no currency symbols). Use the "currency" field to specify ISO 4217 (USD, EUR, JPY, etc.).
 7. Never guess. Null with reasoning beats a hallucinated value.
 8. The user message includes a <today> tag with today's date in ISO format (YYYY-MM-DD). Use that as the reference for any "past" or "future" date reasoning. Do not rely on training-time knowledge of the current date.
+9. Report the figure the document prints, never one you calculate. When a printed subtotal or total disagrees with the amounts above it, extract the printed value and raise the matching flag below. An invoice that does not add up is one to flag, not one to correct.
 
 CROSS-FIELD VALIDATION (populate the "flags" array when you detect any of these):
 - "subtotal + tax ≠ total" (within $0.02 tolerance) → severity: error
