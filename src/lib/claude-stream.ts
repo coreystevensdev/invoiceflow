@@ -291,7 +291,6 @@ export async function* extractInvoiceStream(
         {
           model,
           max_tokens: EXTRACTION_MAX_TOKENS,
-          temperature: 0,
           system: [
             {
               type: "text",
