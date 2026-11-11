@@ -218,6 +218,34 @@ Defined in `src/lib/claude.ts` and `src/lib/cost.ts`:
 
 Every request emits one structured JSON log line including `cost_usd`, `retry_count`, `pdf_size_bytes`, and `pdf_num_pages`. Operators can eyeball the distribution in Vercel logs without standing up a dashboard.
 
+## Extraction accuracy
+
+Measured, not asserted. `npm run eval` runs 150 ground-truth invoices through the real
+extraction path and scores nine fields each against `expected.json`; `npm run eval:report`
+writes the result to [`eval-results/accuracy-table.md`](eval-results/accuracy-table.md) and
+the per-failure detail to [`eval-results/failures.md`](eval-results/failures.md). Both files
+are generated, never hand-edited.
+
+| Metric | Value |
+|---|---|
+| Invoice pass rate | 98.0% (147/150) |
+| Field accuracy | 99.8% (1347/1350) |
+
+Eight of the nine scored fields are perfect. `subtotal` is 98.0% and carries every failure,
+and all three are the same corpus defect rather than an extraction one: `generate-synthetic.ts`
+can emit an invoice whose printed subtotal disagrees with its own line items, the ground truth
+holds the printed figure, and the model returns the arithmetic. s073 prints 8900.00 where its
+items sum to 7620.
+
+Read that 99.8% as one run rather than a fixed point. Those three fixtures flip between pass
+and fail across runs of an identical configuration, so `temperature: 0` does not make
+extraction deterministic on an ambiguous document, and a rerun lands at 147 or 148 depending
+on which of them it reads instead of computes. The corpus costs about $1.40 to run, roughly a
+cent an invoice.
+
+The run does not happen in CI. It costs money and calls a live API, so it is a release-time
+check rather than a per-commit one.
+
 ## Known limitations
 
 A few honest gaps:

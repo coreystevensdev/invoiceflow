@@ -64,6 +64,23 @@ jobs:
           [ "$fail" = 0 ] || { echo "vitest collects $n. Update both spots in README.md."; exit 1; }
           echo "README agrees with vitest: $n"
 
+      # The accuracy figures in README's "Extraction accuracy" section are the
+      # ones eval:report generated, so they rot the moment the eval is re-run and
+      # only the table is committed. This compares the two without calling the
+      # API: it reads the committed table, never the model.
+      - name: README accuracy figures match the committed eval table
+        run: |
+          t=eval-results/accuracy-table.md
+          [ -f "$t" ] || { echo "$t is missing"; exit 1; }
+          fail=0
+          for metric in "Invoice pass rate" "Field accuracy"; do
+            v=$(grep -F "| $metric |" "$t" | sed 's/.*| *\(.*\) *|.*/\1/' | xargs)
+            [ -n "$v" ] || { echo "$t has no '$metric' row"; fail=1; continue; }
+            grep -qF "| $metric | $v |" README.md || { echo "README '$metric' does not say '$v'"; fail=1; }
+          done
+          [ "$fail" = 0 ] || { echo "Re-run npm run eval:report, then copy both rows into README.md."; exit 1; }
+          echo "README agrees with $t"
+
       - name: Build (includes typecheck)
         run: npm run build
         env:
