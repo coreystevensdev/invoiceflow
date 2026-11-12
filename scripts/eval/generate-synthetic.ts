@@ -16,6 +16,12 @@ type SyntheticConfig = {
   currency: string;
   lineItems: Array<{ description: string; qty: number; unitPrice: number }>;
   notes?: string;
+  // Set when the printed subtotal is MEANT to disagree with the line items,
+  // which is the only corpus exercise of prompt rule 9 (transcribe the printed
+  // figure, flag the discrepancy, never silently correct it). Declaring it keeps
+  // an intentional case from reading as an authoring slip, and keeps the check
+  // below from deleting rule 9's coverage.
+  intentionalSubtotalMismatch?: true;
 };
 
 // Escape PDF string literals: \ ( ) must be backslash-escaped.
@@ -73,6 +79,12 @@ function buildPdf(lines: string[]): Buffer {
   ]);
 }
 
+// Up to three decimals with trailing zeros dropped, so 7 stays "7" and 8.875
+// stays "8.875". US state and local rates do not go finer than three places.
+function formatTaxRate(rate: number): string {
+  return (rate * 100).toFixed(3).replace(/\.?0+$/, '');
+}
+
 function configToLines(config: SyntheticConfig): string[] {
   const tax = Math.round(config.subtotal * config.taxRate * 100) / 100;
   const total = Math.round((config.subtotal + tax) * 100) / 100;
@@ -97,7 +109,13 @@ function configToLines(config: SyntheticConfig): string[] {
   }
   lines.push("");
   lines.push(`Subtotal: ${config.subtotal.toFixed(2)}`);
-  lines.push(`Tax (${(config.taxRate * 100).toFixed(0)}%): ${tax.toFixed(2)}`);
+  // toFixed(0) rendered 8.875% as "9%", so the document claimed a rate that does
+  // not produce its own printed tax: a reader checking 9% of 6450.00 gets 580.50
+  // against a printed 572.44. The rates are correct and deliberately real (NYC
+  // 8.875, Texas 8.25, Arizona 9.25); only the label was lossy. 14 of 149
+  // fixtures were affected. The tax amount does not change, so expected.json is
+  // unaffected and only the rendered document moves.
+  lines.push(`Tax (${formatTaxRate(config.taxRate)}%): ${tax.toFixed(2)}`);
   lines.push(`Total: ${total.toFixed(2)}`);
   return lines;
 }
@@ -2581,7 +2599,82 @@ const CONFIGS: SyntheticConfig[] = [
   // --- synthetic edge cases (s120 was already used; leaving gap-fillers) ---
 ];
 
+// subtotal and lineItems are authored independently, and the renderer derives
+// each row's Amount from qty * unitPrice while printing subtotal verbatim. When
+// the two disagree the fixture shows line items that do not add up to its own
+// stated subtotal, and expected.json inherits the same number, so the eval
+// scores a faithful transcription of an arithmetic error as correct and scores
+// a model that adds the rows up as wrong. That is how s074 came to be the one
+// recorded failure in a 149/150 run: it was the single case where the model
+// summed the rows instead of copying the subtotal.
+//
+// 36 of 150 configs were in this state when the check was added. Rows are
+// compared at the precision the document shows them, because that is what a
+// reader can verify.
+function assertSubtotalsMatchLineItems(configs: SyntheticConfig[]): void {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
+  const mismatched = configs.flatMap((config) => {
+    const shown = config.lineItems.reduce((sum, item) => sum + round2(item.qty * item.unitPrice), 0);
+    const lineSum = round2(shown);
+    const printed = round2(config.subtotal);
+    if (lineSum === printed) return [];
+    return [
+      {
+        id: config.id,
+        lineSum,
+        printed,
+        diff: round2(printed - lineSum),
+        intentional: config.intentionalSubtotalMismatch === true,
+      },
+    ];
+  });
+
+  const intentional = mismatched.filter((m) => m.intentional);
+  const broken = mismatched.filter((m) => !m.intentional);
+
+  if (intentional.length > 0) {
+    console.log(
+      `${intentional.length} config(s) disagree with their line items on purpose, exercising rule 9: ` +
+        intentional.map((m) => m.id).join(', '),
+    );
+  }
+  // Rule 9 is only exercised end to end by a fixture that actually disagrees,
+  // and the eval does not score flags, so nothing else would notice it going
+  // uncovered. Losing every case is worth a warning even though it is not an
+  // error: it is a legitimate state for a corpus that has not been triaged yet.
+  if (intentional.length === 0) {
+    console.warn(
+      'No config declares intentionalSubtotalMismatch, so nothing in the corpus exercises rule 9.',
+    );
+  }
+
+  if (broken.length === 0) return;
+
+  // Every violation at once: fixing these is one pass over the configs, and
+  // failing on the first would turn that into 36 runs.
+  console.error(
+    `\n${broken.length} of ${configs.length} configs print a subtotal that is not the sum of their own` +
+      ' line items, and none of them says it is deliberate.\n',
+  );
+  for (const b of broken) {
+    console.error(
+      `  ${b.id}  line items ${b.lineSum.toFixed(2)}  printed ${b.printed.toFixed(2)}  off by ${b.diff.toFixed(2)}`,
+    );
+  }
+  console.error(
+    '\nFor each: make subtotal the sum of its lineItems, or set' +
+      ' intentionalSubtotalMismatch: true if the disagreement is the point.\n' +
+      'Keep at least one intentional case, or rule 9 loses its only corpus coverage.\n' +
+      'Nothing was written; the fixtures on disk are unchanged.\n',
+  );
+  throw new Error(`${broken.length} configs have a subtotal that disagrees with their line items`);
+}
+
 async function main() {
+  // Before any write, so a failure cannot leave the corpus half regenerated.
+  assertSubtotalsMatchLineItems(CONFIGS);
+
   for (const config of CONFIGS) {
     const dir = path.join(FIXTURES_DIR, `${config.id}-${config.category}`);
     fs.mkdirSync(dir, { recursive: true });
@@ -2624,4 +2717,8 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  // console.error alone exits 0, which would make the check above advisory.
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+});
