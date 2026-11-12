@@ -225,11 +225,6 @@ extraction path and scores nine fields each against `expected.json`; `npm run ev
 writes the result to [`eval-results/accuracy-table.md`](eval-results/accuracy-table.md) and
 the per-failure detail to [`eval-results/failures.md`](eval-results/failures.md). Both files
 are generated, never hand-edited.
-> The figures below predate the current fixture corpus. 35 fixtures printed a
-> subtotal that contradicted their own line items, which made a faithful
-> transcription of an arithmetic error the scored answer; they were reconciled
-> and the generator now refuses that shape. Re-run to refresh. Corpus `2d964d0d2d0d`.
-
 
 | Metric | Value |
 |---|---|
