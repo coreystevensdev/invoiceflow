@@ -13,11 +13,17 @@ import type { CustomField } from "./custom-fields";
 
 const ConfidenceEnum = z.enum(["high", "medium", "low"]);
 
+// Key order is generation order in structured output, so reasoning comes first.
+// With value first the model emitted a number and then wrote a justification for
+// it, which is rationalisation rather than reasoning: on the one fixture whose
+// printed subtotal disagrees with its line items, a sample returned 593.60 while
+// its own reasoning text concluded "Printed subtotal is 641.60". The value was
+// already written by the time the reasoning reached the right answer.
 const FieldWithReasoning = <T extends z.ZodTypeAny>(valueSchema: T) =>
   z.object({
-    value: valueSchema.nullable(),
-    confidence: ConfidenceEnum,
     reasoning: z.string(),
+    confidence: ConfidenceEnum,
+    value: valueSchema.nullable(),
   });
 
 const VendorField = z.object({
@@ -35,9 +41,14 @@ const LineItem = z.object({
   reasoning: z.string().optional(),
 });
 
+// Same ordering rule as FieldWithReasoning: describe the finding, then classify
+// it. With severity first the model chose "error" and then wrote a message
+// stating the condition was satisfied, e.g. an error flag reading "Subtotal +
+// Tax does not equal Total: 641.60 + 41.70 = 683.30, which matches the printed
+// Total of 683.30".
 const Flag = z.object({
-  severity: z.enum(["info", "warning", "error"]),
   message: z.string(),
+  severity: z.enum(["info", "warning", "error"]),
 });
 
 export const InvoiceExtractionSchema = z.object({
