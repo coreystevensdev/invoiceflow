@@ -390,7 +390,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-01-20",
     dueDate: "2026-02-19",
     poNumber: "PO-DESIGN-01",
-    subtotal: 3600.00,
+    subtotal: 3000.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -660,7 +660,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-04-15",
     dueDate: null,
     poNumber: "PO-CONTENT-018",
-    subtotal: 2800.00,
+    subtotal: 2800.01,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -711,7 +711,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-05-05",
     dueDate: "2026-06-04",
     poNumber: null,
-    subtotal: 1850.00,
+    subtotal: 1610.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1092,7 +1092,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-01",
     dueDate: "2026-03-31",
     poNumber: "PO-OFFICE-0441",
-    subtotal: 892.30,
+    subtotal: 756.30,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -1110,7 +1110,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-02-10",
     dueDate: "2026-03-12",
     poNumber: "PO-FURN-0022",
-    subtotal: 4340.00,
+    subtotal: 3930.00,
     taxRate: 0.07,
     currency: "USD",
     lineItems: [
@@ -1128,7 +1128,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-04-15",
     dueDate: "2026-05-15",
     poNumber: "PO-AMZ-0099",
-    subtotal: 1234.56,
+    subtotal: 794.74,
     taxRate: 0.08,
     currency: "USD",
     lineItems: [
@@ -1147,7 +1147,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-05-20",
     dueDate: "2026-06-19",
     poNumber: "PO-SAFETY-881",
-    subtotal: 2145.00,
+    subtotal: 1775.00,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -1165,7 +1165,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-01-25",
     dueDate: "2026-02-24",
     poNumber: "PO-SHIP-0332",
-    subtotal: 3210.00,
+    subtotal: 2650.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1184,7 +1184,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-15",
     dueDate: "2026-04-14",
     poNumber: "PO-FAC-0119",
-    subtotal: 1688.75,
+    subtotal: 1397.75,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -1203,7 +1203,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-02-20",
     dueDate: "2026-03-22",
     poNumber: "PO-PLB-0554",
-    subtotal: 4422.00,
+    subtotal: 2134.00,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -1221,7 +1221,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-06-01",
     dueDate: "2026-07-01",
     poNumber: "PO-IND-0211",
-    subtotal: 5670.00,
+    subtotal: 4350.00,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -1239,7 +1239,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-04-10",
     dueDate: "2026-05-10",
     poNumber: "PO-WHR-0098",
-    subtotal: 8900.00,
+    subtotal: 7620.00,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -1263,7 +1263,8 @@ const CONFIGS: SyntheticConfig[] = [
       { description: "Copy paper 20lb 8.5x11 5-ream case", qty: 8, unitPrice: 64.00 },
       { description: "Legal pads yellow 12-pack", qty: 5, unitPrice: 16.32 },
     ],
-    notes: "Paper reorder, two products",
+    notes: "Paper reorder, two products. The printed subtotal of 641.60 deliberately disagrees with the two line items, which sum to 593.60. Rule 9 requires transcribing the printed figure and flagging the discrepancy, never correcting it.",
+    intentionalSubtotalMismatch: true,
   },
   {
     id: "s075",
@@ -1273,7 +1274,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-05-05",
     dueDate: "2026-06-04",
     poNumber: null,
-    subtotal: 318.00,
+    subtotal: 342.00,
     taxRate: 0.075,
     currency: "USD",
     lineItems: [
@@ -1290,7 +1291,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-01-15",
     dueDate: "2026-02-14",
     poNumber: "PO-TECH-0087",
-    subtotal: 6450.00,
+    subtotal: 6591.00,
     taxRate: 0.08875,
     currency: "USD",
     lineItems: [
@@ -1308,7 +1309,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-05",
     dueDate: "2026-04-04",
     poNumber: "PO-SRV-0014",
-    subtotal: 14200.00,
+    subtotal: 12300.00,
     taxRate: 0.0825,
     currency: "USD",
     lineItems: [
@@ -1326,7 +1327,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-04-20",
     dueDate: "2026-05-20",
     poNumber: "PO-HW-0221",
-    subtotal: 3780.00,
+    subtotal: 2890.00,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -1345,7 +1346,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-02-05",
     dueDate: "2026-03-07",
     poNumber: "PO-BULK-0332",
-    subtotal: 2190.00,
+    subtotal: 925.60,
     taxRate: 0.0925,
     currency: "USD",
     lineItems: [
@@ -1380,7 +1381,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-01",
     dueDate: "2026-03-31",
     poNumber: "PO-MED-SUP-441",
-    subtotal: 3418.00,
+    subtotal: 1448.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1399,7 +1400,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-02-15",
     dueDate: "2026-03-17",
     poNumber: "PO-RX-0088",
-    subtotal: 9840.00,
+    subtotal: 6300.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1416,7 +1417,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-04-01",
     dueDate: "2026-05-01",
     poNumber: "PO-DENT-331",
-    subtotal: 2245.00,
+    subtotal: 665.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1435,7 +1436,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-05-01",
     dueDate: "2026-05-31",
     poNumber: "PO-SURG-119",
-    subtotal: 14500.00,
+    subtotal: 11500.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1486,7 +1487,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-02-01",
     dueDate: "2026-03-03",
     poNumber: null,
-    subtotal: 1488.00,
+    subtotal: 1289.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1517,7 +1518,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-31",
     dueDate: "2026-04-30",
     poNumber: "PO-LAB-0882",
-    subtotal: 4280.00,
+    subtotal: 2560.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1567,7 +1568,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-02-10",
     dueDate: "2026-03-12",
     poNumber: "PO-BLD-018",
-    subtotal: 7200.00,
+    subtotal: 6000.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1601,7 +1602,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-15",
     dueDate: "2026-04-14",
     poNumber: "PO-DMAT-098",
-    subtotal: 1840.00,
+    subtotal: 1335.98,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -1760,7 +1761,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-25",
     dueDate: "2026-04-24",
     poNumber: "PO-WIN-055",
-    subtotal: 22500.00,
+    subtotal: 22900.00,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -1845,7 +1846,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-01-20",
     dueDate: "2026-02-19",
     poNumber: "PO-FIRE-080",
-    subtotal: 2800.00,
+    subtotal: 2799.96,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -2029,7 +2030,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-04-01",
     dueDate: "2026-05-01",
     poNumber: null,
-    subtotal: 1845.00,
+    subtotal: 1815.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -2098,7 +2099,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-02-15",
     dueDate: "2026-03-17",
     poNumber: "PO-LTL-441",
-    subtotal: 4880.00,
+    subtotal: 4780.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -2149,7 +2150,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-05-20",
     dueDate: "2026-06-19",
     poNumber: "PO-AIR-051",
-    subtotal: 8900.00,
+    subtotal: 8898.40,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -2199,7 +2200,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-31",
     dueDate: "2026-04-30",
     poNumber: "PO-FFMT-041",
-    subtotal: 18500.00,
+    subtotal: 10100.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -2233,7 +2234,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-05-31",
     dueDate: "2026-06-30",
     poNumber: "PO-DED-003",
-    subtotal: 31200.00,
+    subtotal: 30200.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -2251,7 +2252,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-06-30",
     dueDate: "2026-07-30",
     poNumber: "PO-FLEET-022",
-    subtotal: 9400.00,
+    subtotal: 8200.00,
     taxRate: 0.0,
     currency: "USD",
     lineItems: [
@@ -2270,7 +2271,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-02-10",
     dueDate: "2026-03-12",
     poNumber: "PO-PRINT-221",
-    subtotal: 1244.00,
+    subtotal: 1098.00,
     taxRate: 0.06,
     currency: "USD",
     lineItems: [
@@ -2288,7 +2289,7 @@ const CONFIGS: SyntheticConfig[] = [
     billDate: "2026-03-20",
     dueDate: "2026-04-19",
     poNumber: "PO-WHL-088",
-    subtotal: 3120.00,
+    subtotal: 2900.00,
     taxRate: 0.0725,
     currency: "USD",
     lineItems: [

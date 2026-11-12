@@ -4,8 +4,8 @@
   "bill_date": "2026-05-05",
   "due_date": "2026-06-04",
   "po_number": null,
-  "subtotal": 318,
-  "tax": 23.85,
-  "total": 341.85,
+  "subtotal": 342,
+  "tax": 25.65,
+  "total": 367.65,
   "currency": "USD"
 }

@@ -4,8 +4,8 @@
   "bill_date": "2026-03-05",
   "due_date": "2026-04-04",
   "po_number": "PO-SRV-0014",
-  "subtotal": 14200,
-  "tax": 1171.5,
-  "total": 15371.5,
+  "subtotal": 12300,
+  "tax": 1014.75,
+  "total": 13314.75,
   "currency": "USD"
 }

@@ -4,8 +4,8 @@
   "bill_date": "2026-04-10",
   "due_date": "2026-05-10",
   "po_number": "PO-WHR-0098",
-  "subtotal": 8900,
-  "tax": 534,
-  "total": 9434,
+  "subtotal": 7620,
+  "tax": 457.2,
+  "total": 8077.2,
   "currency": "USD"
 }
