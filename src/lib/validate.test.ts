@@ -122,9 +122,19 @@ describe("the s074 shape: printed arithmetic correct, line items disagreeing", (
       tax: { value: 41.7, confidence: "high", reasoning: "" },
       total: { value: 683.3, confidence: "high", reasoning: "" },
       line_items: [
-        { description: "Copy paper 20lb 8.5x11 5-ream case", qty: 8, unit_price: 64, amount: 512 },
-        { description: "Legal pads yellow 12-pack", qty: 5, unit_price: 16.32, amount: 81.6 },
-      ] as InvoiceExtraction["line_items"],
+        {
+          description: "Copy paper 20lb 8.5x11 5-ream case",
+          quantity: 8,
+          unit_price: 64,
+          amount: 512,
+        },
+        {
+          description: "Legal pads yellow 12-pack",
+          quantity: 5,
+          unit_price: 16.32,
+          amount: 81.6,
+        },
+      ],
     });
 
   it("warns that line items do not sum to the subtotal", () => {
@@ -139,6 +149,55 @@ describe("the s074 shape: printed arithmetic correct, line items disagreeing", (
     // 641.60 + 41.70 = 683.30 exactly. An error here is the false positive the
     // model used to invent.
     expect(deterministicFlags(s074()).filter((f) => f.severity === "error")).toEqual([]);
+  });
+});
+
+describe("mergeFlags drops model flags for conditions the code owns", () => {
+  // Verbatim from a real run before the prompt stopped asking the model to check
+  // these. The deterministic message and the model message describe the same
+  // finding in different words, so the old exact-string dedupe kept both.
+  const detLineItems: ExtractionFlag = {
+    message: "Line items sum to $593.60, but subtotal is $641.60.",
+    severity: "warning",
+  };
+  const modelLineItems: ExtractionFlag = {
+    message:
+      "Line items sum (512.00 + 81.60 = 593.60) does not match the printed subtotal of 641.60. Discrepancy of $48.00.",
+    severity: "warning",
+  };
+  // The fabricated one: severity error, and the message says the condition holds.
+  const modelFalseError: ExtractionFlag = {
+    message:
+      "Subtotal + Tax does not equal Total: 641.60 + 41.70 = 683.30, which matches the printed Total of 683.30.",
+    severity: "error",
+  };
+
+  it("keeps one line-items finding, not two", () => {
+    const merged = mergeFlags([modelLineItems], [detLineItems]);
+    expect(merged).toEqual([detLineItems]);
+  });
+
+  it("drops a model flag for a computed condition even when the code raised none", () => {
+    // s074's printed arithmetic is correct, so deterministicFlags raises no
+    // error here. The code evaluated the condition and said no; the model's
+    // contradiction of that is not information.
+    expect(mergeFlags([modelFalseError], [detLineItems])).toEqual([detLineItems]);
+  });
+
+  it("keeps a model flag the code cannot compute", () => {
+    const illegible: ExtractionFlag = {
+      message: "The tax figure is smudged; 41.70 is a best reading of the printed digits.",
+      severity: "warning",
+    };
+    expect(mergeFlags([illegible], [detLineItems])).toEqual([detLineItems, illegible]);
+  });
+
+  it("keeps an unclassifiable model flag rather than silencing it", () => {
+    const novel: ExtractionFlag = {
+      message: "Two different PO numbers appear in the header and the footer.",
+      severity: "warning",
+    };
+    expect(mergeFlags([novel], [])).toEqual([novel]);
   });
 });
 

@@ -87,19 +87,78 @@ export function deterministicFlags(invoice: InvoiceExtraction): ExtractionFlag[]
 /**
  * Merge Claude's flags with deterministic flags, de-duplicating by message.
  */
+// The conditions this module computes. The prompt tells the model not to check
+// them, but a prompt is a request and this is the check: a model flag classified
+// into a condition the code already owns is dropped, whether or not the code
+// raised one. If the code evaluated the condition, the code's verdict stands.
+type FlagCondition =
+  | "subtotal_plus_tax_vs_total"
+  | "line_items_vs_subtotal"
+  | "non_positive_total"
+  | "due_before_bill"
+  | "future_bill_date"
+  | "missing_vendor";
+
+// Deliberately conservative. A model flag only classifies when its wording is
+// unambiguous about which computed condition it concerns; anything else stays,
+// because silencing a genuine observation the code cannot make is the worse
+// error. Order matters: line-items wording is checked before the subtotal/total
+// wording, since a message can mention both and the more specific one wins.
+const MODEL_FLAG_PATTERNS: ReadonlyArray<readonly [FlagCondition, RegExp]> = [
+  ["line_items_vs_subtotal", /line[- ]?items?[\s\S]{0,20}(sum|total)[\s\S]{0,80}subtotal|subtotal[\s\S]{0,80}line[- ]?items?/i],
+  ["subtotal_plus_tax_vs_total", /subtotal[\s\S]{0,20}\+[\s\S]{0,20}tax|add(s)? up|does not equal total/i],
+  ["due_before_bill", /due date[\s\S]{0,40}before[\s\S]{0,40}bill date/i],
+  ["future_bill_date", /bill date[\s\S]{0,40}(future|after today)/i],
+  ["non_positive_total", /total is (0|zero|negative|\$?-)/i],
+  ["missing_vendor", /vendor name (is )?(missing|absent|not)/i],
+];
+
+function classifyModelFlag(message: string): FlagCondition | null {
+  for (const [condition, pattern] of MODEL_FLAG_PATTERNS) {
+    if (pattern.test(message)) return condition;
+  }
+  return null;
+}
+
+/** Conditions this module evaluates, independent of whether any fired. */
+const COMPUTED_CONDITIONS: ReadonlySet<FlagCondition> = new Set<FlagCondition>([
+  "subtotal_plus_tax_vs_total",
+  "line_items_vs_subtotal",
+  "non_positive_total",
+  "due_before_bill",
+  "future_bill_date",
+  "missing_vendor",
+]);
+
 export function mergeFlags(
   modelFlags: ExtractionFlag[],
   detFlags: ExtractionFlag[],
 ): ExtractionFlag[] {
   const seen = new Set<string>();
   const merged: ExtractionFlag[] = [];
-  for (const flag of [...detFlags, ...modelFlags]) {
+
+  for (const flag of detFlags) {
     const key = `${flag.severity}:${flag.message}`;
     if (!seen.has(key)) {
       seen.add(key);
       merged.push(flag);
     }
   }
+
+  for (const flag of modelFlags) {
+    // Exact-string dedupe alone never fired across sources: the code's message
+    // is fixed and the model's is prose, so both survived and a user saw one
+    // finding twice in different words.
+    const condition = classifyModelFlag(flag.message);
+    if (condition && COMPUTED_CONDITIONS.has(condition)) continue;
+
+    const key = `${flag.severity}:${flag.message}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(flag);
+    }
+  }
+
   return merged;
 }
 
