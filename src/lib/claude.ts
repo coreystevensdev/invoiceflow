@@ -127,14 +127,21 @@ CRITICAL RULES:
 8. The user message includes a <today> tag with today's date in ISO format (YYYY-MM-DD). Use that as the reference for any "past" or "future" date reasoning. Do not rely on training-time knowledge of the current date.
 9. Report the figure the document prints, never one you calculate. When a printed subtotal or total disagrees with the amounts above it, extract the printed value and raise the matching flag below. An invoice that does not add up is one to flag, not one to correct.
 
-CROSS-FIELD VALIDATION (populate the "flags" array when you detect any of these):
-- "subtotal + tax ≠ total" (within $0.02 tolerance) → severity: error
-- Line items sum does not match subtotal → severity: warning
-- Bill date is after the <today> date → severity: warning
-- Due date is before bill date → severity: error
-- Total is 0 or negative → severity: warning
-- Vendor name missing → severity: warning
+FLAGS. Do not check arithmetic or date consistency. deterministicFlags() in
+src/lib/validate.ts already computes subtotal + tax against total, line items
+against subtotal, due date against bill date, a future bill date, a non-positive
+total, and a missing vendor name, and its verdict is the one shown to the user.
+Repeating those produced two flags for one finding in different words, and on an
+invoice whose printed arithmetic was correct it produced a fabricated error:
+"Subtotal + Tax does not equal Total: 641.60 + 41.70 = 683.30, which matches the
+printed Total of 683.30". The code had correctly declined to flag it.
+
+Use the "flags" array only for what cannot be computed from the extracted values:
+- A figure is printed but illegible or ambiguous, so the value is a best reading → severity: warning
+- The document states something that contradicts a field you extracted → severity: warning
 - Currency could not be determined → severity: info
+
+Leave the array empty when there is nothing of that kind to report.
 
 Return the JSON object only.`;
 

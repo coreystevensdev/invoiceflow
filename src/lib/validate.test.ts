@@ -109,6 +109,39 @@ describe("deterministicFlags", () => {
   });
 });
 
+describe("the s074 shape: printed arithmetic correct, line items disagreeing", () => {
+  // The prompt used to ask the model to check these conditions too, so a user
+  // saw the same finding twice in different words, plus a fabricated error
+  // reading "Subtotal + Tax does not equal Total: 641.60 + 41.70 = 683.30,
+  // which matches the printed Total of 683.30". The model no longer checks
+  // computable conditions, which means this is the only source of the warning
+  // and it has to keep firing.
+  const s074 = () =>
+    makeInvoice({
+      subtotal: { value: 641.6, confidence: "high", reasoning: "" },
+      tax: { value: 41.7, confidence: "high", reasoning: "" },
+      total: { value: 683.3, confidence: "high", reasoning: "" },
+      line_items: [
+        { description: "Copy paper 20lb 8.5x11 5-ream case", qty: 8, unit_price: 64, amount: 512 },
+        { description: "Legal pads yellow 12-pack", qty: 5, unit_price: 16.32, amount: 81.6 },
+      ] as InvoiceExtraction["line_items"],
+    });
+
+  it("warns that line items do not sum to the subtotal", () => {
+    const flags = deterministicFlags(s074());
+    const warnings = flags.filter((f) => f.severity === "warning");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]!.message).toContain("593.60");
+    expect(warnings[0]!.message).toContain("641.60");
+  });
+
+  it("raises no error, because subtotal plus tax does equal the printed total", () => {
+    // 641.60 + 41.70 = 683.30 exactly. An error here is the false positive the
+    // model used to invent.
+    expect(deterministicFlags(s074()).filter((f) => f.severity === "error")).toEqual([]);
+  });
+});
+
 describe("mergeFlags", () => {
   it("dedupes by severity + message", () => {
     const a: ExtractionFlag[] = [{ severity: "warning", message: "X" }];
