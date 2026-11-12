@@ -228,8 +228,15 @@ are generated, never hand-edited.
 
 | Metric | Value |
 |---|---|
-| Invoice pass rate | 99.3% (149/150) |
-| Field accuracy | 99.9% (1349/1350) |
+| Invoice pass rate | 100.0% (150/150) |
+| Field accuracy | 100.0% (1350/1350) |
+
+One sample per invoice, and `temperature` is not pinned (the API refuses it
+alongside structured output), so a clean sweep is weaker evidence than it looks:
+if each invoice independently passed 99% of the time, a 150/150 run would still
+happen about 22% of the time. Read it as "no fixture failed on this run" rather
+than as a per-invoice success rate. `scripts/eval/probe-fixture.ts` samples a
+single fixture repeatedly when a specific one needs a real rate.
 
 Eight of the nine scored fields are perfect. The single failure is `subtotal` on one fixture,
 and it is a corpus defect rather than an extraction one: `generate-synthetic.ts` can emit an
