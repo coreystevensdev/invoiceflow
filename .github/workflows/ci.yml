@@ -81,6 +81,27 @@ jobs:
           [ "$fail" = 0 ] || { echo "Re-run npm run eval:report, then copy both rows into README.md."; exit 1; }
           echo "README agrees with $t"
 
+      # The guard above compares two committed files and makes no API call, so it
+      # proves they agree with each other and not that either describes the
+      # fixtures on disk. That gap went live once: 35 fixtures had their expected
+      # subtotal, tax and total corrected while both files stayed green quoting a
+      # corpus that no longer existed. The fingerprint closes it, still without
+      # calling the model.
+      - name: Eval figures were measured against the corpus that is committed
+        run: |
+          t=eval-results/accuracy-table.md
+          recorded=$(grep -F '**Corpus fingerprint:**' "$t" | sed 's/.*`\(.*\)`.*/\1/')
+          [ -n "$recorded" ] || { echo "$t has no '**Corpus fingerprint:**' line"; exit 1; }
+          actual=$(npx tsx scripts/eval/corpus-fingerprint.ts)
+          if [ "$recorded" != "$actual" ]; then
+            echo "The committed accuracy figures predate the fixture corpus."
+            echo "  measured against: $recorded"
+            echo "  corpus on disk:   $actual"
+            echo "Re-run: npm run eval && npm run eval:report, then copy both rows into README.md."
+            exit 1
+          fi
+          echo "Accuracy figures describe the committed corpus: $actual"
+
       - name: Build (includes typecheck)
         run: npm run build
         env:

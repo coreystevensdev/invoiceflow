@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { corpusFingerprint } from "./corpus-fingerprint";
 import type { InvoiceScore, EvalSummary, GroundTruth } from "./types";
 
 const RAW_DIR = path.resolve("eval-results/raw");
@@ -83,6 +84,10 @@ function writeAccuracyTable(summary: EvalSummary): void {
     `**Run date:** ${summary.runDate}`,
     `**Model:** ${summary.model}`,
     `**Corpus:** ${summary.totalInvoices} invoices`,
+    // Recorded so CI can tell whether these figures still describe the
+    // fixtures on disk. Without it the drift guard only proves README and
+    // this table agree with each other.
+    `**Corpus fingerprint:** \`${corpusFingerprint()}\``,
     ``,
     `## Overall`,
     ``,

@@ -3,13 +3,14 @@
 **Run date:** 2026-11-11
 **Model:** claude-sonnet-4-6
 **Corpus:** 150 invoices
+**Corpus fingerprint:** `333a1352f6be`
 
 > **These figures predate the current corpus and need a re-run.**
 > They were measured on 2026-11-11 against ground truth in which 35 fixtures
 > printed a subtotal that disagreed with their own line items, so for those the
 > scored answer was a transcription of an arithmetic error. The generator now
 > refuses such configs and those 35 were reconciled, which changed their
-> expected subtotal, tax and total. Corpus fingerprint is now `ea8b5bf9a8a9`; the numbers
+> expected subtotal, tax and total. Corpus fingerprint is now `2d964d0d2d0d`; the numbers
 > below were measured before it. `npm run eval` then `npm run eval:report`
 > replaces them.
 
