@@ -125,7 +125,7 @@ CRITICAL RULES:
 6. All monetary values must be numeric (no currency symbols). Use the "currency" field to specify ISO 4217 (USD, EUR, JPY, etc.).
 7. Never guess. Null with reasoning beats a hallucinated value.
 8. The user message includes a <today> tag with today's date in ISO format (YYYY-MM-DD). Use that as the reference for any "past" or "future" date reasoning. Do not rely on training-time knowledge of the current date.
-9. Report the figure the document prints, never one you calculate. When a printed subtotal or total disagrees with the amounts above it, extract the printed value and raise the matching flag below. An invoice that does not add up is one to flag, not one to correct.
+9. Report the figure the document prints, never one you calculate. When a printed subtotal or total disagrees with the amounts above it, extract the printed value unchanged and do not correct it. The arithmetic flag for that is the code's, not yours; see FLAGS below.
 
 FLAGS. Do not check arithmetic or date consistency. deterministicFlags() in
 src/lib/validate.ts already computes subtotal + tax against total, line items
