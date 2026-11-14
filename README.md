@@ -238,17 +238,29 @@ happen about 22% of the time. Read it as "no fixture failed on this run" rather
 than as a per-invoice success rate. `scripts/eval/probe-fixture.ts` samples a
 single fixture repeatedly when a specific one needs a real rate.
 
-Eight of the nine scored fields are perfect. The single failure is `subtotal` on one fixture,
-and it is a corpus defect rather than an extraction one: `generate-synthetic.ts` can emit an
-invoice whose printed subtotal disagrees with its own line items, the ground truth holds the
-printed figure, and the model returns the arithmetic. s074 prints 641.60 where its two items
-sum to 593.60, and the printed figure is the one consistent with the printed tax and total.
+All nine scored fields pass on every fixture, and two separate changes got it there. Only one
+of them is an extraction improvement, so they are worth keeping apart. 35 fixtures had a printed
+subtotal that disagreed with their own line items, because `subtotal` and `lineItems` were
+authored as independent fields; reconciling them stopped those fixtures scoring a transcription
+of their own arithmetic error as correct, which is a corpus fix. s074 started being answered
+correctly, which is a schema fix.
 
-Two sibling fixtures used to fail the same way and no longer do, which is what critical rule 9
-in `EXTRACTION_SYSTEM_PROMPT` is for: report the figure the document prints, never one you
-calculate. Paired against the previous prompt across all 1,350 field comparisons, it fixed two
-and broke none. s074 still resists in every run and is unexplained. The corpus costs about
-$1.40 to run, roughly a cent an invoice.
+s074 is kept as the one deliberate mismatch so critical rule 9 in `EXTRACTION_SYSTEM_PROMPT` has
+something to exercise: report the figure the document prints, never one you calculate. It prints
+641.60 where its two items sum to 593.60, and the printed figure is the one consistent with the
+printed tax and total. Rule 9 fixed two sibling fixtures and broke none across all 1,350 field
+comparisons, but left s074 a coin flip.
+
+What closed it was key order rather than wording. Key order is generation order in structured
+output, so `{ value, confidence, reasoning }` had the model emit the number and then justify it:
+one sample returned 593.60 with reasoning reading "the rule says report what the document prints.
+Printed subtotal is 641.60." The reasoning reaches the right answer and the value field already
+holds the wrong one. Reversed to reasoning-first, s074 went 4 of 10 to 10 of 10, Fisher
+p = 0.0108. One fixture and one model, so the claim is that the ordering matters here, not a
+general effect size. `scripts/eval/probe-fixture.ts` samples a fixture repeatedly when one needs
+a real rate.
+
+The corpus costs about $1.40 to run, roughly a cent an invoice.
 
 The run does not happen in CI. It costs money and calls a live API, so it is a release-time
 check rather than a per-commit one.
