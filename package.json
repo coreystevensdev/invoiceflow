@@ -15,8 +15,8 @@
     "postinstall": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.6.0",
-    "next": "16.4.5",
+    "@anthropic-ai/sdk": "^1.8.0",
+    "next": "16.4.6",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^6.5.438",
     "react": "19.3.1",
@@ -32,7 +32,7 @@
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^10",
-    "eslint-config-next": "16.4.5",
+    "eslint-config-next": "16.4.6",
     "playwright": "^1.65.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
