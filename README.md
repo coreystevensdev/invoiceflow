@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://invoiceflow-cs.vercel.app"><img src="https://img.shields.io/badge/live--demo-invoiceflow--cs.vercel.app-2563eb?style=flat" alt="Live demo"></a>
   <a href="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml"><img src="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-153-brightgreen.svg" alt="153 tests">
+  <img src="https://img.shields.io/badge/tests-160-brightgreen.svg" alt="160 tests">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="MIT License">
 </p>
 
@@ -214,7 +214,10 @@ Defined in `src/lib/claude.ts` and `src/lib/cost.ts`:
 | `EXTRACTION_MAX_RETRIES` | 2 | Transient failures retry twice with exponential backoff, then surface `model-API-failure` |
 | `EXTRACTION_TIMEOUT_MS` | 90,000 | `AbortSignal.timeout`; slow calls fail as `extraction-timeout` |
 | `ABSOLUTE_CEILING_USD` | $1.00 | Single extractions above this abort as `cost-budget-exceeded`. Catches the very first request before any history exists. |
-| `CAP_MULTIPLIER × rolling median` | 3× | After a few extractions, requests above 3× the median abort. Catches layout explosions, prompt-injection that balloons output, or misconfigured prompts. |
+| `CAP_MULTIPLIER × rolling median` | 3× | Once `MIN_SAMPLES` extractions are on record, requests above 3× the median abort. Catches layout explosions, prompt-injection that balloons output, or misconfigured prompts. |
+| `MIN_SAMPLES` | 5 | Samples required before the median layer arms. Below it only the absolute ceiling applies, so one cheap first extraction cannot set a hair-trigger baseline for the next. |
+
+`cost_usd` prices cache writes at 1.25× and cache reads at 0.1× the input rate, the same way Anthropic bills them. Counting only uncached `input_tokens` would subtract the cached prefix from every request, and since that prefix is the same for all of them, dropping it inflates the ratio between two ordinary invoices. The median layer compares ratios, so it would abort real extractions while believing it had caught an anomaly.
 
 Every request emits one structured JSON log line including `cost_usd`, `retry_count`, `pdf_size_bytes`, and `pdf_num_pages`. Operators can eyeball the distribution in Vercel logs without standing up a dashboard.
 
