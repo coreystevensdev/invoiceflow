@@ -11,6 +11,7 @@ import {
   getModelPricing,
   getMonthlyBudgetUsd,
   getMonthlyCumulativeUsd,
+  MIN_SAMPLES,
   medianCost,
   recordCost,
   recordMonthlyCost,
@@ -59,6 +60,69 @@ describe("computeCost", () => {
     expect(
       computeCost({ input_tokens: 0, output_tokens: 0 }, "claude-haiku-4-5"),
     ).toBe(0);
+  });
+
+  it("bills cache reads at a tenth of the input rate", () => {
+    const cost = computeCost(
+      {
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_read_input_tokens: 1_000_000,
+      },
+      "claude-sonnet-4-6",
+    );
+    expect(cost).toBeCloseTo(0.3, 6);
+  });
+
+  it("bills cache writes at 1.25x the input rate", () => {
+    const cost = computeCost(
+      {
+        input_tokens: 0,
+        output_tokens: 0,
+        cache_creation_input_tokens: 1_000_000,
+      },
+      "claude-sonnet-4-6",
+    );
+    expect(cost).toBeCloseTo(3.75, 6);
+  });
+
+  it("treats null cache counts as zero rather than NaN", () => {
+    const cost = computeCost(
+      {
+        input_tokens: 1_000_000,
+        output_tokens: 0,
+        cache_creation_input_tokens: null,
+        cache_read_input_tokens: null,
+      },
+      "claude-sonnet-4-6",
+    );
+    expect(cost).toBe(3);
+  });
+
+  // Dropping the cached prefix subtracts a large constant from every request,
+  // which inflates the ratio between two ordinary documents past the median
+  // cap even though their real costs are close together.
+  it("keeps two ordinary documents within CAP_MULTIPLIER of each other", () => {
+    const CACHED_PREFIX = 20_000;
+    const small = computeCost(
+      {
+        input_tokens: 300,
+        output_tokens: 300,
+        cache_read_input_tokens: CACHED_PREFIX,
+      },
+      "claude-sonnet-4-6",
+    );
+    const large = computeCost(
+      {
+        input_tokens: 1200,
+        output_tokens: 900,
+        cache_read_input_tokens: CACHED_PREFIX,
+      },
+      "claude-sonnet-4-6",
+    );
+    expect(small).not.toBeNull();
+    expect(large).not.toBeNull();
+    expect(large! / small!).toBeLessThan(CAP_MULTIPLIER);
   });
 });
 
@@ -200,7 +264,7 @@ describe("exceedsBudget", () => {
   });
 
   it("flags requests above CAP_MULTIPLIER × median", () => {
-    [0.01, 0.02, 0.03].forEach(recordCost);
+    [0.01, 0.01, 0.02, 0.03, 0.03].forEach(recordCost);
     // median = 0.02, cap = 0.06
     const result = exceedsBudget(0.07);
     expect(result.exceeded).toBe(true);
@@ -208,9 +272,33 @@ describe("exceedsBudget", () => {
   });
 
   it("passes requests at or below CAP_MULTIPLIER × median", () => {
-    [0.01, 0.02, 0.03].forEach(recordCost);
+    [0.01, 0.01, 0.02, 0.03, 0.03].forEach(recordCost);
     const result = exceedsBudget(0.05);
     expect(result.exceeded).toBe(false);
+  });
+
+  // One cheap call must not arm the cap. A warm instance that happened to see
+  // a small invoice first would otherwise abort the next ordinary extraction.
+  it("stays dormant until MIN_SAMPLES costs are recorded", () => {
+    recordCost(0.004);
+    const result = exceedsBudget(0.015);
+    expect(result.exceeded).toBe(false);
+    expect(result.cap).toBeNull();
+  });
+
+  it("arms the median cap on the MIN_SAMPLES-th sample", () => {
+    for (let i = 0; i < MIN_SAMPLES - 1; i++) recordCost(0.01);
+    expect(exceedsBudget(0.9).exceeded).toBe(false);
+
+    recordCost(0.01);
+    expect(exceedsBudget(0.9).exceeded).toBe(true);
+  });
+
+  it("still catches a runaway during warmup via the absolute ceiling", () => {
+    recordCost(0.004);
+    const result = exceedsBudget(ABSOLUTE_CEILING_USD + 0.5);
+    expect(result.exceeded).toBe(true);
+    expect(result.cap).toBe(ABSOLUTE_CEILING_USD);
   });
 });
 

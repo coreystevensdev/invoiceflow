@@ -30,6 +30,9 @@
 export const CAP_MULTIPLIER = 3;
 const HISTORY_CAP = 50;
 
+/** Samples before the median layer arms, so one cheap call can't set the baseline. */
+export const MIN_SAMPLES = 5;
+
 /** Hard per-request ceiling. Catches runaways before the rolling median seeds. */
 export const ABSOLUTE_CEILING_USD = 1.0;
 
@@ -132,17 +135,30 @@ export function consumeModelPricingMisconfig(): ModelPricingMisconfig | null {
   return diagnostic;
 }
 
+/** Anthropic bills cache writes at 1.25x the input rate, cache reads at 0.1x. */
+const CACHE_WRITE_RATE = 1.25;
+const CACHE_READ_RATE = 0.1;
+
 export interface Usage {
   input_tokens: number;
   output_tokens: number;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
 }
 
 export function computeCost(usage: Usage, model: string): number | null {
   const pricing = getModelPricing(model);
   if (!pricing) return null;
-  const input = (usage.input_tokens / 1_000_000) * pricing.inputPerMillion;
+  const perInputToken = pricing.inputPerMillion / 1_000_000;
+  const input = usage.input_tokens * perInputToken;
   const output = (usage.output_tokens / 1_000_000) * pricing.outputPerMillion;
-  return input + output;
+  // Leaving these out drops the cached prefix from every request. It is the
+  // same prefix each time, so removing it inflates the ratio the cap measures.
+  const cacheWrite =
+    (usage.cache_creation_input_tokens ?? 0) * perInputToken * CACHE_WRITE_RATE;
+  const cacheRead =
+    (usage.cache_read_input_tokens ?? 0) * perInputToken * CACHE_READ_RATE;
+  return input + output + cacheWrite + cacheRead;
 }
 
 const history: number[] = [];
@@ -179,7 +195,7 @@ export function exceedsBudget(current: number): BudgetCheck {
       median,
     };
   }
-  if (median === null || median === 0) {
+  if (median === null || median === 0 || history.length < MIN_SAMPLES) {
     return { exceeded: false, observed: current, cap: null, median };
   }
   const cap = median * CAP_MULTIPLIER;
