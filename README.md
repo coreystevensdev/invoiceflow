@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://invoiceflow-cs.vercel.app"><img src="https://img.shields.io/badge/live--demo-invoiceflow--cs.vercel.app-2563eb?style=flat" alt="Live demo"></a>
   <a href="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml"><img src="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-160-brightgreen.svg" alt="160 tests">
+  <img src="https://img.shields.io/badge/tests-164-brightgreen.svg" alt="164 tests">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="MIT License">
 </p>
 
@@ -147,6 +147,8 @@ src/
 │   └── upgrade-browser-notice.tsx
 ├── lib/
 │   ├── claude.ts                     System prompt + Zod schema + extractInvoice()
+│   │                                 (key order is load-bearing, guarded by
+│   │                                 claude-schema-order.test.ts)
 │   ├── claude-stream.ts              SSE encoder + partial-field parser
 │   ├── pdf.ts                        pdf-parse wrapper with typed errors
 │   ├── validate.ts                   Cross-field validation
@@ -308,7 +310,7 @@ A few honest gaps:
 - **Scanned-PDF support routes through Claude vision, not local OCR.** When `pdf-parse` returns no text layer, the raw PDF is sent to Claude as a `document` content block. This keeps the pipeline single-vendor (no Tesseract/Textract dependency) and gets you ~5-10x the cost of a digital extraction. Handwriting accuracy depends on Claude vision's quality; some scrawled receipts will still come back with low confidence flags.
 - **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
-- **Unit and integration tests cover library and route handlers.** Fourteen Vitest files, every one under `src/` or `scripts/`: `cost.ts` (38), `validate.ts` (18), `claude-stream.ts` (17), `ssrf-guard.ts` (12), the eval scorer (15), `csv.ts` (9), `errors.ts` (9), `rate-limit.ts` (9), `pdf.ts` (5), `proxy.ts` (4), and all four route handlers (`webhook` 9, `csv` 6, `extract` 3, `extract-stream` 3). No end-to-end coverage of the upload flow: Playwright is a devDependency and no spec files exist.
+- **Unit and integration tests cover library and route handlers.** Fifteen Vitest files, every one under `src/` or `scripts/`: `cost.ts` (38), `validate.ts` (18), `claude-stream.ts` (17), `ssrf-guard.ts` (12), the eval scorer (15), `csv.ts` (9), `errors.ts` (9), `rate-limit.ts` (9), `pdf.ts` (5), `proxy.ts` (4), and all four route handlers (`webhook` 9, `csv` 6, `extract` 3, `extract-stream` 3), plus the schema key-order guard (4). No end-to-end coverage of the upload flow: Playwright is a devDependency and no spec files exist.
 
 ## Deploy
 
