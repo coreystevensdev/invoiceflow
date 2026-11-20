@@ -15,6 +15,22 @@
 
 Uploads PDFs or images of invoices and extracts vendor, line items, tax, total, and due date as structured JSON. Each extracted field includes the source text Claude used to derive it, surfaced via keyboard-accessible tooltips. Supports batch uploads, exports to CSV (QuickBooks or Xero format), and POST-to-webhook forwarding. Define custom fields on the landing page to extract domain-specific data beyond the standard nine.
 
+## If you only read one thing
+
+- **[Extraction accuracy](#extraction-accuracy)** is the measurement and the
+  honest reading of it. The corpus sweeps 150 of 150, and that section says why
+  a clean sweep is weaker evidence than it looks: one sample per invoice and no
+  pinned temperature, so a 99%-per-fixture system would still sweep about 22% of
+  the time. It also carries the key-order finding, which is the one real result
+  here.
+- **[Known limitations](#known-limitations)** names six specific gaps, including
+  that the 20-per-hour extract cap is really 20 per hour per instance under
+  horizontal scale.
+- **[How this was built](#how-this-was-built)** is what constrains the model
+  rather than what calls it: a schema enforced at the SDK boundary, ten typed
+  error codes the compiler will not let you half-wire, and an SSRF guard on
+  webhook URLs.
+
 ## Problem
 
 Finance and accounting workflows that handle vendor invoices copy vendor names, line items, tax amounts, totals, and due dates into accounting software by hand. Rules-based parsers and template matchers break on new invoice layouts and require per-vendor maintenance. The core challenge is understanding what fields mean in context: distinguishing a subtotal from a grand total, or an order number from an invoice number, requires understanding document structure rather than just extracting characters.
@@ -172,29 +188,53 @@ InvoiceFlow uses a **Ledger Paper** design system: paper-white canvas (`#FAFAF6`
 
 Each of these has a longer write-up as an ADR in [`docs/adr/`](docs/adr/) covering context, alternatives considered, and consequences accepted.
 
-**Per-field confidence and reasoning.** Every extracted field is a `{value, confidence, reasoning}` tuple. Hover or focus a field to see the source-cited reasoning. The tooltip is keyboard-accessible (Tab to reveal, Escape to dismiss) and wired to the field via `aria-describedby`.
+### Per-field confidence and reasoning
 
-**Click-to-highlight.** Hover or focus any extracted field and the source region in the original document is highlighted. Image inputs and PDF inputs both work, by different paths. For images, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag in normalized 0..1 coordinates; the client parses the prefix off and overlays an indigo box on the source region. For PDFs, the file renders to a `<canvas>` via PDF.js, `getTextContent()` provides per-text-item positions, and the client substring-matches each extracted field's value against those positions to derive the same overlay coordinates. PDF.js is lazy-loaded only after a successful extraction (~600KB chunk; absent on the landing-page bundle). On older iOS Safari versions where the legacy build's iterator-helper polyfills don't reach, the component degrades gracefully: the source PDF stays visible via the browser's native PDF viewer, the highlight overlay is silently disabled. That fallback was established against pdfjs-dist v5 on real devices and has not been re-tested since the bump to v6, so it may now be unnecessary rather than load-bearing.
+Every extracted field is a `{value, confidence, reasoning}` tuple. Hover or focus a field to see the source-cited reasoning. The tooltip is keyboard-accessible (Tab to reveal, Escape to dismiss) and wired to the field via `aria-describedby`.
 
-**Inline editing.** Click any field value in the results panel to swap the display for an input. Money fields parse to numbers via `parseFloat`, dates and strings save as-is, Enter or blur commits, Escape cancels. CSV export and webhook fire use the edited values, not the original extraction. State resets when a new file is uploaded.
+### Click-to-highlight
 
-**Two-pass validation.** Claude flags cross-field issues during extraction. A deterministic pass in `lib/validate.ts` runs independently and merges its findings. Either alone misses things the other catches.
+Hover or focus any extracted field and the source region in the original document is highlighted. Image inputs and PDF inputs both work, by different paths. For images, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag in normalized 0..1 coordinates; the client parses the prefix off and overlays an indigo box on the source region. For PDFs, the file renders to a `<canvas>` via PDF.js, `getTextContent()` provides per-text-item positions, and the client substring-matches each extracted field's value against those positions to derive the same overlay coordinates. PDF.js is lazy-loaded only after a successful extraction (~600KB chunk; absent on the landing-page bundle). On older iOS Safari versions where the legacy build's iterator-helper polyfills don't reach, the component degrades gracefully: the source PDF stays visible via the browser's native PDF viewer, the highlight overlay is silently disabled. That fallback was established against pdfjs-dist v5 on real devices and has not been re-tested since the bump to v6, so it may now be unnecessary rather than load-bearing.
 
-**Zero retention.** No database, no auth, no content logging. Uploaded PDFs process in memory within a single Vercel Function execution. The structured logger in `src/lib/log.ts` only emits an allowlisted set of metadata keys: `pdf_size_bytes`, `pdf_num_pages`, `correlation_id`, `error_code`, `cost_usd`, `retry_count`. Field values and PDF bytes never reach the log stream.
+### Inline editing
 
-**Typed error taxonomy.** Ten error codes (`corrupt-PDF`, `oversized-PDF`, `non-PDF`, `not-an-invoice`, `model-API-failure`, `rate-limited`, `extraction-timeout`, `cost-budget-exceeded`, `monthly-budget-exhausted`, `pdf-reader-unavailable`) each map to a user-readable title, cause, and next-step copy via the shared `ErrorState` component. Raw 5xx responses never reach the client. Adding a new error path is a `Record<...>`-typed change that won't compile if you forget any of the three places it has to be wired.
+Click any field value in the results panel to swap the display for an input. Money fields parse to numbers via `parseFloat`, dates and strings save as-is, Enter or blur commits, Escape cancels. CSV export and webhook fire use the edited values, not the original extraction. State resets when a new file is uploaded.
 
-**Strict nonce-based CSP.** `src/proxy.ts` generates a per-request nonce, sets the CSP header, and ships HSTS, Referrer-Policy, X-Content-Type-Options, and Permissions-Policy alongside it. No `'unsafe-inline'`. JSON-LD structured data is served at a dedicated `/schema.jsonld` route rather than as an inline `<script>`, because the strict CSP would block it.
+### Two-pass validation
 
-**WCAG 2.1 AA baseline.** Keyboard-operable everywhere, `aria-live` status updates during extraction, icon and text status indicators (color is never the only signal), `prefers-reduced-motion` honored globally, focus rings visible on every interactive element.
+Claude flags cross-field issues during extraction. A deterministic pass in `lib/validate.ts` runs independently and merges its findings. Either alone misses things the other catches.
 
-**Universal CSV schema.** Imports cleanly into QuickBooks Online's CSV importer, into Xero, and opens in Excel and Google Sheets. ISO-8601 dates, numeric money, UTF-8 with BOM.
+### Zero retention
 
-**Prompt caching.** The ~500-token system prompt uses `cache_control: { type: "ephemeral" }`. After the first call in a cache window, the system-prompt fraction of cost drops by roughly 90%.
+No database, no auth, no content logging. Uploaded PDFs process in memory within a single Vercel Function execution. The structured logger in `src/lib/log.ts` only emits an allowlisted set of metadata keys: `pdf_size_bytes`, `pdf_num_pages`, `correlation_id`, `error_code`, `cost_usd`, `retry_count`. Field values and PDF bytes never reach the log stream.
 
-**Structured output.** `messages.parse()` plus `zodOutputFormat(InvoiceExtractionSchema)` validates Claude's response against the Zod schema inside the SDK. No hand-rolled JSON parsing or defensive type guards scattered through the codebase.
+### Typed error taxonomy
 
-**Cost and retry safety.** 90-second Claude timeout, max 2 retries with exponential backoff, 3× rolling-median cost ceiling, and an absolute first-request guard. Constants and roles in the table below.
+Ten error codes (`corrupt-PDF`, `oversized-PDF`, `non-PDF`, `not-an-invoice`, `model-API-failure`, `rate-limited`, `extraction-timeout`, `cost-budget-exceeded`, `monthly-budget-exhausted`, `pdf-reader-unavailable`) each map to a user-readable title, cause, and next-step copy via the shared `ErrorState` component. Raw 5xx responses never reach the client. Adding a new error path is a `Record<...>`-typed change that won't compile if you forget any of the three places it has to be wired.
+
+### Strict nonce-based CSP
+
+`src/proxy.ts` generates a per-request nonce, sets the CSP header, and ships HSTS, Referrer-Policy, X-Content-Type-Options, and Permissions-Policy alongside it. No `'unsafe-inline'`. JSON-LD structured data is served at a dedicated `/schema.jsonld` route rather than as an inline `<script>`, because the strict CSP would block it.
+
+### WCAG 2.1 AA baseline
+
+Keyboard-operable everywhere, `aria-live` status updates during extraction, icon and text status indicators (color is never the only signal), `prefers-reduced-motion` honored globally, focus rings visible on every interactive element.
+
+### Universal CSV schema
+
+Imports cleanly into QuickBooks Online's CSV importer, into Xero, and opens in Excel and Google Sheets. ISO-8601 dates, numeric money, UTF-8 with BOM.
+
+### Prompt caching
+
+The ~500-token system prompt uses `cache_control: { type: "ephemeral" }`. After the first call in a cache window, the system-prompt fraction of cost drops by roughly 90%.
+
+### Structured output
+
+`messages.parse()` plus `zodOutputFormat(InvoiceExtractionSchema)` validates Claude's response against the Zod schema inside the SDK. No hand-rolled JSON parsing or defensive type guards scattered through the codebase.
+
+### Cost and retry safety
+
+90-second Claude timeout, max 2 retries with exponential backoff, 3× rolling-median cost ceiling, and an absolute first-request guard. Constants and roles in the table below.
 
 ## Why Claude
 
