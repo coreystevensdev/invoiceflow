@@ -93,7 +93,8 @@ Everything inside the function is one Node.js process. No queue, no worker, no b
 | Route | Method | What it does |
 |---|---|---|
 | `/` | GET | Landing + extraction UI |
-| `/api/extract` | POST (multipart) | `pdf` form field (PDF or image: JPG, PNG, GIF, WebP) returns an `ExtractResponse` JSON |
+| `/api/extract-stream` | POST (multipart) | What the single-file upload on the live page actually calls. Same `pdf` form field, streamed back as SSE so field values appear as they are extracted |
+| `/api/extract` | POST (multipart) | `pdf` form field (PDF or image: JPG, PNG, GIF, WebP) returns an `ExtractResponse` JSON in one response. Used for batch and by any API client |
 | `/api/csv` | POST (JSON) | `{invoices, format: "summary" \| "line_items"}` returns a CSV download |
 | `/api/webhook` | POST (JSON) | `{webhook_url, invoice, verbose?}` POSTs to your URL |
 | `/robots.txt`, `/sitemap.xml`, `/schema.jsonld` | GET | SEO surfaces |
@@ -113,32 +114,52 @@ Open http://localhost:3000 and drop a PDF.
 
 ## File layout
 
+Every tracked source file, because a partial tree is worse than none: the
+previous version of this listing was missing fifteen files, including both
+November features, so nothing in the Features list above could be found from it.
+
 ```
 src/
 ├── app/
-│   ├── page.tsx                  Upload UI + reasoning tooltips
-│   ├── layout.tsx                Metadata, OG, Twitter, JSON-LD link
-│   ├── globals.css               :focus-visible ring + reduced-motion guard
-│   ├── api/extract/route.ts      PDF (text via pdf-parse) or image (Claude vision) → structured JSON
-│   ├── api/csv/route.ts          Invoice JSON → CSV (QBO or Xero)
-│   ├── api/webhook/route.ts      Invoice JSON → POST to user URL
-│   └── schema.jsonld/route.ts    SoftwareApplication structured data
+│   ├── page.tsx                      Upload UI + reasoning tooltips
+│   ├── batch-view.tsx                Multi-file results table
+│   ├── results-view.tsx              Single-invoice result + field tooltips
+│   ├── layout.tsx                    Metadata, OG, Twitter, JSON-LD link
+│   ├── globals.css                   :focus-visible ring + reduced-motion guard
+│   ├── not-found.tsx                 404
+│   ├── opengraph-image.tsx           Generated OG image
+│   ├── robots.ts, sitemap.ts         SEO surfaces
+│   ├── api/extract-stream/route.ts   SSE path the live page uses
+│   ├── api/extract/route.ts          One-shot: PDF text via pdf-parse, or image via Claude vision
+│   ├── api/csv/route.ts              Invoice JSON to CSV (QBO or Xero)
+│   ├── api/webhook/route.ts          Invoice JSON to POST at a user URL
+│   └── schema.jsonld/route.ts        SoftwareApplication structured data
 ├── components/
-│   ├── error-state.tsx           ErrorState for all 8 error categories
-│   ├── pdf-preview.tsx           Canvas-rendered PDF + bbox highlight overlay
-│   ├── privacy-section.tsx       Zero-retention copy block (landing + results)
+│   ├── error-state.tsx               ErrorState for all 10 error categories
+│   ├── pdf-preview.tsx               Canvas-rendered PDF + bbox highlight overlay
+│   ├── pdfjs-dist-webpack.d.ts       Types for the legacy canvas build
+│   ├── extraction-status.tsx         Per-field progress during streaming
+│   ├── preview-card.tsx              Thumbnail + filename per queued file
+│   ├── custom-fields-manager.tsx     Define extra fields at runtime
+│   ├── privacy-section.tsx           Zero-retention copy block (landing + results)
+│   ├── loom-embed.tsx                Demo video
+│   ├── tellsight-cta.tsx             Cross-link to the related project
 │   └── upgrade-browser-notice.tsx
 ├── lib/
-│   ├── claude.ts                 System prompt + Zod schema + extractInvoice()
-│   ├── pdf.ts                    pdf-parse wrapper with typed errors
-│   ├── validate.ts               Cross-field validation
-│   ├── csv.ts                    Summary + line-item CSV formatters
-│   ├── errors.ts                 ExtractionErrorCode union + toErrorResponse
-│   ├── log.ts                    Structured correlation-ID logger (allowlist)
-│   ├── cost.ts                   Rolling-median cost ceiling
-│   ├── rate-limit.ts             Sliding-window limiter
-│   └── site.ts                   Canonical URL helper
-└── proxy.ts                      Next.js 16 middleware: nonce CSP, HSTS
+│   ├── claude.ts                     System prompt + Zod schema + extractInvoice()
+│   ├── claude-stream.ts              SSE encoder + partial-field parser
+│   ├── pdf.ts                        pdf-parse wrapper with typed errors
+│   ├── validate.ts                   Cross-field validation
+│   ├── csv.ts                        Summary + line-item CSV formatters
+│   ├── errors.ts                     ExtractionErrorCode union + toErrorResponse
+│   ├── log.ts                        Structured correlation-ID logger (allowlist)
+│   ├── cost.ts                       Rolling-median cost ceiling
+│   ├── rate-limit.ts                 Sliding-window limiter
+│   ├── limits.ts                     Size and page ceilings in one place
+│   ├── ssrf-guard.ts                 Blocks webhook URLs pointing at private ranges
+│   ├── custom-fields.ts              Runtime field definitions to schema
+│   └── site.ts                       Canonical URL helper
+└── proxy.ts                          Next.js 16 middleware: nonce CSP, HSTS
 ```
 
 ## Signature aesthetic
@@ -151,7 +172,7 @@ Each of these has a longer write-up as an ADR in [`docs/adr/`](docs/adr/) coveri
 
 **Per-field confidence and reasoning.** Every extracted field is a `{value, confidence, reasoning}` tuple. Hover or focus a field to see the source-cited reasoning. The tooltip is keyboard-accessible (Tab to reveal, Escape to dismiss) and wired to the field via `aria-describedby`.
 
-**Click-to-highlight.** Hover or focus any extracted field and the source region in the original document is highlighted. Image inputs and PDF inputs both work, by different paths. For images, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag in normalized 0..1 coordinates; the client parses the prefix off and overlays an indigo box on the source region. For PDFs, the file renders to a `<canvas>` via PDF.js, `getTextContent()` provides per-text-item positions, and the client substring-matches each extracted field's value against those positions to derive the same overlay coordinates. PDF.js is lazy-loaded only after a successful extraction (~600KB chunk; absent on the landing-page bundle). On older iOS Safari versions where pdfjs-dist v5's iterator-helper polyfills don't reach, the component degrades gracefully: the source PDF stays visible via the browser's native PDF viewer, the highlight overlay is silently disabled.
+**Click-to-highlight.** Hover or focus any extracted field and the source region in the original document is highlighted. Image inputs and PDF inputs both work, by different paths. For images, Claude vision is asked to prefix every reasoning string with a `[bbox: x, y, w, h]` tag in normalized 0..1 coordinates; the client parses the prefix off and overlays an indigo box on the source region. For PDFs, the file renders to a `<canvas>` via PDF.js, `getTextContent()` provides per-text-item positions, and the client substring-matches each extracted field's value against those positions to derive the same overlay coordinates. PDF.js is lazy-loaded only after a successful extraction (~600KB chunk; absent on the landing-page bundle). On older iOS Safari versions where the legacy build's iterator-helper polyfills don't reach, the component degrades gracefully: the source PDF stays visible via the browser's native PDF viewer, the highlight overlay is silently disabled. That fallback was established against pdfjs-dist v5 on real devices and has not been re-tested since the bump to v6, so it may now be unnecessary rather than load-bearing.
 
 **Inline editing.** Click any field value in the results panel to swap the display for an input. Money fields parse to numbers via `parseFloat`, dates and strings save as-is, Enter or blur commits, Escape cancels. CSV export and webhook fire use the edited values, not the original extraction. State resets when a new file is uploaded.
 
@@ -159,7 +180,7 @@ Each of these has a longer write-up as an ADR in [`docs/adr/`](docs/adr/) coveri
 
 **Zero retention.** No database, no auth, no content logging. Uploaded PDFs process in memory within a single Vercel Function execution. The structured logger in `src/lib/log.ts` only emits an allowlisted set of metadata keys: `pdf_size_bytes`, `pdf_num_pages`, `correlation_id`, `error_code`, `cost_usd`, `retry_count`. Field values and PDF bytes never reach the log stream.
 
-**Typed error taxonomy.** Eight error codes (`corrupt-PDF`, `oversized-PDF`, `non-PDF`, `not-an-invoice`, `model-API-failure`, `rate-limited`, `extraction-timeout`, `cost-budget-exceeded`) each map to a user-readable title, cause, and next-step copy via the shared `ErrorState` component. Raw 5xx responses never reach the client. Adding a new error path is a `Record<...>`-typed change that won't compile if you forget any of the three places it has to be wired.
+**Typed error taxonomy.** Ten error codes (`corrupt-PDF`, `oversized-PDF`, `non-PDF`, `not-an-invoice`, `model-API-failure`, `rate-limited`, `extraction-timeout`, `cost-budget-exceeded`, `monthly-budget-exhausted`, `pdf-reader-unavailable`) each map to a user-readable title, cause, and next-step copy via the shared `ErrorState` component. Raw 5xx responses never reach the client. Adding a new error path is a `Record<...>`-typed change that won't compile if you forget any of the three places it has to be wired.
 
 **Strict nonce-based CSP.** `src/proxy.ts` generates a per-request nonce, sets the CSP header, and ships HSTS, Referrer-Policy, X-Content-Type-Options, and Permissions-Policy alongside it. No `'unsafe-inline'`. JSON-LD structured data is served at a dedicated `/schema.jsonld` route rather than as an inline `<script>`, because the strict CSP would block it.
 
@@ -277,7 +298,7 @@ A few honest gaps:
 - **Scanned-PDF support routes through Claude vision, not local OCR.** When `pdf-parse` returns no text layer, the raw PDF is sent to Claude as a `document` content block. This keeps the pipeline single-vendor (no Tesseract/Textract dependency) and gets you ~5-10x the cost of a digital extraction. Handwriting accuracy depends on Claude vision's quality; some scrawled receipts will still come back with low confidence flags.
 - **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
-- **Unit and integration tests cover library and route handlers.** Vitest covers `cost.ts`, `errors.ts`, `validate.ts`, `rate-limit.ts`, `csv.ts`, and the `/api/csv` and `/api/webhook` route handlers. No end-to-end coverage of the upload flow.
+- **Unit and integration tests cover library and route handlers.** Fourteen Vitest files, every one under `src/` or `scripts/`: `cost.ts` (38), `validate.ts` (18), `claude-stream.ts` (17), `ssrf-guard.ts` (12), the eval scorer (15), `csv.ts` (9), `errors.ts` (9), `rate-limit.ts` (9), `pdf.ts` (5), `proxy.ts` (4), and all four route handlers (`webhook` 9, `csv` 6, `extract` 3, `extract-stream` 3). No end-to-end coverage of the upload flow: Playwright is a devDependency and no spec files exist.
 
 ## Deploy
 

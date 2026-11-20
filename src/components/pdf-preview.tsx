@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { InvoiceExtraction } from "@/lib/claude";
 
-const PDF_PREVIEW_BUILD = "v5-canvas-only-render";
+// The iOS Safari workarounds below (legacy build, canvas-without-context,
+// text-extraction fallback) were all established against pdfjs-dist v5 on real
+// devices. package.json has since moved to ^6.5.438 and none of them has been
+// re-tested on v6, so they may now be unnecessary rather than load-bearing.
+const PDF_PREVIEW_BUILD = "canvas-only-render";
 
 type Bbox = number[];
 
@@ -51,7 +55,7 @@ interface RenderError {
  *      Runs every time the user edits a field value, but does no I/O.
  *
  * If the canvas pipeline fails (typically on older iOS Safari versions that
- * pdfjs-dist v5 doesn't fully support), the component falls back to the
+ * the legacy canvas build does not fully support), the component falls back to the
  * browser's native PDF viewer in an <object>, with a new-tab link nested inside
  * it for browsers that will not display it. That <object> needs object-src to
  * allow blob:, which proxy.ts does deliberately. The bbox highlight overlay is
@@ -86,7 +90,7 @@ export function PdfPreview({
         // Direct legacy/build/pdf.mjs import + manual workerSrc keeps the
         // wiring identical across Turbopack / webpack / vite. The legacy
         // build polyfills modern APIs (Promise.withResolvers, iterator
-        // helpers, Uint8Array.fromBase64) that pdfjs-dist v5 assumes but
+        // helpers, Uint8Array.fromBase64) that pdfjs-dist assumes but
         // older iOS Safari doesn't ship. The worker file at the static
         // /pdf.worker.min.mjs URL is copied from the package in postinstall.
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -103,7 +107,7 @@ export function PdfPreview({
         if (!canvas || cancelled) return;
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        // pdfjs-dist v5 docs: "If the context must absolutely be used to
+        // pdfjs-dist docs: "If the context must absolutely be used to
         // render the page, the canvas must be null." Passing both can leave
         // the canvas blank on some browsers (observed on iOS Safari). Pass
         // only `canvas` and let pdfjs grab its own 2d context.
@@ -111,7 +115,7 @@ export function PdfPreview({
         if (cancelled) return;
 
         // Text extraction is a separate failure mode from canvas rendering.
-        // pdfjs-dist v5's getTextContent uses iterator helpers that older
+        // getTextContent uses iterator helpers that older
         // iOS Safari versions don't ship (the legacy build polyfills core-js
         // features but iterator-helpers like Iterator.prototype.map aren't
         // fully covered). When this fails, keep the rendered canvas visible
