@@ -1,0 +1,131 @@
+# The 150-invoice corpus cannot gate a commit: it calls a live API and costs
+# about $1.40 a run, roughly a cent an invoice. So it runs weekly instead, and
+# opens an issue when the pass rate drops rather than failing into a log nobody
+# reads.
+#
+# It needs ANTHROPIC_API_KEY as a repository secret. None exists yet, and the
+# guard below skips the run with a clear message rather than failing every
+# Monday until one does.
+#
+# What already gates every commit is the cheap half: the schema key-order guard
+# in src/lib/claude-schema-order.test.ts asserts the specific finding this
+# corpus paid to discover.
+
+name: Weekly eval
+
+on:
+  schedule:
+    # Mondays 09:30 UTC, half an hour after taxcite's, so two paid runs do not
+    # start together and make a spend spike hard to attribute.
+    - cron: "30 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Weekly eval skipped"
+              echo
+              echo "Needs \`ANTHROPIC_API_KEY\` as a repository secret."
+              echo "Add it under Settings, Secrets and variables, Actions, and this runs on its own next Monday."
+              echo
+              echo "Cost per run: about \$1.40, roughly a cent an invoice across 150 fixtures."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  eval:
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+
+      - name: Confirm the corpus has not changed under the run
+        # A pass-rate comparison across two different corpora is meaningless, so
+        # the fingerprint goes in the summary beside the result rather than being
+        # assumed constant.
+        run: npx tsx scripts/eval/corpus-fingerprint.ts >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run the corpus
+        run: npm run eval
+
+      - name: Build the report
+        run: npm run eval:report
+
+      - name: Compare against the committed table
+        id: compare
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import os, pathlib, re
+
+          def rate(path):
+              text = pathlib.Path(path).read_text()
+              m = re.search(r"Invoice pass rate \|\s*([\d.]+)%\s*\((\d+)/(\d+)\)", text)
+              return (float(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+          new = rate("eval-results/accuracy-table.md")
+          print("### Weekly eval\n")
+          if not new:
+              print("Could not parse a pass rate out of the generated table.")
+              raise SystemExit(0)
+
+          pct, passed, total = new
+          print(f"Invoice pass rate: **{pct:.1f}%** ({passed}/{total})\n")
+          print("One sample per invoice and `temperature` is not pinned, because the API "
+                "refuses it alongside structured output. A 99%-per-fixture system would still "
+                "sweep clean about 22% of the time, so read a drop of one or two fixtures as "
+                "worth re-running rather than as a regression.\n")
+
+          failing = total - passed
+          with pathlib.Path(os.environ["GITHUB_OUTPUT"]).open("a") as fh:
+              # Three or more is past what one noisy run explains.
+              fh.write(f"regressed={'1' if failing >= 3 else '0'}\n")
+              fh.write(f"summary={failing} of {total} fixtures failed ({pct:.1f}% pass rate)\n")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: weekly-eval-results
+          path: |
+            eval-results/accuracy-table.md
+            eval-results/failures.md
+
+      - name: Open an issue if three or more fixtures failed
+        if: steps.compare.outputs.regressed == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ steps.compare.outputs.summary }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --title "Weekly eval: three or more fixtures failed" \
+            --label eval \
+            --body "$(printf '%s\n\n%s\n\n%s\n' \
+              "$RESULT" \
+              "Run: $RUN_URL. The accuracy table and per-failure detail are attached as weekly-eval-results." \
+              "The threshold is three rather than one on purpose: with one sample per invoice and no pinned temperature, one or two failures is inside what a clean system produces by chance. Use scripts/eval/probe-fixture.ts to sample a specific fixture repeatedly before concluding anything about it.")"
