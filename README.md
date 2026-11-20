@@ -289,6 +289,16 @@ The corpus costs about $1.40 to run, roughly a cent an invoice.
 The run does not happen in CI. It costs money and calls a live API, so it is a release-time
 check rather than a per-commit one.
 
+## How this was built
+
+Written with heavy AI assistance. That is worth saying because the work here is not the extraction call, which is short, it is everything constraining what comes back from it.
+
+**The model is not trusted to return a shape.** A Zod schema is enforced at the SDK boundary, so a response that does not parse never reaches application code. Ten error codes in `src/lib/errors.ts` each map to a title and a next step through `Record<...>` types, which means adding an error path does not compile until all three places are wired. Webhook URLs go through `src/lib/ssrf-guard.ts` before anything is posted to them, because a user-supplied URL plus a server-side request is an SSRF primitive whatever the model does.
+
+**The one real finding came from distrusting a passing result.** The eval swept 150 of 150, and the honest reading of that is in Extraction accuracy above: one sample per invoice and no pinned temperature, so a clean sweep would still happen about 22% of the time if each fixture only passed 99% of the time. Probing the one deliberately-ambiguous fixture repeatedly is what surfaced the key-order effect, that `{ value, confidence, reasoning }` makes the model emit a number and then rationalise it. That is in `src/lib/claude.ts:16` with the sample that proved it, and it moved one fixture from 4 of 10 to 10 of 10 at Fisher p = 0.0108. It is also sized honestly there: one fixture and one model, so the claim is that ordering matters here, not an effect size anyone should generalise.
+
+**What I changed about my own process.** The eval does not run in CI, because it costs money and calls a live API, so it is a release-time check that has to be remembered rather than a gate that holds. That is a real weakness and it is in Known limitations rather than hidden.
+
 ## Known limitations
 
 A few honest gaps:
