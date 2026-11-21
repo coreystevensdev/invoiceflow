@@ -62,6 +62,8 @@ next-env.d.ts
 
 # AI-development scaffolding (local only)
 CLAUDE.md
+# session scratch from the remember hook: dated logs of what was worked on
+.remember/
 AGENTS.md
 
 # Build artifact copied from node_modules by postinstall
