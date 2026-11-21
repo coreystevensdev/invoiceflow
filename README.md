@@ -333,7 +333,7 @@ check rather than a per-commit one.
 
 ## How this was built
 
-Written with heavy AI assistance. That is worth saying because the work here is not the extraction call, which is short, it is everything constraining what comes back from it.
+AI assistance was used. That is worth saying because the work here is not the extraction call, which is short, it is everything constraining what comes back from it.
 
 **The model is not trusted to return a shape.** A Zod schema is enforced at the SDK boundary, so a response that does not parse never reaches application code. Ten error codes in `src/lib/errors.ts` each map to a title and a next step through `Record<...>` types, which means adding an error path does not compile until all three places are wired. Webhook URLs go through `src/lib/ssrf-guard.ts` before anything is posted to them, because a user-supplied URL plus a server-side request is an SSRF primitive whatever the model does.
 
