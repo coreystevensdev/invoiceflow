@@ -11,7 +11,7 @@
 
 # InvoiceFlow
 
-**[Try it now](https://invoiceflow-cs.vercel.app): drop a PDF or invoice image, get structured JSON back in under 5 seconds.**
+**[Try it now](https://invoiceflow-cs.vercel.app): drop a PDF or invoice image, get structured JSON back.**
 
 Uploads PDFs or images of invoices and extracts vendor, line items, tax, total, and due date as structured JSON. Each extracted field includes the source text Claude used to derive it, surfaced via keyboard-accessible tooltips. Supports batch uploads, exports to CSV (QuickBooks or Xero format), and POST-to-webhook forwarding. Define custom fields on the landing page to extract domain-specific data beyond the standard nine.
 
@@ -37,7 +37,7 @@ Finance and accounting workflows that handle vendor invoices copy vendor names, 
 
 ## Solution
 
-Drop any PDF or invoice image and get structured JSON back in under 5 seconds. Claude reads the document with a Zod schema enforced at the SDK boundary, extracting the nine standard fields plus any custom fields defined at runtime. Each field returns with the source text used to derive it. No login, no database, no file storage: every document processes in memory within a single Vercel Function and disappears when the request ends. PDFs run through `pdf-parse` for the text layer first; scanned PDFs and uploaded images route to Claude vision. Same Zod schema, same response shape either way.
+Drop any PDF or invoice image and get structured JSON back. Claude reads the document with a Zod schema enforced at the SDK boundary, extracting the nine standard fields plus any custom fields defined at runtime. Each field returns with the source text used to derive it. No login, no database, no file storage: every document processes in memory within a single Vercel Function and disappears when the request ends. PDFs run through `pdf-parse` for the text layer first; scanned PDFs and uploaded images route to Claude vision. Same Zod schema, same response shape either way.
 
 ## Features
 
