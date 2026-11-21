@@ -7,7 +7,7 @@
 export const SITE_NAME = "InvoiceFlow";
 export const SITE_TAGLINE = "PDF invoices structured by Claude in seconds";
 export const SITE_DESCRIPTION =
-  "PDF invoice extraction with per-field reasoning, confidence flags, and CSV export for QuickBooks or Xero. Typically under 5 seconds. Zero retention by design.";
+  "PDF invoice extraction with per-field reasoning, confidence flags, and CSV export for QuickBooks or Xero. Zero retention by design.";
 
 export function getSiteUrl(): string {
   const explicit = process.env.SITE_URL;
