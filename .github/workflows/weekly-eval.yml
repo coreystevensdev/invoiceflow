@@ -69,6 +69,15 @@ jobs:
           cache: npm
       - run: npm ci
 
+      # The fixture PDFs are gitignored on purpose: .gitignore calls them
+      # "reproducible artifacts from eval:generate", and corpus-fingerprint.ts
+      # hashes only expected.json because their bytes are not stable across
+      # regenerations. CI therefore has to generate them. Without this step all
+      # 150 fixtures are skipped and the runner exits 1 having called no API,
+      # which is how the first dispatched run failed.
+      - name: Generate the fixture PDFs
+        run: npm run eval:generate
+
       - name: Confirm the corpus has not changed under the run
         # A pass-rate comparison across two different corpora is meaningless, so
         # the fingerprint goes in the summary beside the result rather than being
