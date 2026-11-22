@@ -2,10 +2,11 @@
  * Structured per-request logger. Binds a correlation ID up front so every
  * line from one request shares the same identifier.
  *
- * Invariant: loggers never accept free-form strings for payloads. Callers
- * pass a shape via `StructuredPayload`; if the shape contains anything
- * resembling extracted content (invoice fields, PDF text, webhook body),
- * the type system should stop them, the allowed keys are enumerated.
+ * Invariant: the keys are enumerated, so a caller cannot invent a field for
+ * extracted content (invoice fields, PDF text, webhook body) without editing
+ * `StructuredPayload` first. `note` is the one free-form value and it is for
+ * operator diagnostics, a bad env var or a retry reason; nothing passes
+ * extracted content through it and a review should keep it that way.
  *
  * Logs go to `console.*`. In Vercel Fluid Compute they are picked up by
  * the log drain; in local dev they render to the terminal. No external
