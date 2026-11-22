@@ -3,9 +3,13 @@
 # opens an issue when the pass rate drops rather than failing into a log nobody
 # reads.
 #
-# It needs ANTHROPIC_API_KEY as a repository secret. None exists yet, and the
-# guard below skips the run with a clear message rather than failing every
-# Monday until one does.
+# It needs ANTHROPIC_API_KEY as a repository secret, which is set as of
+# 2026-11-21. The guard below stays because a rotated or removed key should skip
+# with a clear message rather than fail every Monday until someone notices.
+#
+# The same key answers taxcite's weekly eval, so the 09:30 offset below separates
+# the two runs in time but not in billing: a spend line cannot be attributed to a
+# repo by key alone.
 #
 # What already gates every commit is the cheap half: the schema key-order guard
 # in src/lib/claude-schema-order.test.ts asserts the specific finding this
