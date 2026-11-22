@@ -120,16 +120,6 @@ function classifyModelFlag(message: string): FlagCondition | null {
   return null;
 }
 
-/** Conditions this module evaluates, independent of whether any fired. */
-const COMPUTED_CONDITIONS: ReadonlySet<FlagCondition> = new Set<FlagCondition>([
-  "subtotal_plus_tax_vs_total",
-  "line_items_vs_subtotal",
-  "non_positive_total",
-  "due_before_bill",
-  "future_bill_date",
-  "missing_vendor",
-]);
-
 export function mergeFlags(
   modelFlags: ExtractionFlag[],
   detFlags: ExtractionFlag[],
@@ -149,8 +139,14 @@ export function mergeFlags(
     // Exact-string dedupe alone never fired across sources: the code's message
     // is fixed and the model's is prose, so both survived and a user saw one
     // finding twice in different words.
-    const condition = classifyModelFlag(flag.message);
-    if (condition && COMPUTED_CONDITIONS.has(condition)) continue;
+    // Classifying at all is the same thing as being a condition this module
+    // computes: every FlagCondition is one, so a classified model flag is always
+    // a restatement of the code's own verdict. A set of "computed" conditions
+    // used to sit here, but it listed the whole union and nothing links a Set
+    // literal to a union at compile time, so it could not have caught a seventh
+    // condition that the code does not evaluate. If one is ever added, this is
+    // where it has to branch.
+    if (classifyModelFlag(flag.message)) continue;
 
     const key = `${flag.severity}:${flag.message}`;
     if (!seen.has(key)) {
