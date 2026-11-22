@@ -130,9 +130,12 @@ Open http://localhost:3000 and drop a PDF.
 
 ## File layout
 
-Every tracked source file, because a partial tree is worse than none: the
-previous version of this listing was missing fifteen files, including both
-November features, so nothing in the Features list above could be found from it.
+Every tracked source file outside the eval fixtures, because a partial tree is
+worse than none: an earlier version of this listing was missing fifteen files,
+including both November features, so nothing in the Features list above could be
+found from it. The 150 fixture directories under `scripts/eval/fixtures/` are two
+JSON files each and are left out deliberately; `scripts/eval/fixtures/README.md`
+describes their shape.
 
 ```
 src/
@@ -178,6 +181,25 @@ src/
 │   ├── custom-fields.ts              Runtime field definitions to schema
 │   └── site.ts                       Canonical URL helper
 └── proxy.ts                          Next.js 16 middleware: nonce CSP, HSTS
+
+scripts/
+├── eval/
+│   ├── runner.ts                     Scores the corpus, writes the run JSON
+│   ├── score.ts                      Field-level comparison rules
+│   ├── score.test.ts                 Unit tests for those rules
+│   ├── report.ts                     Renders a run into the README's table
+│   ├── types.ts                      Shared shapes for a run and a fixture
+│   ├── generate-synthetic.ts         Builds the fixture PDFs from expected.json
+│   ├── probe-fixture.ts              Samples one fixture repeatedly for a real rate
+│   ├── corpus-fingerprint.ts         Hashes the corpus so a run names what it scored
+│   └── fixtures/                     150 fixtures, expected.json + meta.json each
+├── git-hooks/pre-push                Runs lint and tests before a push
+├── banner.mjs                        Generates the README's social banner
+├── copy-pdf-worker.mjs               postinstall: vendors the pdf.js worker
+├── sample-pdf.mjs                    Builds the sample invoice the app offers
+├── scanned-fixture.mjs               Renders a fixture as a scan for the OCR path
+├── screenshots.mjs                   Captures the README screenshots
+└── test-ocr-fallback.mjs             Exercises the OCR path against a scan
 ```
 
 ## Signature aesthetic
@@ -323,8 +345,7 @@ one sample returned 593.60 with reasoning reading "the rule says report what the
 Printed subtotal is 641.60." The reasoning reaches the right answer and the value field already
 holds the wrong one. Reversed to reasoning-first, s074 went 4 of 10 to 10 of 10, Fisher
 p = 0.0108. One fixture and one model, so the claim is that the ordering matters here, not a
-general effect size. `scripts/eval/probe-fixture.ts` samples a fixture repeatedly when one needs
-a real rate.
+general effect size.
 
 The corpus costs about $1.40 to run, roughly a cent an invoice.
 
