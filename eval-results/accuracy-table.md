@@ -1,30 +1,30 @@
 # InvoiceFlow Eval Results
 
-**Run date:** 2026-11-12
+**Run date:** 2026-11-22
 **Model:** claude-sonnet-4-6
-**Corpus:** 150 invoices
+**Corpus:** 149 invoices
 **Corpus fingerprint:** `2d964d0d2d0d`
 
 ## Overall
 
 | Metric | Value |
 |--------|-------|
-| Invoice pass rate | 100.0% (150/150) |
-| Field accuracy | 100.0% (1350/1350) |
+| Invoice pass rate | 100.0% (149/149) |
+| Field accuracy | 100.0% (1341/1341) |
 
 ## Per-Field Accuracy
 
 | Field | Matched | Total | Accuracy |
 |-------|---------|-------|----------|
-| invoice_number | 150 | 150 | 100.0% |
-| vendor_name | 150 | 150 | 100.0% |
-| bill_date | 150 | 150 | 100.0% |
-| due_date | 150 | 150 | 100.0% |
-| po_number | 150 | 150 | 100.0% |
-| subtotal | 150 | 150 | 100.0% |
-| tax | 150 | 150 | 100.0% |
-| total | 150 | 150 | 100.0% |
-| currency | 150 | 150 | 100.0% |
+| invoice_number | 149 | 149 | 100.0% |
+| vendor_name | 149 | 149 | 100.0% |
+| bill_date | 149 | 149 | 100.0% |
+| due_date | 149 | 149 | 100.0% |
+| po_number | 149 | 149 | 100.0% |
+| subtotal | 149 | 149 | 100.0% |
+| tax | 149 | 149 | 100.0% |
+| total | 149 | 149 | 100.0% |
+| currency | 149 | 149 | 100.0% |
 
 ## Per-Category Accuracy
 
@@ -39,5 +39,4 @@
 | retail | 18 | 100.0% |
 | saas-tech | 20 | 100.0% |
 | staffing | 11 | 100.0% |
-| tech | 1 | 100.0% |
 | utilities | 18 | 100.0% |
