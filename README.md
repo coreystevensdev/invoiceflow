@@ -18,7 +18,7 @@ Uploads PDFs or images of invoices and extracts vendor, line items, tax, total, 
 ## If you only read one thing
 
 - **[Extraction accuracy](#extraction-accuracy)** is the measurement and the
-  honest reading of it. The corpus sweeps 149 of 149, and that section says why
+  honest reading of it. The corpus sweeps 150 of 150, and that section says why
   a clean sweep is weaker evidence than it looks: one sample per invoice and no
   pinned temperature, so a 99%-per-fixture system would still sweep about 22% of
   the time. It also carries the key-order finding, which is the one real result
@@ -286,7 +286,7 @@ Every request emits one structured JSON log line including `cost_usd`, `retry_co
 
 ## Extraction accuracy
 
-Measured, not asserted. `npm run eval` runs 149 ground-truth invoices through the real
+Measured, not asserted. `npm run eval` runs 150 ground-truth invoices through the real
 extraction path and scores nine fields each against `expected.json`; `npm run eval:report`
 writes the result to [`eval-results/accuracy-table.md`](eval-results/accuracy-table.md) and
 the per-failure detail to [`eval-results/failures.md`](eval-results/failures.md). Both files
@@ -294,12 +294,12 @@ are generated, never hand-edited.
 
 | Metric | Value |
 |---|---|
-| Invoice pass rate | 100.0% (149/149) |
-| Field accuracy | 100.0% (1341/1341) |
+| Invoice pass rate | 100.0% (150/150) |
+| Field accuracy | 100.0% (1350/1350) |
 
 One sample per invoice, and `temperature` is not pinned (the API refuses it
 alongside structured output), so a clean sweep is weaker evidence than it looks:
-if each invoice independently passed 99% of the time, a 149/149 run would still
+if each invoice independently passed 99% of the time, a 150/150 run would still
 happen about 22% of the time. Read it as "no fixture failed on this run" rather
 than as a per-invoice success rate. `scripts/eval/probe-fixture.ts` samples a
 single fixture repeatedly when a specific one needs a real rate.
@@ -337,9 +337,9 @@ AI assistance was used. That is worth saying because the work here is not the ex
 
 **The model is not trusted to return a shape.** A Zod schema is enforced at the SDK boundary, so a response that does not parse never reaches application code. Ten error codes in `src/lib/errors.ts` each map to a title and a next step through `Record<...>` types, which means adding an error path does not compile until all three places are wired. Webhook URLs go through `src/lib/ssrf-guard.ts` before anything is posted to them, because a user-supplied URL plus a server-side request is an SSRF primitive whatever the model does.
 
-**The one real finding came from distrusting a passing result.** The eval swept 149 of 149, and the honest reading of that is in Extraction accuracy above: one sample per invoice and no pinned temperature, so a clean sweep would still happen about 22% of the time if each fixture only passed 99% of the time. Probing the one deliberately-ambiguous fixture repeatedly is what surfaced the key-order effect, that `{ value, confidence, reasoning }` makes the model emit a number and then rationalise it. That is in `src/lib/claude.ts:16` with the sample that proved it, and it moved one fixture from 4 of 10 to 10 of 10 at Fisher p = 0.0108. It is also sized honestly there: one fixture and one model, so the claim is that ordering matters here, not an effect size anyone should generalise.
+**The one real finding came from distrusting a passing result.** The eval swept 150 of 150, and the honest reading of that is in Extraction accuracy above: one sample per invoice and no pinned temperature, so a clean sweep would still happen about 22% of the time if each fixture only passed 99% of the time. Probing the one deliberately-ambiguous fixture repeatedly is what surfaced the key-order effect, that `{ value, confidence, reasoning }` makes the model emit a number and then rationalise it. That is in `src/lib/claude.ts:16` with the sample that proved it, and it moved one fixture from 4 of 10 to 10 of 10 at Fisher p = 0.0108. It is also sized honestly there: one fixture and one model, so the claim is that ordering matters here, not an effect size anyone should generalise.
 
-**What I changed about my own process.** The eval runs on a weekly schedule rather than per commit, because it costs money and calls a live API: `.github/workflows/weekly-eval.yml` is a Monday cron plus `workflow_dispatch`. The `ANTHROPIC_API_KEY` secret is set, so the preflight passes and the first scheduled run lands on the next Monday. A run costs about $1.40 across the 149 fixtures, and it opens an issue only when three or more fail, because with one sample per invoice and no pinned temperature one or two failures is inside what a clean system produces by chance.
+**What I changed about my own process.** The eval runs on a weekly schedule rather than per commit, because it costs money and calls a live API: `.github/workflows/weekly-eval.yml` is a Monday cron plus `workflow_dispatch`. The `ANTHROPIC_API_KEY` secret is set, so the preflight passes and the first scheduled run lands on the next Monday. A run costs about $1.40 across the 150 fixtures, and it opens an issue only when three or more fail, because with one sample per invoice and no pinned temperature one or two failures is inside what a clean system produces by chance.
 
 ## Known limitations
 
@@ -350,7 +350,7 @@ A few honest gaps:
 - **Scanned-PDF support routes through Claude vision, not local OCR.** When `pdf-parse` returns no text layer, the raw PDF is sent to Claude as a `document` content block. This keeps the pipeline single-vendor (no Tesseract/Textract dependency) and gets you ~5-10x the cost of a digital extraction. Handwriting accuracy depends on Claude vision's quality; some scrawled receipts will still come back with low confidence flags.
 - **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
-- **The corpus is 149 scored fixtures, and `001-sample` is a 150th that never runs.** It has committed `expected.json` and `meta.json` but no entry in `generate-synthetic.ts`, so CI generates no PDF for it and the runner skips it with a logged line nobody reads. The corpus fingerprint cannot catch this: it hashes `expected.json` only, so a 149-fixture run carries the same fingerprint as the committed 150-fixture one did. Either give it a generator entry or stop committing ground truth for it; until then the drift guards agree with each other about a number one short of the directory count.
+- **The corpus fingerprint hashes `expected.json` only, so it cannot see a fixture that stops running.** That is the right choice for catching ground-truth drift and it is blind to the other failure: `001-sample` was skipped for a missing PDF for ten days while the fingerprint matched and both drift guards stayed green. The generator copies it into place now, but nothing asserts the number of fixtures scored against the number on disk.
 - **Unit and integration tests cover library and route handlers.** Fifteen Vitest files totalling 164 tests, every one under `src/` or `scripts/`: `cost.ts` (38), `validate.ts` (18), `claude-stream.ts` (17), `ssrf-guard.ts` (12), the eval scorer (15), `csv.ts` (9), `errors.ts` (9), `rate-limit.ts` (9), `pdf.ts` (8), `proxy.ts` (4), and all four route handlers (`webhook` 9, `csv` 6, `extract` 3, `extract-stream` 3), plus the schema key-order guard (4). No end-to-end coverage of the upload flow: Playwright is a devDependency and no spec files exist.
 
 ## Deploy
