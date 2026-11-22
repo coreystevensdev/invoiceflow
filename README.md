@@ -182,7 +182,7 @@ src/
 
 ## Signature aesthetic
 
-InvoiceFlow uses a **Ledger Paper** design system: paper-white canvas (`#FAFAF6`), ink-navy accent (`#0C2D5C`), and JetBrains Mono for all extracted values. A 28px ruled-grid background evokes a legal pad, and legal-pad yellow (`#FFF5B8`) reserves exclusively for source-highlight hover. This is not shadcn-default chrome or a gradient hero. The aesthetic is intentional and consistent across every screen.
+InvoiceFlow uses a **Ledger Paper** design system: paper-white canvas (`#FAFAF6`), ink-navy accent (`#0C2D5C`), and JetBrains Mono for all extracted values. A 28px ruled-grid background evokes a legal pad, and legal-pad yellow (`#FFF5B8`) is reserved for source-highlight hover and used nowhere else.
 
 ## Design decisions worth calling out
 
