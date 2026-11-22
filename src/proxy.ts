@@ -8,16 +8,19 @@ import { NextRequest, NextResponse } from "next/server";
  *   - Emit a strict set of security headers on every HTML response:
  *     Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options,
  *     Referrer-Policy, Permissions-Policy.
- *   - Propagate the nonce as `x-nonce` request header so Server Components
- *     (RootLayout) can read it via `headers()` and inject nonce-bearing
- *     `<script type="application/ld+json">` tags.
+ *   - Propagate the nonce as an `x-nonce` request header, which is Next's
+ *     documented pattern so a Server Component can read it via `headers()`
+ *     when it needs to nonce a `<Script>`. Nothing reads it today. Next
+ *     itself takes the nonce from the CSP header, not from this one, so
+ *     framework and bundle scripts are nonced either way.
  *
  * The matcher below excludes API routes (their own handlers own their
  * headers), static assets, and favicon. Prefetch requests and next/image
  * requests are skipped to keep them cache-friendly.
  *
- * Loom is whitelisted in frame-src / img-src / media-src to support the
- * Sunday hero video. Drop those entries if Loom is ever removed.
+ * Loom is whitelisted in frame-src / img-src / media-src for the demo video,
+ * which renders below the uploader on the idle screen. Drop those entries if
+ * Loom is ever removed.
  *
  * `blob:` is whitelisted in frame-src so the results view can render the
  * uploaded PDF in an iframe via URL.createObjectURL. The blob URL is
