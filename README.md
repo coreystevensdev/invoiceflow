@@ -96,7 +96,7 @@ Everything inside the function is one Node.js process. No queue, no worker, no b
 | Layer | Technology | Why |
 |---|---|---|
 | Framework | Next.js 16 (App Router) | Server Components for zero-JS landing; Fluid Compute for 300s extraction timeout; `src/proxy.ts` middleware for per-request CSP nonce |
-| AI | Anthropic `claude-sonnet-4-6` | `messages.parse()` + `zodOutputFormat` validates response at the SDK boundary; ephemeral caching drops system-prompt cost 90%; reasoning string per field is native to the API |
+| AI | Anthropic `claude-sonnet-4-6` | `messages.parse()` + `zodOutputFormat` validates response at the SDK boundary; system prompt marked for ephemeral caching, though see the caching note below for whether it engages; reasoning string per field is native to the API |
 | Validation | Zod 4 | `Record<ExtractionErrorCode, Shape>` enforces exhaustiveness: adding a new error code that misses `STATUS_BY_CODE` or `ERROR_DESCRIPTIONS` fails to compile |
 | PDF text | pdf-parse + pdfjs-dist | pdf-parse extracts the text layer server-side; pdfjs-dist handles iOS Safari client-side preview (requires legacy canvas build + static worker) |
 | Styling | Tailwind CSS 4 | Ledger-paper design tokens in `@theme inline`; no component library; `prefers-reduced-motion` and `focus-visible` globally enforced |
@@ -206,7 +206,7 @@ Claude flags cross-field issues during extraction. A deterministic pass in `lib/
 
 ### Zero retention
 
-No database, no auth, no content logging. Uploaded PDFs process in memory within a single Vercel Function execution. The structured logger in `src/lib/log.ts` only emits an allowlisted set of metadata keys: `pdf_size_bytes`, `pdf_num_pages`, `correlation_id`, `error_code`, `cost_usd`, `retry_count`. Field values and PDF bytes never reach the log stream.
+No database, no auth, no content logging. Uploaded PDFs process in memory within a single Vercel Function execution. The structured logger in `src/lib/log.ts` constrains payloads to the sixteen keys enumerated on `StructuredPayload`, plus the `correlation_id` it binds itself. Fifteen of those values are numbers or fixed strings. The exception is `note`, a free-form string used for operator diagnostics such as a malformed `MONTHLY_BUDGET_USD` value or a retry reason; no call site passes extracted content through it. Field values and PDF bytes never reach the log stream.
 
 ### Typed error taxonomy
 
@@ -226,7 +226,7 @@ Imports cleanly into QuickBooks Online's CSV importer, into Xero, and opens in E
 
 ### Prompt caching
 
-The ~500-token system prompt uses `cache_control: { type: "ephemeral" }`. After the first call in a cache window, the system-prompt fraction of cost drops by roughly 90%.
+The system prompt is 2,859 characters, roughly 714 tokens, and carries `cache_control: { type: "ephemeral" }`. Whether that creates a cache entry is not something this repo has measured. `claude-sonnet-4-6` has a 1,024-token minimum cacheable prefix, and a prompt below it is processed without caching and without an error, so the breakpoint may be inert. The prefix spans system plus tools, so the output schema the SDK appends may carry it over the line; that is the part nobody has checked. `cost.ts` prices `cache_creation_input_tokens` and `cache_read_input_tokens` correctly but nothing asserts either is non-zero, which is exactly how Anthropic says to detect a prompt that was not cached.
 
 ### Structured output
 
@@ -339,7 +339,7 @@ AI assistance was used. That is worth saying because the work here is not the ex
 
 **The one real finding came from distrusting a passing result.** The eval swept 150 of 150, and the honest reading of that is in Extraction accuracy above: one sample per invoice and no pinned temperature, so a clean sweep would still happen about 22% of the time if each fixture only passed 99% of the time. Probing the one deliberately-ambiguous fixture repeatedly is what surfaced the key-order effect, that `{ value, confidence, reasoning }` makes the model emit a number and then rationalise it. That is in `src/lib/claude.ts:16` with the sample that proved it, and it moved one fixture from 4 of 10 to 10 of 10 at Fisher p = 0.0108. It is also sized honestly there: one fixture and one model, so the claim is that ordering matters here, not an effect size anyone should generalise.
 
-**What I changed about my own process.** The eval does not run in CI, because it costs money and calls a live API, so it is a release-time check that has to be remembered rather than a gate that holds. That is a real weakness and it is in Known limitations rather than hidden.
+**What I changed about my own process.** The eval runs on a weekly schedule rather than per commit, because it costs money and calls a live API: `.github/workflows/weekly-eval.yml` is a Monday cron plus `workflow_dispatch`. It is not currently producing results, and for a mundane reason the workflow states in its own header: no `ANTHROPIC_API_KEY` repository secret exists, so the preflight step skips the run. So the gate is written and not yet armed, which is a weaker position than a scheduled eval and a stronger one than a release-time check nobody remembers.
 
 ## Known limitations
 
@@ -350,7 +350,7 @@ A few honest gaps:
 - **Scanned-PDF support routes through Claude vision, not local OCR.** When `pdf-parse` returns no text layer, the raw PDF is sent to Claude as a `document` content block. This keeps the pipeline single-vendor (no Tesseract/Textract dependency) and gets you ~5-10x the cost of a digital extraction. Handwriting accuracy depends on Claude vision's quality; some scrawled receipts will still come back with low confidence flags.
 - **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
-- **Unit and integration tests cover library and route handlers.** Fifteen Vitest files, every one under `src/` or `scripts/`: `cost.ts` (38), `validate.ts` (18), `claude-stream.ts` (17), `ssrf-guard.ts` (12), the eval scorer (15), `csv.ts` (9), `errors.ts` (9), `rate-limit.ts` (9), `pdf.ts` (5), `proxy.ts` (4), and all four route handlers (`webhook` 9, `csv` 6, `extract` 3, `extract-stream` 3), plus the schema key-order guard (4). No end-to-end coverage of the upload flow: Playwright is a devDependency and no spec files exist.
+- **Unit and integration tests cover library and route handlers.** Fifteen Vitest files totalling 164 tests, every one under `src/` or `scripts/`: `cost.ts` (38), `validate.ts` (18), `claude-stream.ts` (17), `ssrf-guard.ts` (12), the eval scorer (15), `csv.ts` (9), `errors.ts` (9), `rate-limit.ts` (9), `pdf.ts` (8), `proxy.ts` (4), and all four route handlers (`webhook` 9, `csv` 6, `extract` 3, `extract-stream` 3), plus the schema key-order guard (4). No end-to-end coverage of the upload flow: Playwright is a devDependency and no spec files exist.
 
 ## Deploy
 
@@ -359,7 +359,7 @@ npx vercel          # preview
 npx vercel --prod   # production
 ```
 
-Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-sonnet-4-6`), `SITE_URL`, `MONTHLY_BUDGET_USD` (default 25). See `.env.example`. The 25 MB PDF size cap and 3.5 MB image cap are set in code at `src/app/api/extract/route.ts`.
+Required env: `ANTHROPIC_API_KEY`. Optional: `CLAUDE_MODEL` (default `claude-sonnet-4-6`), `SITE_URL`, `MONTHLY_BUDGET_USD` (default 25). See `.env.example`. The 25 MB PDF size cap and 3.5 MB image cap are `MAX_PDF_BYTES` and `MAX_IMAGE_BYTES` in `src/lib/limits.ts`.
 
 ## Related project
 
