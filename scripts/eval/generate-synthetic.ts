@@ -2716,6 +2716,22 @@ async function main() {
     fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));
     console.log(`Generated ${dir}`);
   }
+
+  // 001-sample is not synthetic. Its expected.json describes the app's own
+  // public/sample-invoice.pdf, so it is copied rather than generated: a
+  // SyntheticConfig entry would overwrite that ground truth with a fabricated
+  // invoice. Without this step the runner skips it for a missing PDF, which is
+  // how CI scored 149 while the README and the committed table both said 150.
+  const sampleDir = path.join(FIXTURES_DIR, "001-sample");
+  const sampleSource = path.resolve("public/sample-invoice.pdf");
+  if (!fs.existsSync(sampleDir)) {
+    throw new Error(`${sampleDir} is missing; it holds the built-in sample's ground truth`);
+  }
+  if (!fs.existsSync(sampleSource)) {
+    throw new Error(`${sampleSource} is missing; 001-sample has no invoice to score`);
+  }
+  fs.copyFileSync(sampleSource, path.join(sampleDir, "invoice.pdf"));
+  console.log(`Copied the built-in sample into ${sampleDir}`);
 }
 
 main().catch((err) => {
