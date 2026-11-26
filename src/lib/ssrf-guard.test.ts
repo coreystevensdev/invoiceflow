@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertPublicHttpUrl, pinnedLookup } from "./ssrf-guard";
+import { assertPublicHttpUrl, pinnedLookup, webhookFetch } from "./ssrf-guard";
 
 describe("assertPublicHttpUrl", () => {
   it("allows a public IPv4 literal", async () => {
@@ -85,5 +85,35 @@ describe("pinnedLookup", () => {
         }
       });
     });
+  });
+});
+
+function causeChain(err: Error): string {
+  const messages: string[] = [];
+  let current: unknown = err;
+  while (current instanceof Error) {
+    messages.push(current.message);
+    current = current.cause;
+  }
+  return messages.join(" | ");
+}
+
+describe("webhookFetch", () => {
+  it("actually runs the pinned lookup, so a hostname that resolves to loopback is refused", async () => {
+    // Goes through the dispatcher instead of calling pinnedLookup directly.
+    // Every test above passed for months while this pairing threw on every
+    // request and the lookup never ran once, because none of them crossed
+    // the fetch boundary. Resolution happens before connect, so nothing needs
+    // to be listening on the port.
+    const err = await webhookFetch("http://localhost:9099/", {
+      method: "POST",
+      signal: AbortSignal.timeout(5_000),
+    }).then(
+      () => null,
+      (e: Error) => e,
+    );
+
+    expect(err).toBeTruthy();
+    expect(causeChain(err as Error)).toMatch(/private or reserved/);
   });
 });
