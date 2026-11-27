@@ -5,7 +5,7 @@ import { confidenceSummary } from "@/lib/validate";
 import { toErrorResponse } from "@/lib/errors";
 import { createLogger } from "@/lib/log";
 import { clientIpFrom, inquiryLimit } from "@/lib/rate-limit";
-import { assertPublicHttpUrl, webhookDispatcher } from "@/lib/ssrf-guard";
+import { assertPublicHttpUrl, webhookFetch } from "@/lib/ssrf-guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -140,14 +140,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // call. Once a webhook is configured, invoice content leaves this
     // process and this app has no control over what the destination does
     // with it.
-    const res = await fetch(webhook_url, {
+    const res = await webhookFetch(webhook_url, {
       method: "POST",
       headers: outboundHeaders,
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15_000),
       redirect: "manual",
-      // @ts-expect-error -- dispatcher is an undici/Node fetch extension, not in the DOM lib fetch types
-      dispatcher: webhookDispatcher,
     });
     status = res.status;
     responseText = await res.text().catch(() => "");

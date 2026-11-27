@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
 import {
@@ -6,6 +6,17 @@ import {
   resetForTests as resetRateLimit,
 } from "@/lib/rate-limit";
 import type { InvoiceExtraction } from "@/lib/claude";
+import { webhookFetch } from "@/lib/ssrf-guard";
+
+// Stubs the delivery call at the module boundary, not globalThis.fetch. These
+// tests used to spy on the global fetch, which replaced the whole call and
+// ignored the dispatcher argument, so they stayed green while every real
+// delivery threw. assertPublicHttpUrl is left real, so the private-address
+// cases below still run the actual guard.
+vi.mock("@/lib/ssrf-guard", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/ssrf-guard")>();
+  return { ...actual, webhookFetch: vi.fn() };
+});
 
 const baseField = <T>(value: T) => ({
   value,
@@ -53,15 +64,16 @@ function buildRequest(
   });
 }
 
-let fetchSpy: ReturnType<typeof vi.spyOn>;
+let fetchSpy: Mock;
 
 beforeEach(() => {
   resetRateLimit();
-  fetchSpy = vi.spyOn(globalThis, "fetch");
+  fetchSpy = vi.mocked(webhookFetch) as unknown as Mock;
+  fetchSpy.mockReset();
 });
 
 afterEach(() => {
-  fetchSpy.mockRestore();
+  fetchSpy.mockReset();
 });
 
 describe("POST /api/webhook rate-limit gate", () => {

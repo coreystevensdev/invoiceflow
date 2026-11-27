@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://invoiceflow-cs.vercel.app"><img src="https://img.shields.io/badge/live--demo-invoiceflow--cs.vercel.app-2563eb?style=flat" alt="Live demo"></a>
   <a href="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml"><img src="https://github.com/coreystevensdev/invoiceflow/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-164-brightgreen.svg" alt="164 tests">
+  <img src="https://img.shields.io/badge/tests-165-brightgreen.svg" alt="165 tests">
   <img src="https://img.shields.io/badge/license-MIT-yellow.svg" alt="MIT License">
 </p>
 
@@ -372,7 +372,7 @@ A few honest gaps:
 - **Model pricing is hard-coded in `src/lib/cost.ts`.** Adding a new model means adding a pricing row, or the anomaly cap silently fails open. Documented in the file header.
 - **JSON-LD served at `/schema.jsonld`, not inline.** Google prefers inline `<script type="application/ld+json">`; linked structured data is best-effort across crawlers.
 - **The corpus fingerprint hashes `expected.json` only, so it cannot see a fixture that stops running.** That is the right choice for catching ground-truth drift and it is blind to the other failure: `001-sample` was skipped for a missing PDF for ten days while the fingerprint matched and both drift guards stayed green. The generator copies it into place now, but nothing asserts the number of fixtures scored against the number on disk.
-- **Unit and integration tests cover library and route handlers.** Fifteen Vitest files totalling 164 tests, every one under `src/` or `scripts/`: `cost.ts` (38), `validate.ts` (18), `claude-stream.ts` (17), `ssrf-guard.ts` (12), the eval scorer (15), `csv.ts` (9), `errors.ts` (9), `rate-limit.ts` (9), `pdf.ts` (8), `proxy.ts` (4), and all four route handlers (`webhook` 9, `csv` 6, `extract` 3, `extract-stream` 3), plus the schema key-order guard (4). No end-to-end coverage of the upload flow: Playwright is a devDependency and no spec files exist.
+- **Unit and integration tests cover library and route handlers.** Fifteen Vitest files totalling 165 tests, every one under `src/` or `scripts/`: `cost.ts` (38), `validate.ts` (18), `claude-stream.ts` (17), `ssrf-guard.ts` (13), the eval scorer (15), `csv.ts` (9), `errors.ts` (9), `rate-limit.ts` (9), `pdf.ts` (8), `proxy.ts` (4), and all four route handlers (`webhook` 9, `csv` 6, `extract` 3, `extract-stream` 3), plus the schema key-order guard (4). No end-to-end coverage of the upload flow: Playwright is a devDependency and no spec files exist.
 
 ## Deploy
 

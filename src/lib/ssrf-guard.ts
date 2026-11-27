@@ -1,7 +1,7 @@
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
 import dns from "node:dns";
-import { Agent } from "undici";
+import { Agent, fetch as undiciFetch, type RequestInit } from "undici";
 
 const BLOCKED_HOSTNAMES = new Set(["localhost", "metadata.google.internal"]);
 
@@ -102,6 +102,20 @@ export function pinnedLookup(
   });
 }
 
-/** Shared dispatcher for outbound webhook requests: pins DNS resolution to
- * addresses validated at the exact moment of connection (see pinnedLookup). */
-export const webhookDispatcher = new Agent({ connect: { lookup: pinnedLookup } });
+/** Pins DNS resolution to addresses validated at the exact moment of
+ * connection (see pinnedLookup). Module-private because it only works with
+ * undici's own fetch, which webhookFetch below is here to guarantee. */
+const webhookDispatcher = new Agent({ connect: { lookup: pinnedLookup } });
+
+/**
+ * Delivers an outbound webhook through the pinned dispatcher.
+ *
+ * Uses undici's own fetch, not the global one. The global fetch is backed by
+ * Node's bundled copy of undici, which rejects an Agent built from the npm
+ * package with "invalid onRequestStart method": that pairing threw on every
+ * delivery and never reached pinnedLookup, so the guard did nothing at all.
+ * Keeping both in one function is what stops them being paired wrongly again.
+ */
+export function webhookFetch(url: string, init: RequestInit) {
+  return undiciFetch(url, { ...init, dispatcher: webhookDispatcher });
+}
